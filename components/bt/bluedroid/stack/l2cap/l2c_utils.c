@@ -2202,7 +2202,7 @@ void l2cu_device_reset (void)
 **
 ** Description      This function initiates an acl connection via HCI
 **
-** Returns          TRUE if successful, FALSE if gki get buffer fails.
+** Returns          TRUE if successful, FALSE if osi get buffer fails.
 **
 *******************************************************************************/
 BOOLEAN l2cu_create_conn (tL2C_LCB *p_lcb, tBT_TRANSPORT transport)
@@ -2309,7 +2309,7 @@ UINT8 l2cu_get_num_hi_priority (void)
 ** Description      This function initiates an acl connection via HCI
 **                  If switch required to create connection it is already done.
 **
-** Returns          TRUE if successful, FALSE if gki get buffer fails.
+** Returns          TRUE if successful, FALSE if osi get buffer fails.
 **
 *******************************************************************************/
 
@@ -3488,13 +3488,12 @@ BT_HDR *l2cu_get_next_buffer_to_send (tL2C_LCB *p_lcb)
                     L2CAP_TRACE_ERROR("l2cu_get_buffer_to_send: No data to be sent");
                     return (NULL);
                 }
+                l2cu_check_channel_congestion (p_ccb);
+                l2cu_set_acl_hci_header (p_buf, p_ccb);
                 /* send tx complete */
                 if (l2cb.fixed_reg[xx].pL2CA_FixedTxComplete_Cb) {
                     (*l2cb.fixed_reg[xx].pL2CA_FixedTxComplete_Cb)(p_ccb->local_cid, 1);
                 }
-
-                l2cu_check_channel_congestion (p_ccb);
-                l2cu_set_acl_hci_header (p_buf, p_ccb);
                 return (p_buf);
             }
         }
