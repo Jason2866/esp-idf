@@ -19,6 +19,7 @@ import yaml
 from dynamic_pipelines.constants import BUILD_ONLY_LABEL
 from dynamic_pipelines.constants import DEFAULT_CASES_TEST_PER_JOB
 from dynamic_pipelines.constants import DEFAULT_TARGET_TEST_CHILD_PIPELINE_FILEPATH
+from dynamic_pipelines.constants import DEFAULT_TARGET_TEST_CHILD_PIPELINE_NAME
 from dynamic_pipelines.constants import DEFAULT_TEST_PATHS
 from dynamic_pipelines.constants import KNOWN_GENERATE_TEST_CHILD_PIPELINE_WARNINGS_FILEPATH
 from dynamic_pipelines.models import EmptyJob
@@ -110,6 +111,10 @@ def get_target_test_jobs(
     else:
         extra_include_yml = ['tools/ci/dynamic_pipelines/templates/generate_target_test_report.yml']
 
+    fast_pipeline_flag = int(os.getenv('REPORT_EXIT_CODE', 0)) == 30
+    if fast_pipeline_flag:
+        extra_include_yml = ['tools/ci/dynamic_pipelines/templates/fast_pipeline.yml']
+
     issues['no_env_marker_test_cases'] = sorted(issues['no_env_marker_test_cases'])
     issues['no_runner_tags'] = sorted(issues['no_runner_tags'])
 
@@ -166,7 +171,7 @@ def generate_target_test_child_pipeline(
     if no_env_marker_test_cases_fail or no_runner_tags_fail:
         raise SystemExit('Failed to generate target test child pipeline.')
 
-    dump_jobs_to_yaml(target_test_jobs, output_filepath, extra_include_yml)
+    dump_jobs_to_yaml(target_test_jobs, output_filepath, DEFAULT_TARGET_TEST_CHILD_PIPELINE_NAME, extra_include_yml)
     print(f'Generate child pipeline yaml file {output_filepath} with {sum(j.parallel for j in target_test_jobs)} jobs')
 
 

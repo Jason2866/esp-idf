@@ -11,7 +11,7 @@ Secure Boot v2
 
 {IDF_TARGET_SECURE_BOOT_OPTION_TEXT:default="", esp32c6="RSA is recommended because of faster verification time. You can choose between RSA and ECDSA scheme from the menu.", esp32h2="RSA is recommended because of faster verification time. You can choose between RSA and ECDSA scheme from the menu.", esp32p4="RSA is recommended because of faster verification time. You can choose between RSA and ECDSA scheme from the menu."}
 
-{IDF_TARGET_ECO_VERSION:default="", esp32="(v3.0 onwards)", esp32c3="(v3.0 onwards)"}
+{IDF_TARGET_ECO_VERSION:default="", esp32="(v3.0 onwards)", esp32c3="(v0.3 onwards)"}
 
 {IDF_TARGET_RSA_TIME:default="", esp32c6="about 2.7 ms", esp32h2="about 4.5 ms", esp32p4="about 2.4 ms"}
 
@@ -20,6 +20,8 @@ Secure Boot v2
 {IDF_TARGET_CPU_FREQ:default="", esp32c6="160 MHz", esp32h2="96 MHz", esp32p4="360 MHz"}
 
 {IDF_TARGET_SBV2_DEFAULT_SCHEME:default="RSA", esp32c2="ECDSA (v2), esp32c5="ECDSA (v2)"}
+
+{IDF_TARGET_EFUSE_WR_DIS_RD_DIS:default="ESP_EFUSE_WR_DIS_RD_DIS", esp32="ESP_EFUSE_WR_DIS_EFUSE_RD_DISABLE"}
 
 .. important::
 
@@ -37,7 +39,7 @@ Secure Boot v2
 
 .. only:: esp32c3
 
-    ``Secure Boot v2`` is available for ESP32-C3 from chip revision v3.0 onwards. To use these options in menuconfig, set :ref:`CONFIG_ESP32C3_REV_MIN` greater than or equal to `v3.0`.
+    ``Secure Boot v2`` is available for ESP32-C3 from chip revision v0.3 (ECO3) onwards. To use these options in menuconfig, set :ref:`CONFIG_ESP32C3_REV_MIN` greater than or equal to `v0.3 (ECO3)`.
 
 
 .. note::
@@ -431,9 +433,31 @@ Restrictions After Secure Boot Is Enabled
 
 - Any updated bootloader or app will need to be signed with a key matching the digest already stored in eFuse.
 
-- After Secure Boot is enabled, no further eFuses can be read-protected. If :doc:`/security/flash-encryption` is enabled then the bootloader will ensure that any flash encryption key generated on the first boot will already be read-protected. If :ref:`CONFIG_SECURE_BOOT_INSECURE` is enabled, then this behavior can be disabled, but this is not recommended.
-
 - Please note that enabling Secure Boot or flash encryption disables the USB-OTG USB stack in the ROM, disallowing updates via the serial emulation or Device Firmware Update (DFU) on that port.
+
+Burning read-protected keys
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+After Secure Boot is enabled, no further eFuses can be read-protected, because this might allow an attacker to read-protect the efuse block holding the public key digest, causing an immediate denial of service and possibly allowing an additional fault injection attack to bypass the signature protection.
+
+If :doc:`/security/flash-encryption` is enabled by the 2nd stage bootloader, it ensures that the flash encryption key generated on the first boot shall already be read-protected.
+
+In case you need to read-protect a key after Secure Boot has been enabled on the device, for example,
+
+.. list::
+  :SOC_FLASH_ENC_SUPPORTED:* the flash encryption key
+
+  :SOC_HMAC_SUPPORTED:* HMAC keys
+
+  :SOC_ECDSA_SUPPORTED:* ECDSA keys
+
+  :SOC_KEY_MANAGER_SUPPORTED:* Key Manager keys
+
+  you need to enable the config :ref:`CONFIG_SECURE_BOOT_V2_ALLOW_EFUSE_RD_DIS` at the same time when you enable Secure Boot to prevent disabling the ability to read-protect further efuses.
+
+It is highly recommended that all such keys must been burned before enabling secure boot.
+
+In case you need to enable :ref:`CONFIG_SECURE_BOOT_V2_ALLOW_EFUSE_RD_DIS`, make sure that you burn the efuse {IDF_TARGET_EFUSE_WR_DIS_RD_DIS}, using ``esp_efuse_write_field_bit()`` API from ``esp_efuse.h``, once all the read-protected efuse keys have been programmed.
 
 
 .. _secure-boot-v2-generate-key:

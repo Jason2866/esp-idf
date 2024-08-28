@@ -52,7 +52,7 @@ menu "Example Ethernet Configuration"
                 bool "KSZ80xx"
                 help
                     With the KSZ80xx series, Microchip offers single-chip 10BASE-T/100BASE-TX
-                    Ethernet Physical Layer Tranceivers (PHY).
+                    Ethernet Physical Layer Transceivers (PHY).
                     The following chips are supported: KSZ8001, KSZ8021, KSZ8031, KSZ8041,
                         KSZ8051, KSZ8061, KSZ8081, KSZ8091
                     Goto https://www.microchip.com for more information about them.
@@ -70,7 +70,7 @@ menu "Example Ethernet Configuration"
             int "SMI MDIO GPIO number"
             range ENV_GPIO_RANGE_MIN ENV_GPIO_OUT_RANGE_MAX
             default 18 if IDF_TARGET_ESP32
-            default 27 if IDF_TARGET_ESP32P4
+            default 52 if IDF_TARGET_ESP32P4
             help
                 Set the GPIO number used by SMI MDIO.
 
@@ -78,7 +78,7 @@ menu "Example Ethernet Configuration"
             int "PHY Reset GPIO number"
             range -1 ENV_GPIO_OUT_RANGE_MAX
             default 5 if IDF_TARGET_ESP32
-            default 26 if IDF_TARGET_ESP32P4
+            default 51 if IDF_TARGET_ESP32P4
             help
                 Set the GPIO number used to reset PHY chip.
                 Set to -1 to disable PHY chip hardware reset.
@@ -148,6 +148,7 @@ menu "Example Ethernet Configuration"
             default 6 if IDF_TARGET_ESP32C3 || IDF_TARGET_ESP32C2 || IDF_TARGET_ESP32C6
             default 4 if IDF_TARGET_ESP32H2
             default 33 if IDF_TARGET_ESP32P4
+            default 8 if IDF_TARGET_ESP32C5
             help
                 Set the GPIO number used by SPI SCLK.
 
@@ -159,6 +160,7 @@ menu "Example Ethernet Configuration"
             default 7 if IDF_TARGET_ESP32C3 || IDF_TARGET_ESP32C2 || IDF_TARGET_ESP32C6
             default 5 if IDF_TARGET_ESP32H2
             default 32 if IDF_TARGET_ESP32P4
+            default 10 if IDF_TARGET_ESP32C5
             help
                 Set the GPIO number used by SPI MOSI.
 
@@ -170,6 +172,7 @@ menu "Example Ethernet Configuration"
             default 2 if IDF_TARGET_ESP32C3 || IDF_TARGET_ESP32C2 || IDF_TARGET_ESP32C6
             default 0 if IDF_TARGET_ESP32H2
             default 52 if IDF_TARGET_ESP32P4
+            default 9 if IDF_TARGET_ESP32C5
             help
                 Set the GPIO number used by SPI MISO.
 
@@ -185,7 +188,7 @@ menu "Example Ethernet Configuration"
             range ENV_GPIO_RANGE_MIN ENV_GPIO_OUT_RANGE_MAX
             default 15 if IDF_TARGET_ESP32
             default 10 if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32C3 || IDF_TARGET_ESP32S3 || IDF_TARGET_ESP32C2
-            default 3 if IDF_TARGET_ESP32C6
+            default 3 if IDF_TARGET_ESP32C6 || IDF_TARGET_ESP32C5
             default 1 if IDF_TARGET_ESP32H2
             default 53 if IDF_TARGET_ESP32P4
             help
@@ -202,6 +205,7 @@ menu "Example Ethernet Configuration"
             default 3 if IDF_TARGET_ESP32C2
             default 11 if IDF_TARGET_ESP32H2
             default 23 if IDF_TARGET_ESP32P4
+            default 1 if IDF_TARGET_ESP32C5
             help
                 Set the GPIO number used by SPI CS1, i.e. Chip Select associated with the second SPI Eth module.
 
@@ -209,7 +213,7 @@ menu "Example Ethernet Configuration"
             int "Interrupt GPIO number SPI Ethernet module #1"
             range -1 ENV_GPIO_IN_RANGE_MAX
             default 4 if IDF_TARGET_ESP32 || IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32C3 || IDF_TARGET_ESP32S3
-            default 4 if IDF_TARGET_ESP32C2 || IDF_TARGET_ESP32C6
+            default 4 if IDF_TARGET_ESP32C2 || IDF_TARGET_ESP32C6 || IDF_TARGET_ESP32C5
             default 10 if IDF_TARGET_ESP32H2
             default 48 if IDF_TARGET_ESP32P4
             help
@@ -222,7 +226,7 @@ menu "Example Ethernet Configuration"
             range -1 ENV_GPIO_IN_RANGE_MAX
             default 33 if IDF_TARGET_ESP32
             default 5 if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32C3 || IDF_TARGET_ESP32S3 || IDF_TARGET_ESP32C2
-            default 5 if IDF_TARGET_ESP32C6
+            default 5 if IDF_TARGET_ESP32C6 || IDF_TARGET_ESP32C5
             default 9 if IDF_TARGET_ESP32H2
             default 47 if IDF_TARGET_ESP32P4
             help

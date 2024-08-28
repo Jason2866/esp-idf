@@ -18,15 +18,15 @@
 
 /*-------------------------- COMMON CAPS ---------------------------------------*/
 //  \#define SOC_ADC_SUPPORTED               1    //TODO: [ESP32C61] IDF-9302, IDF-9303, IDF-9304
-//  \#define SOC_DEDICATED_GPIO_SUPPORTED    1    //TODO: [ESP32C61] IDF-9321
-#define SOC_UART_SUPPORTED              1       //TODO: [ESP32C61] IDF-9320
-//  \#define SOC_GDMA_SUPPORTED              1    //TODO: [ESP32C61] IDF-9310, IDF-9311
-//  \#define SOC_AHB_GDMA_SUPPORTED          1    //TODO: [ESP32C61] IDF-9310, IDF-9311
+#define SOC_DEDICATED_GPIO_SUPPORTED    1
+#define SOC_UART_SUPPORTED              1
+#define SOC_GDMA_SUPPORTED              1
+#define SOC_AHB_GDMA_SUPPORTED          1
 #define SOC_GPTIMER_SUPPORTED           1
 //  \#define SOC_BT_SUPPORTED                1
 //  \#define SOC_IEEE802154_SUPPORTED        1
-//  \#define SOC_ASYNC_MEMCPY_SUPPORTED      1    //TODO: [ESP32C61] IDF-9315
-//  \#define SOC_USB_SERIAL_JTAG_SUPPORTED   1    //TODO: [ESP32C61] IDF-9319
+#define SOC_USB_SERIAL_JTAG_SUPPORTED   1
+#define SOC_ASYNC_MEMCPY_SUPPORTED      1
 //  \#define SOC_TEMP_SENSOR_SUPPORTED       1    //TODO: [ESP32C61] IDF-9322
 //  \#define SOC_WIFI_SUPPORTED              1
 #define SOC_SUPPORTS_SECURE_DL_MODE     1
@@ -37,19 +37,16 @@
 #define SOC_RTC_MEM_SUPPORTED           1       //TODO: [ESP32C61] IDF-9274
 //  \#define SOC_I2S_SUPPORTED               1    //TODO: [ESP32C61] IDF-9312, IDF-9313
 //  \#define SOC_GPSPI_SUPPORTED             1    //TODO: [ESP32C61] IDF-9299, IDF-9300, IDF-9301
-//  \#define SOC_LEDC_SUPPORTED              1    //TODO: [ESP32C61] IDF-9291
-//  \#define SOC_I2C_SUPPORTED               1    //TODO: [ESP32C61] IDF-9296, IDF-9297
+#define SOC_I2C_SUPPORTED               1
+#define SOC_LEDC_SUPPORTED              1
 #define SOC_SYSTIMER_SUPPORTED          1       //TODO: [ESP32C61] IDF-9307, IDF-9308
 //  \#define SOC_SUPPORT_COEXISTENCE         1
-//  \#define SOC_MPI_SUPPORTED               1
 //  \#define SOC_SHA_SUPPORTED               1    //TODO: [ESP32C61] IDF-9234
-//  \#define SOC_HMAC_SUPPORTED              1    //TODO: [ESP32C61] IDF-9323
-//  \#define SOC_DIG_SIGN_SUPPORTED          1    //TODO: [ESP32C61] IDF-9325
 #define SOC_ECC_SUPPORTED               1
 #define SOC_ECC_EXTENDED_MODES_SUPPORTED   1
 #define SOC_FLASH_ENC_SUPPORTED         1
-//  \#define SOC_SECURE_BOOT_SUPPORTED       1    //TODO: [ESP32C61] IDF-9233
-//  \#define SOC_BOD_SUPPORTED               1    //TODO: [ESP32C61] IDF-9254
+#define SOC_SECURE_BOOT_SUPPORTED       1
+#define SOC_BOD_SUPPORTED               1
 //  \#define SOC_APM_SUPPORTED               1    //TODO: [ESP32C61] IDF-9230
 #define SOC_PMU_SUPPORTED               1    //TODO: [ESP32C61] IDF-9250
 //  \#define SOC_LP_TIMER_SUPPORTED          1    //TODO: [ESP32C61] IDF-9244
@@ -60,30 +57,20 @@
 //  \#define SOC_WDT_SUPPORTED               1    //TODO: [ESP32C61] IDF-9257
 #define SOC_SPI_FLASH_SUPPORTED         1       //TODO: [ESP32C61] IDF-9314
 //  \#define SOC_RNG_SUPPORTED               1    //TODO: [ESP32C61] IDF-9236
-//  \#define SOC_MODEM_CLOCK_SUPPORTED       1
+#define SOC_MODEM_CLOCK_SUPPORTED       1
 #define SOC_REG_I2C_SUPPORTED           1
 
 //  \#define SOC_TWAI_SUPPORTED              0    //TODO: [ESP32C61] IDF-9336
 //  \#define SOC_ETM_SUPPORTED               0
 //  \#define SOC_LP_CORE_SUPPORTED           0    //TODO: [ESP32C61] IDF-9331
-//  \#define SOC_AES_SUPPORTED               0    //TODO: [ESP32C61] IDF-9328
 //  \#define SOC_SDIO_SLAVE_SUPPORTED        0
 //  \#define SOC_PAU_SUPPORTED               0
 //  \#define SOC_LP_I2C_SUPPORTED            0    //TODO: [ESP32C61] IDF-9330, IDF-9337
-//  \#define SOC_ULP_LP_UART_SUPPORTED       0    //TODO: [ESP32C61] IDF-9329, IDF-9341
 //  \#define SOC_PM_SUPPORTED                1
-
+#define SOC_ECDSA_SUPPORTED             1
+#define SOC_SPIRAM_SUPPORTED            1
 /*-------------------------- XTAL CAPS ---------------------------------------*/
 #define SOC_XTAL_SUPPORT_40M            1
-
-/*-------------------------- AES CAPS -----------------------------------------*/
-#define SOC_AES_SUPPORT_DMA     (1)
-
-/* Has a centralized DMA, which is shared with all peripherals */
-#define SOC_AES_GDMA            (1)
-
-#define SOC_AES_SUPPORT_AES_128 (1)
-#define SOC_AES_SUPPORT_AES_256 (1)
 
 //TODO: [ESP32C61] IDF-9302, IDF-9303, IDF-9304
 /*-------------------------- ADC CAPS -------------------------------*/
@@ -132,6 +119,9 @@
 /*-------------------------- BROWNOUT CAPS -----------------------------------*/
 #define SOC_BROWNOUT_RESET_SUPPORTED 1
 
+/*-------------------------- RNG CAPS -----------------------------------*/
+#define SOC_RNG_SUPPORTED            1
+
 /*-------------------------- CACHE CAPS --------------------------------------*/
 #define SOC_SHARED_IDCACHE_SUPPORTED            1   //Shared Cache for both instructions and data
 #define SOC_CACHE_WRITEBACK_SUPPORTED           1
@@ -154,25 +144,15 @@
 #define SOC_CPU_IDRAM_SPLIT_USING_PMP   1
 #define SOC_CPU_PMP_REGION_GRANULARITY  128 // TODO IDF-9580 check when doing PMP bringup
 
+/*-------------------------- DMA Common CAPS ----------------------------------------*/
+#define SOC_DMA_CAN_ACCESS_FLASH 1 /*!< DMA can access Flash memory */
 
-/*-------------------------- DIGITAL SIGNATURE CAPS ----------------------------------------*/
-//TODO: [ESP32C61] IDF-9325 (Copy from esp32c6, need check)
-/** The maximum length of a Digital Signature in bits. */
-#define SOC_DS_SIGNATURE_MAX_BIT_LEN (3072)
-
-/** Initialization vector (IV) length for the RSA key parameter message digest (MD) in bytes. */
-#define SOC_DS_KEY_PARAM_MD_IV_LENGTH (16)
-
-/** Maximum wait time for DS parameter decryption key. If overdue, then key error.
-    See TRM DS chapter for more details */
-#define SOC_DS_KEY_CHECK_MAX_WAIT_US (1100)
-
-//TODO: [ESP32C61] IDF-9310
 /*-------------------------- GDMA CAPS -------------------------------------*/
-//  \#define SOC_AHB_GDMA_VERSION            1U
-//  \#define SOC_GDMA_NUM_GROUPS_MAX         1U
-//  \#define SOC_GDMA_PAIRS_PER_GROUP_MAX    3
-//  \#define SOC_GDMA_SUPPORT_ETM            1  // Support ETM submodule
+#define SOC_AHB_GDMA_VERSION            2U
+#define SOC_GDMA_NUM_GROUPS_MAX         1U
+#define SOC_GDMA_PAIRS_PER_GROUP_MAX    2
+// \#define SOC_GDMA_SUPPORT_ETM            1  // Support ETM submodule TODO: IDF-9964
+// \#define SOC_GDMA_SUPPORT_SLEEP_RETENTION    1  // TODO: IDF-10380
 
 /*-------------------------- ETM CAPS --------------------------------------*/
 #define SOC_ETM_GROUPS                  1U  // Number of ETM groups
@@ -182,10 +162,11 @@
 // ESP32-C61 has 1 GPIO peripheral
 #define SOC_GPIO_PORT                      1U
 #define SOC_GPIO_PIN_COUNT                 22
-//  \#define SOC_GPIO_SUPPORT_PIN_GLITCH_FILTER 1 //TODO: [ESP32C61] IDF-9340
+#define SOC_GPIO_SUPPORT_PIN_GLITCH_FILTER 1
+#define SOC_GPIO_SUPPORT_PIN_HYS_FILTER    1
 
 // GPIO peripheral has the ETM extension
-//  \#define SOC_GPIO_SUPPORT_ETM          1  //TODO: [ESP32C61] IDF-9340
+//  \#define SOC_GPIO_SUPPORT_ETM          1  //TODO: [ESP32C61] IDF-9318
 
 // Target has the full LP IO subsystem
 // On ESP32-C61, Digital IOs have their own registers to control pullup/down capability, independent of LP registers.
@@ -207,6 +188,8 @@
 
 // Support to force hold all IOs
 #define SOC_GPIO_SUPPORT_FORCE_HOLD              (1)
+// "LP"_IOs and DIG_IOs can be hold during deep sleep and after waking up
+#define SOC_GPIO_SUPPORT_HOLD_IO_IN_DSLP (1)
 // Support to hold a single digital I/O when the digital domain is powered off
 #define SOC_GPIO_SUPPORT_HOLD_SINGLE_IO_IN_DSLP  (1)
 
@@ -231,29 +214,21 @@
 
 /*-------------------------- I2C CAPS ----------------------------------------*/
 // ESP32-C61 has 1 I2C
-// #define SOC_I2C_NUM                 (1U)
-// #define SOC_HP_I2C_NUM              (1U)
+#define SOC_I2C_NUM                 (1U)
+#define SOC_HP_I2C_NUM              (1U)
 
-// #define SOC_I2C_FIFO_LEN            (32) /*!< I2C hardware FIFO depth */
-// #define SOC_I2C_CMD_REG_NUM         (8)  /*!< Number of I2C command registers */
-// #define SOC_I2C_SUPPORT_SLAVE       (1)
+#define SOC_I2C_FIFO_LEN            (32) /*!< I2C hardware FIFO depth */
+#define SOC_I2C_CMD_REG_NUM         (8)  /*!< Number of I2C command registers */
+#define SOC_I2C_SUPPORT_SLAVE       (1)
 
-// #define SOC_I2C_SUPPORT_HW_FSM_RST  (1)
-// #define SOC_I2C_SUPPORT_HW_CLR_BUS  (1)
-
-// #define SOC_I2C_SUPPORT_XTAL        (1)
-// #define SOC_I2C_SUPPORT_RTC         (1)
-// #define SOC_I2C_SUPPORT_10BIT_ADDR   (1)
-// #define SOC_I2C_SLAVE_SUPPORT_BROADCAST    (1)
-// #define SOC_I2C_SLAVE_CAN_GET_STRETCH_CAUSE    (1)
-// #define SOC_I2C_SLAVE_SUPPORT_I2CRAM_ACCESS   (1)
-// #define SOC_I2C_SLAVE_SUPPORT_SLAVE_UNMATCH    (1)
-
-/*-------------------------- LP_I2C CAPS -------------------------------------*/
-// ESP32-C61 has 1 LP_I2C
-// #define SOC_LP_I2C_NUM              (1U)
-
-// #define SOC_LP_I2C_FIFO_LEN         (16) /*!< LP_I2C hardware FIFO depth */
+#define SOC_I2C_SUPPORT_HW_FSM_RST  (1)
+#define SOC_I2C_SUPPORT_XTAL        (1)
+#define SOC_I2C_SUPPORT_RTC         (1)
+#define SOC_I2C_SUPPORT_10BIT_ADDR   (1)
+#define SOC_I2C_SLAVE_SUPPORT_BROADCAST    (1)
+#define SOC_I2C_SLAVE_CAN_GET_STRETCH_CAUSE    (1)
+#define SOC_I2C_SLAVE_SUPPORT_I2CRAM_ACCESS   (1)
+#define SOC_I2C_SLAVE_SUPPORT_SLAVE_UNMATCH    (1)
 
 // /*-------------------------- I2S CAPS ----------------------------------------*/
 // #define SOC_I2S_NUM                 (1U)
@@ -267,15 +242,14 @@
 // #define SOC_I2S_SUPPORTS_TDM        (1)
 
 /*-------------------------- LEDC CAPS ---------------------------------------*/
-//TODO: [ESP32C61] IDF-9291
 #define SOC_LEDC_SUPPORT_PLL_DIV_CLOCK      (1)
-// #define SOC_LEDC_SUPPORT_XTAL_CLOCK         (1)
+#define SOC_LEDC_SUPPORT_XTAL_CLOCK         (1)
 #define SOC_LEDC_CHANNEL_NUM                (6)
-// #define SOC_LEDC_TIMER_BIT_WIDTH            (20)
-// #define SOC_LEDC_SUPPORT_FADE_STOP          (1)
-// #define SOC_LEDC_GAMMA_CURVE_FADE_SUPPORTED (1)
-// #define SOC_LEDC_GAMMA_CURVE_FADE_RANGE_MAX (16)
-// #define SOC_LEDC_FADE_PARAMS_BIT_WIDTH      (10)
+#define SOC_LEDC_TIMER_BIT_WIDTH            (20)
+#define SOC_LEDC_SUPPORT_FADE_STOP          (1)
+#define SOC_LEDC_GAMMA_CURVE_FADE_SUPPORTED (1)
+#define SOC_LEDC_GAMMA_CURVE_FADE_RANGE_MAX (16)
+#define SOC_LEDC_FADE_PARAMS_BIT_WIDTH      (10)
 
 /*-------------------------- MMU CAPS ----------------------------------------*/
 #define SOC_MMU_PAGE_SIZE_CONFIGURABLE        (1)
@@ -293,14 +267,6 @@
 
 /*------------------------ USB SERIAL JTAG CAPS ------------------------------*/
 //  \#define SOC_USB_SERIAL_JTAG_SUPPORT_LIGHT_SLEEP     (1)     /*!< Support to maintain minimum usb communication during light sleep */ // TODO: IDF-6395
-
-/*--------------------------- MPI CAPS ---------------------------------------*/
-#define SOC_MPI_MEM_BLOCKS_NUM (4)
-#define SOC_MPI_OPERATIONS_NUM (3)
-
-/*--------------------------- RSA CAPS ---------------------------------------*/
-//TODO: [ESP32C61] IDF-9326
-#define SOC_RSA_MAX_BIT_LEN    (3072)
 
 // TODO: IDF-5353 (Copy from esp32c3, need check)
 /*--------------------------- SHA CAPS ---------------------------------------*/
@@ -322,6 +288,10 @@
 // #define SOC_SHA_SUPPORT_SHA1            (1)
 // #define SOC_SHA_SUPPORT_SHA224          (1)
 // #define SOC_SHA_SUPPORT_SHA256          (1)
+
+/*--------------------------- ECDSA CAPS ---------------------------------------*/
+#define SOC_ECDSA_SUPPORT_EXPORT_PUBKEY     (1)
+#define SOC_ECDSA_SUPPORT_DETERMINISTIC_MODE   (1)
 
 /*-------------------------- SPI CAPS ----------------------------------------*/
 #define SOC_SPI_PERIPH_NUM          2
@@ -422,9 +392,7 @@
 // ESP32-C61 has 3 UARTs (3 HP UART)
 #define SOC_UART_NUM                    (3)
 #define SOC_UART_HP_NUM                 (3)
-//  \#define SOC_UART_LP_NUM                 (1U) //TODO: IDF-9341
 #define SOC_UART_FIFO_LEN               (128)       /*!< The UART hardware FIFO length */
-#define SOC_LP_UART_FIFO_LEN            (16)        /*!< The LP UART hardware FIFO length */
 #define SOC_UART_BITRATE_MAX            (5000000)   /*!< Max bit rate supported by UART */
 #define SOC_UART_SUPPORT_PLL_F80M_CLK   (1)         /*!< Support PLL_F80M as the clock source */
 #define SOC_UART_SUPPORT_RTC_CLK        (1)         /*!< Support RTC clock as the clock source */

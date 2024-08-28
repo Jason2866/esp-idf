@@ -153,6 +153,10 @@ endif()
 # Add port files to mbedtls targets
 target_sources(mbedtls PRIVATE ${mbedtls_target_sources})
 
+if(NOT ${IDF_TARGET} STREQUAL "linux")
+    target_link_libraries(mbedcrypto PRIVATE idf::esp_security)
+endif()
+
 # Choose peripheral type
 
 if(CONFIG_SOC_SHA_SUPPORTED)
@@ -333,7 +337,16 @@ if(CONFIG_ESP_TLS_USE_DS_PERIPHERAL)
     set_property(TARGET mbedcrypto APPEND PROPERTY LINK_INTERFACE_MULTIPLICITY 6)
 endif()
 
-# Link esp-cryptoauthlib to mbedtls
+# Additional optional dependencies for the mbedcrypto library
+function(mbedcrypto_optional_deps component_name)
+    idf_build_get_property(components BUILD_COMPONENTS)
+    if(${component_name} IN_LIST components)
+        idf_component_get_property(lib_name ${component_name} COMPONENT_LIB)
+        target_link_libraries(mbedcrypto PRIVATE ${lib_name})
+    endif()
+endfunction()
+
+# Link esp-cryptoauthlib to mbedcrypto
 if(CONFIG_ATCA_MBEDTLS_ECDSA)
-    idf_component_optional_requires(PRIVATE espressif__esp-cryptoauthlib esp-cryptoauthlib)
+    mbedcrypto_optional_deps(espressif__esp-cryptoauthlib esp-cryptoauthlib)
 endif()

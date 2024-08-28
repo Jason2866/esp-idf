@@ -47,7 +47,15 @@ config SOC_PCNT_SUPPORTED
     bool
     default y
 
+config SOC_LCDCAM_SUPPORTED
+    bool
+    default y
+
 config SOC_LCDCAM_CAM_SUPPORTED
+    bool
+    default y
+
+config SOC_LCDCAM_I80_LCD_SUPPORTED
     bool
     default y
 
@@ -659,10 +667,6 @@ config SOC_GPIO_SUPPORT_FORCE_HOLD
     bool
     default y
 
-config SOC_GPIO_SUPPORT_HOLD_SINGLE_IO_IN_DSLP
-    bool
-    default y
-
 config SOC_RTCIO_PIN_COUNT
     int
     default 16
@@ -835,6 +839,14 @@ config SOC_ISP_DVP_SUPPORTED
     bool
     default y
 
+config SOC_ISP_SHARPEN_SUPPORTED
+    bool
+    default y
+
+config SOC_ISP_SHARE_CSI_BRG
+    bool
+    default y
+
 config SOC_ISP_NUMS
     int
     default 1
@@ -842,14 +854,6 @@ config SOC_ISP_NUMS
 config SOC_ISP_DVP_CTLR_NUMS
     int
     default 1
-
-config SOC_ISP_AF_CTLR_NUMS
-    int
-    default 1
-
-config SOC_ISP_AF_WINDOW_NUMS
-    int
-    default 3
 
 config SOC_ISP_AE_CTLR_NUMS
     int
@@ -863,9 +867,13 @@ config SOC_ISP_AE_BLOCK_Y_NUMS
     int
     default 5
 
-config SOC_ISP_SHARE_CSI_BRG
-    bool
-    default y
+config SOC_ISP_AF_CTLR_NUMS
+    int
+    default 1
+
+config SOC_ISP_AF_WINDOW_NUMS
+    int
+    default 3
 
 config SOC_ISP_BF_TEMPLATE_X_NUMS
     int
@@ -882,6 +890,38 @@ config SOC_ISP_CCM_DIMENSION
 config SOC_ISP_DVP_DATA_WIDTH_MAX
     int
     default 16
+
+config SOC_ISP_SHARPEN_TEMPLATE_X_NUMS
+    int
+    default 3
+
+config SOC_ISP_SHARPEN_TEMPLATE_Y_NUMS
+    int
+    default 3
+
+config SOC_ISP_SHARPEN_H_FREQ_COEF_INT_BITS
+    int
+    default 3
+
+config SOC_ISP_SHARPEN_H_FREQ_COEF_DEC_BITS
+    int
+    default 5
+
+config SOC_ISP_SHARPEN_H_FREQ_COEF_RES_BITS
+    int
+    default 24
+
+config SOC_ISP_SHARPEN_M_FREQ_COEF_INT_BITS
+    int
+    default 3
+
+config SOC_ISP_SHARPEN_M_FREQ_COEF_DEC_BITS
+    int
+    default 5
+
+config SOC_ISP_SHARPEN_M_FREQ_COEF_RES_BITS
+    int
+    default 24
 
 config SOC_LEDC_SUPPORT_PLL_DIV_CLOCK
     bool
@@ -1039,25 +1079,21 @@ config SOC_RMT_SUPPORT_SLEEP_RETENTION
     bool
     default y
 
-config SOC_LCD_I80_BUSES
-    int
-    default 1
-
-config SOC_LCD_RGB_PANELS
-    int
-    default 1
-
-config SOC_LCD_I80_BUS_WIDTH
-    int
-    default 24
-
-config SOC_LCD_RGB_DATA_WIDTH
-    int
-    default 24
-
-config SOC_LCD_SUPPORT_RGB_YUV_CONV
+config SOC_LCD_I80_SUPPORTED
     bool
     default y
+
+config SOC_LCDCAM_I80_NUM_BUSES
+    int
+    default 1
+
+config SOC_LCDCAM_I80_BUS_WIDTH
+    int
+    default 24
+
+config SOC_LCDCAM_RGB_NUM_PANELS
+    int
+    default 1
 
 config SOC_MCPWM_GROUPS
     int

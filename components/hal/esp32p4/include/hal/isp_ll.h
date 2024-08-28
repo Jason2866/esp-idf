@@ -67,6 +67,7 @@ extern "C" {
 #define ISP_LL_EVENT_AF_MASK                  (ISP_LL_EVENT_AF_FDONE | ISP_LL_EVENT_AF_ENV)
 #define ISP_LL_EVENT_AE_MASK                  (ISP_LL_EVENT_AE_FDONE | ISP_LL_EVENT_AE_ENV)
 #define ISP_LL_EVENT_AWB_MASK                 (ISP_LL_EVENT_AWB_FDONE)
+#define ISP_LL_EVENT_SHARP_MASK               (ISP_LL_EVENT_SHARP_FRAME)
 
 /*---------------------------------------------------------------
                       AF
@@ -787,6 +788,7 @@ static inline void isp_ll_bf_set_template(isp_dev_t *hw, uint8_t template_arr[SO
 
     hw->bf_gau1.gau_template22 = template_arr[2][2];
 }
+
 /*---------------------------------------------------------------
                       CCM
 ---------------------------------------------------------------*/
@@ -1322,6 +1324,294 @@ __attribute__((always_inline))
 static inline uint32_t isp_ll_awb_get_accumulated_b_value(isp_dev_t *hw)
 {
     return hw->awb0_acc_b.awb0_acc_b;
+}
+
+/*---------------------------------------------------------------
+                      Sharpen
+---------------------------------------------------------------*/
+/**
+ * @brief Enable / Disable sharpen clock
+ *
+ * @param[in] hw      Hardware instance address
+ * @param[in] enable  Enable / Disable
+ */
+static inline void isp_ll_sharp_clk_enable(isp_dev_t *hw, bool enable)
+{
+    hw->clk_en.clk_sharp_force_on = enable;
+}
+
+/**
+ * @brief Enable / Disable sharpen
+ *
+ * @param[in] hw      Hardware instance address
+ * @param[in] enable  Enable / Disable
+ */
+static inline void isp_ll_sharp_enable(isp_dev_t *hw, bool enable)
+{
+    hw->cntl.sharp_en = enable;
+}
+
+/**
+ * @brief Set sharpen low thresh
+ *
+ * @param[in] hw      Hardware instance address
+ * @param[in] thresh  Thresh
+ */
+__attribute__((always_inline))
+static inline void isp_ll_sharp_set_low_thresh(isp_dev_t *hw, uint8_t thresh)
+{
+    hw->sharp_ctrl0.sharp_threshold_low = thresh;
+}
+
+/**
+ * @brief Set sharpen high thresh
+ *
+ * @param[in] hw      Hardware instance address
+ * @param[in] thresh  Thresh
+ */
+__attribute__((always_inline))
+static inline void isp_ll_sharp_set_high_thresh(isp_dev_t *hw, uint8_t thresh)
+{
+    hw->sharp_ctrl0.sharp_threshold_high = thresh;
+}
+
+/**
+ * @brief Set sharpen medium pixel coeff
+ *
+ * @param[in] hw      Hardware instance address
+ * @param[in] coeff  coeff
+ */
+__attribute__((always_inline))
+static inline void isp_ll_sharp_set_medium_freq_coeff(isp_dev_t *hw, isp_sharpen_m_freq_coeff coeff)
+{
+    //val between `sharp_amount_low` and `sharp_threshold_high` will be multiplied by `sharp_amount_low`
+    hw->sharp_ctrl0.sharp_amount_low = coeff.val;
+}
+
+/**
+ * @brief Set sharpen high freq pixel coeff
+ *
+ * @param[in] hw      Hardware instance address
+ * @param[in] coeff  coeff
+ */
+__attribute__((always_inline))
+static inline void isp_ll_sharp_set_high_freq_coeff(isp_dev_t *hw, isp_sharpen_h_freq_coeff coeff)
+{
+    //val higher than `sharp_threshold_high` will be multiplied by `sharp_amount_high`
+    hw->sharp_ctrl0.sharp_amount_high = coeff.val;
+}
+
+/**
+ * @brief Set ISP sharpen padding mode
+ *
+ * @param[in] hw            Hardware instance address
+ * @param[in] padding_mode  padding mode
+ */
+__attribute__((always_inline))
+static inline void isp_ll_sharp_set_padding_mode(isp_dev_t *hw, isp_sharpen_edge_padding_mode_t padding_mode)
+{
+    hw->sharp_matrix_ctrl.sharp_padding_mode = padding_mode;
+}
+
+/**
+ * @brief Set ISP sharpen padding data
+ *
+ * @param[in] hw            Hardware instance address
+ * @param[in] padding_data  padding data
+ */
+__attribute__((always_inline))
+static inline void isp_ll_sharp_set_padding_data(isp_dev_t *hw, uint32_t padding_data)
+{
+    hw->sharp_matrix_ctrl.sharp_padding_data = padding_data;
+}
+
+/**
+ * @brief Set ISP sharpen tail start pulse pixel
+ *
+ * @param[in] hw           Hardware instance address
+ * @param[in] start_pixel  start pixel value
+ */
+__attribute__((always_inline))
+static inline void isp_ll_sharp_set_padding_line_tail_valid_start_pixel(isp_dev_t *hw, uint32_t start_pixel)
+{
+    hw->sharp_matrix_ctrl.sharp_tail_pixen_pulse_tl = start_pixel;
+}
+
+/**
+ * @brief Set ISP sharpen tail pulse end pixel
+ *
+ * @param[in] hw         Hardware instance address
+ * @param[in] end_pixel  end pixel value
+ */
+__attribute__((always_inline))
+static inline void isp_ll_sharp_set_padding_line_tail_valid_end_pixel(isp_dev_t *hw, uint32_t end_pixel)
+{
+    hw->sharp_matrix_ctrl.sharp_tail_pixen_pulse_th = end_pixel;
+}
+
+/**
+ * @brief Set ISP sharpen template
+ *
+ * @param[in] hw            Hardware instance address
+ * @param[in] template_arr  2-d array for the template
+ */
+__attribute__((always_inline))
+static inline void isp_ll_sharp_set_template(isp_dev_t *hw, uint8_t template_arr[SOC_ISP_SHARPEN_TEMPLATE_X_NUMS][SOC_ISP_SHARPEN_TEMPLATE_Y_NUMS])
+{
+    for (int i = 0; i < SOC_ISP_SHARPEN_TEMPLATE_X_NUMS; i++) {
+        for (int j = 0; j < SOC_ISP_SHARPEN_TEMPLATE_Y_NUMS; j++) {
+            if (j == 0) {
+                hw->sharp_filter[i].sharp_filter_coe0 = template_arr[i][j];
+            } else if (j == 1) {
+                hw->sharp_filter[i].sharp_filter_coe1 = template_arr[i][j];
+            } else if (j == 2) {
+                hw->sharp_filter[i].sharp_filter_coe2 = template_arr[i][j];
+            } else {
+                HAL_ASSERT(false);
+            }
+        }
+    }
+}
+
+/**
+ * @brief Get ISP sharpen high freq image pixel max value
+ *
+ * @param[in] hw            Hardware instance address
+ *
+ * @return Max value
+ */
+__attribute__((always_inline))
+static inline uint8_t isp_ll_sharp_get_high_freq_pixel_max(isp_dev_t *hw)
+{
+    return hw->sharp_ctrl1.sharp_gradient_max;
+}
+
+/*---------------------------------------------------------------
+                      RGB/YUV
+---------------------------------------------------------------*/
+/**
+ * @brief Enable / Disable rgb2yuv clock
+ *
+ * @param[in] hw      Hardware instance address
+ * @param[in] enable  0: hw control; 1: always on
+ */
+static inline void isp_ll_rgb2yuv_clk_enable(isp_dev_t *hw, bool enable)
+{
+    hw->clk_en.clk_rgb2yuv_force_on = enable;
+}
+
+/**
+ * @brief Enable / Disable yuv2rgb clock
+ *
+ * @param[in] hw      Hardware instance address
+ * @param[in] enable  0: hw control; 1: always on
+ */
+static inline void isp_ll_yuv2rgb_clk_enable(isp_dev_t *hw, bool enable)
+{
+    hw->clk_en.clk_yuv2rgb_force_on = enable;
+}
+
+/**
+ * @brief Set YUV range
+ *
+ * @param[in] hw      Hardware instance address
+ * @param[in] range   see `isp_color_range_t`
+ */
+static inline void isp_ll_yuv_set_range(isp_dev_t *hw, isp_color_range_t range)
+{
+    switch (range) {
+    case ISP_COLOR_RANGE_LIMIT:
+        hw->yuv_format.yuv_range = 1;
+        break;
+    case ISP_COLOR_RANGE_FULL:
+        hw->yuv_format.yuv_range = 0;
+        break;
+    default:
+        // Unsupported color range
+        abort();
+    }
+}
+
+/**
+ * @brief Set YUV standard
+ *
+ * @param[in] hw      Hardware instance address
+ * @param[in] std     see `isp_yuv_conv_std_t`
+ */
+static inline void isp_ll_yuv_set_std(isp_dev_t *hw, isp_yuv_conv_std_t std)
+{
+    hw->yuv_format.yuv_mode = std;
+}
+
+/*---------------------------------------------------------------
+                      Gamma Correction
+---------------------------------------------------------------*/
+/**
+ * @brief Enable / Disable gamma
+ *
+ * @param[in] hw      Hardware instance address
+ * @param[in] enable  Enable / Disable
+ */
+static inline void isp_ll_gamma_enable(isp_dev_t *hw, bool enable)
+{
+    hw->cntl.gamma_en = enable;
+}
+
+/**
+ * @brief Set gamma correction curve for one of the R/G/B components
+ *
+ * @param[in] hw      Hardware instance address
+ * @param[in] channel One of the R/G/B components, color_component_t
+ * @param[in] pts     Pointer to the structure that contains the information of the gamma curve
+ */
+__attribute__((always_inline))
+static inline void isp_ll_gamma_set_correction_curve(isp_dev_t *hw, color_component_t channel, const isp_gamma_curve_points_t *pts)
+{
+    int ch_index = -1;
+    switch (channel) {
+    case COLOR_COMPONENT_R:
+        ch_index = 0;
+        break;
+    case COLOR_COMPONENT_G:
+        ch_index = 1;
+        break;
+    case COLOR_COMPONENT_B:
+        ch_index = 2;
+        break;
+    default:
+        abort();
+    }
+
+    uint32_t x_prev = 0;
+    uint32_t gamma_x1 = 0, gamma_x2 = 0, gamma_y1 = 0, gamma_y2 = 0, gamma_y3 = 0, gamma_y4 = 0;
+    for (int i = 0; i < ISP_GAMMA_CURVE_POINTS_NUM; i++) {
+        uint32_t x_delta = (i == (ISP_GAMMA_CURVE_POINTS_NUM - 1) ? 256 : pts->pt[i].x) - x_prev;
+        uint32_t power = __builtin_ctz(x_delta);
+        HAL_ASSERT((x_delta & (x_delta - 1)) == 0 && power < 8);
+        if (i < 4) {
+            gamma_x1 |= (power << (21 - i * 3));
+            gamma_y1 |= (pts->pt[i].y << (24 - i * 8));
+        } else if (i < 8) {
+            gamma_x1 |= (power << (21 - i * 3));
+            gamma_y2 |= (pts->pt[i].y << (24 - (i - 4) * 8));
+        } else if (i < 12) {
+            gamma_x2 |= (power << (21 - (i - 8) * 3));
+            gamma_y3 |= (pts->pt[i].y << (24 - (i - 8) * 8));
+        } else {
+            gamma_x2 |= (power << (21 - (i - 8) * 3));
+            gamma_y4 |= (pts->pt[i].y << (24 - (i - 12) * 8));
+        }
+        x_prev = pts->pt[i].x;
+    }
+    hw->gamma_rgb_x[ch_index].gamma_x1.val = gamma_x1;
+    hw->gamma_rgb_x[ch_index].gamma_x2.val = gamma_x2;
+    hw->gamma_rgb_y[ch_index].gamma_y1.val = gamma_y1;
+    hw->gamma_rgb_y[ch_index].gamma_y2.val = gamma_y2;
+    hw->gamma_rgb_y[ch_index].gamma_y3.val = gamma_y3;
+    hw->gamma_rgb_y[ch_index].gamma_y4.val = gamma_y4;
+
+    hw->gamma_ctrl.gamma_update = 1;
+    while (hw->gamma_ctrl.gamma_update);
 }
 
 #ifdef __cplusplus

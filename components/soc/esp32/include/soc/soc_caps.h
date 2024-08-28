@@ -193,6 +193,9 @@
 #define SOC_GPIO_CLOCKOUT_BY_IO_MUX    (1)
 #define SOC_GPIO_CLOCKOUT_CHANNEL_NUM  (3)
 
+// RTC_IOs and DIG_IOs can be hold during deep sleep and after waking up
+#define SOC_GPIO_SUPPORT_HOLD_IO_IN_DSLP (1)
+
 /*-------------------------- I2C CAPS ----------------------------------------*/
 // ESP32 has 2 I2C
 #define SOC_I2C_NUM                (2U)
@@ -222,6 +225,7 @@
 #define SOC_I2S_SUPPORTS_ADC        (1)
 #define SOC_I2S_SUPPORTS_DAC        (1)
 #define SOC_I2S_SUPPORTS_LCD_CAMERA (1)
+#define SOC_I2S_MAX_DATA_WIDTH      (24)
 
 #define SOC_I2S_TRANS_SIZE_ALIGN_WORD (1) // I2S DMA transfer size must be aligned to word
 #define SOC_I2S_LCD_I80_VARIANT       (1) // I2S has a special LCD mode that can generate Intel 8080 TX timing

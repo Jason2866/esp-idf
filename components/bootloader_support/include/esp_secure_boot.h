@@ -33,6 +33,8 @@
 #include "esp32p4/rom/secure_boot.h"
 #elif CONFIG_IDF_TARGET_ESP32C5
 #include "esp32c5/rom/secure_boot.h"
+#elif CONFIG_IDF_TARGET_ESP32C61
+#include "esp32c61/rom/secure_boot.h"
 #endif
 
 #ifdef CONFIG_SECURE_BOOT_V1_ENABLED
@@ -85,7 +87,7 @@ typedef enum {
  *
  * @return key type for the selected secure boot scheme
  */
-static inline char* esp_secure_boot_get_scheme_name(esp_secure_boot_sig_scheme_t scheme)
+static inline const char* esp_secure_boot_get_scheme_name(esp_secure_boot_sig_scheme_t scheme)
 {
     switch (scheme) {
         case ESP_SECURE_BOOT_V2_RSA:

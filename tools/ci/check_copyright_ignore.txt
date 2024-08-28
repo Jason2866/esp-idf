@@ -485,7 +485,6 @@ components/mbedtls/port/include/esp32s2/aes.h
 components/mbedtls/port/include/esp32s2/gcm.h
 components/mbedtls/port/include/esp32s2/sha.h
 components/mbedtls/port/include/mbedtls/esp_debug.h
-components/mbedtls/port/include/sha/sha_dma.h
 components/mbedtls/port/include/sha/sha_parallel_engine.h
 components/mbedtls/port/include/sha1_alt.h
 components/mbedtls/port/include/sha256_alt.h
@@ -500,7 +499,6 @@ components/nvs_flash/src/nvs_pagemanager.hpp
 components/nvs_flash/src/nvs_partition_lookup.cpp
 components/nvs_flash/src/nvs_partition_lookup.hpp
 components/nvs_flash/src/nvs_test_api.h
-components/nvs_flash/src/nvs_types.cpp
 components/nvs_flash/test_nvs_host/main.cpp
 components/nvs_flash/test_nvs_host/sdkconfig.h
 components/nvs_flash/test_nvs_host/test_intrusive_list.cpp
@@ -515,7 +513,6 @@ components/sdmmc/sdmmc_io.c
 components/sdmmc/sdmmc_mmc.c
 components/sdmmc/sdmmc_sd.c
 components/soc/esp32/adc_periph.c
-components/soc/esp32/i2c_periph.c
 components/soc/esp32/include/soc/bb_reg.h
 components/soc/esp32/include/soc/boot_mode.h
 components/soc/esp32/include/soc/fe_reg.h
@@ -559,7 +556,6 @@ components/soc/esp32/include/soc/uhci_struct.h
 components/soc/esp32/include/soc/wdev_reg.h
 components/soc/esp32/ledc_periph.c
 components/soc/esp32/spi_periph.c
-components/soc/esp32c3/i2c_periph.c
 components/soc/esp32c3/include/soc/apb_saradc_reg.h
 components/soc/esp32c3/include/soc/assist_debug_reg.h
 components/soc/esp32c3/include/soc/bb_reg.h
@@ -590,7 +586,6 @@ components/soc/esp32c3/include/soc/wdev_reg.h
 components/soc/esp32c3/interrupts.c
 components/soc/esp32c3/ledc_periph.c
 components/soc/esp32s2/adc_periph.c
-components/soc/esp32s2/i2c_periph.c
 components/soc/esp32s2/include/soc/apb_saradc_reg.h
 components/soc/esp32s2/include/soc/assist_debug_reg.h
 components/soc/esp32s2/include/soc/bb_reg.h
@@ -625,7 +620,6 @@ components/soc/esp32s2/include/soc/usb_wrap_reg.h
 components/soc/esp32s2/include/soc/usb_wrap_struct.h
 components/soc/esp32s2/include/soc/wdev_reg.h
 components/soc/esp32s2/ledc_periph.c
-components/soc/esp32s3/i2c_periph.c
 components/soc/esp32s3/include/soc/apb_saradc_reg.h
 components/soc/esp32s3/include/soc/assist_debug_reg.h
 components/soc/esp32s3/include/soc/assist_debug_struct.h
