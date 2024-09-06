@@ -28,15 +28,15 @@
 #define SOC_USB_SERIAL_JTAG_SUPPORTED   1
 #define SOC_ASYNC_MEMCPY_SUPPORTED      1
 //  \#define SOC_TEMP_SENSOR_SUPPORTED       1    //TODO: [ESP32C61] IDF-9322
-//  \#define SOC_WIFI_SUPPORTED              1
+#define SOC_PHY_SUPPORTED               1
+#define SOC_WIFI_SUPPORTED              1
 #define SOC_SUPPORTS_SECURE_DL_MODE     1
-//  \#define SOC_ULP_SUPPORTED               1
 #define SOC_EFUSE_KEY_PURPOSE_FIELD     1
 #define SOC_EFUSE_SUPPORTED             1
 #define SOC_RTC_FAST_MEM_SUPPORTED      1
 #define SOC_RTC_MEM_SUPPORTED           1       //TODO: [ESP32C61] IDF-9274
 //  \#define SOC_I2S_SUPPORTED               1    //TODO: [ESP32C61] IDF-9312, IDF-9313
-//  \#define SOC_GPSPI_SUPPORTED             1    //TODO: [ESP32C61] IDF-9299, IDF-9300, IDF-9301
+#define SOC_GPSPI_SUPPORTED             1
 #define SOC_I2C_SUPPORTED               1
 #define SOC_LEDC_SUPPORTED              1
 #define SOC_SYSTIMER_SUPPORTED          1       //TODO: [ESP32C61] IDF-9307, IDF-9308
@@ -59,13 +59,9 @@
 //  \#define SOC_RNG_SUPPORTED               1    //TODO: [ESP32C61] IDF-9236
 #define SOC_MODEM_CLOCK_SUPPORTED       1
 #define SOC_REG_I2C_SUPPORTED           1
-
-//  \#define SOC_TWAI_SUPPORTED              0    //TODO: [ESP32C61] IDF-9336
 //  \#define SOC_ETM_SUPPORTED               0
-//  \#define SOC_LP_CORE_SUPPORTED           0    //TODO: [ESP32C61] IDF-9331
 //  \#define SOC_SDIO_SLAVE_SUPPORTED        0
 //  \#define SOC_PAU_SUPPORTED               0
-//  \#define SOC_LP_I2C_SUPPORTED            0    //TODO: [ESP32C61] IDF-9330, IDF-9337
 //  \#define SOC_PM_SUPPORTED                1
 #define SOC_ECDSA_SUPPORTED             1
 #define SOC_SPIRAM_SUPPORTED            1
@@ -142,7 +138,9 @@
 
 #define SOC_CPU_HAS_PMA                 1
 #define SOC_CPU_IDRAM_SPLIT_USING_PMP   1
-#define SOC_CPU_PMP_REGION_GRANULARITY  128 // TODO IDF-9580 check when doing PMP bringup
+#define SOC_CPU_PMP_REGION_GRANULARITY  128
+
+#define SOC_CPU_HAS_LOCKUP_RESET        1
 
 /*-------------------------- DMA Common CAPS ----------------------------------------*/
 #define SOC_DMA_CAN_ACCESS_FLASH 1 /*!< DMA can access Flash memory */
@@ -294,26 +292,20 @@
 #define SOC_ECDSA_SUPPORT_DETERMINISTIC_MODE   (1)
 
 /*-------------------------- SPI CAPS ----------------------------------------*/
-#define SOC_SPI_PERIPH_NUM          2
-#define SOC_SPI_PERIPH_CS_NUM(i)    6
-#define SOC_SPI_MAX_CS_NUM          6
+#define SOC_SPI_PERIPH_NUM                  2
+#define SOC_SPI_PERIPH_CS_NUM(i)            6
+#define SOC_SPI_MAX_CS_NUM                  6
+#define SOC_SPI_MAX_PRE_DIVIDER             16
+#define SOC_SPI_MAXIMUM_BUFFER_SIZE         64
 
-// #define SOC_SPI_MAX_PRE_DIVIDER          16
-// #define SOC_SPI_MAXIMUM_BUFFER_SIZE      64
+#define SOC_SPI_SUPPORT_SLAVE_HD_VER2       1
+#define SOC_SPI_SUPPORT_CLK_XTAL            1
+#define SOC_SPI_SUPPORT_CLK_PLL             1
+#define SOC_SPI_SUPPORT_CLK_RC_FAST         1
 
-// #define SOC_SPI_SUPPORT_DDRCLK              1
-// #define SOC_SPI_SLAVE_SUPPORT_SEG_TRANS     1
-// #define SOC_SPI_SUPPORT_CD_SIG              1
-// #define SOC_SPI_SUPPORT_CONTINUOUS_TRANS    1
-// #define SOC_SPI_SUPPORT_SLAVE_HD_VER2       1 // TODO : [ESP32C61] IDF-9301
-// #define SOC_SPI_SUPPORT_CLK_XTAL            1
-// #define SOC_SPI_SUPPORT_CLK_PLL_F80M        1
-// #define SOC_SPI_SUPPORT_CLK_RC_FAST         1
-
-// // Peripheral supports DIO, DOUT, QIO, or QOUT
-// // host_id = 0 -> SPI0/SPI1, host_id = 1 -> SPI2,
+// Peripheral supports DIO, DOUT, QIO, or QOUT
+// host_id = 0 -> SPI0/SPI1, host_id = 1 -> SPI2,
 #define SOC_SPI_PERIPH_SUPPORT_MULTILINE_MODE(host_id)  ({(void)host_id; 1;})
-
 #define SOC_MEMSPI_IS_INDEPENDENT 1
 
 /*-------------------------- SPI MEM CAPS ---------------------------------------*/
@@ -355,14 +347,6 @@
 
 /*--------------------------- WATCHDOG CAPS ---------------------------------------*/
 // #define SOC_MWDT_SUPPORT_XTAL              (1)
-
-/*-------------------------- TWAI CAPS ---------------------------------------*/
-// #define SOC_TWAI_CONTROLLER_NUM         2
-// #define SOC_TWAI_CLK_SUPPORT_XTAL       1
-// #define SOC_TWAI_BRP_MIN                2
-// #define SOC_TWAI_BRP_MAX                32768
-// #define SOC_TWAI_SUPPORTS_RX_STATUS     1
-
 
 /*-------------------------- eFuse CAPS----------------------------*/
 #define SOC_EFUSE_DIS_DOWNLOAD_ICACHE 0
@@ -445,7 +429,7 @@
 //  \#define SOC_PM_CPU_RETENTION_BY_SW          (1)
 #define SOC_PM_MODEM_RETENTION_BY_REGDMA    (0)
 #define SOC_PM_RETENTION_HAS_CLOCK_BUG      (1)
-
+#define SOC_EXT_MEM_CACHE_TAG_IN_CPU_DOMAIN (1)
 #define SOC_PM_PAU_LINK_NUM             (4)
 
 /*-------------------------- CLOCK SUBSYSTEM CAPS ----------------------------------------*/
@@ -464,13 +448,13 @@
 // #define SOC_TEMPERATURE_SENSOR_INTR_SUPPORT                   (1)
 
 /*------------------------------------ WI-FI CAPS ------------------------------------*/
-// #define SOC_WIFI_HW_TSF                     (1)    /*!< Support hardware TSF */
-// #define SOC_WIFI_FTM_SUPPORT                (0)    /*!< Support FTM */
-// #define SOC_WIFI_GCMP_SUPPORT               (1)    /*!< Support GCMP(GCMP128 and GCMP256) */
-// #define SOC_WIFI_WAPI_SUPPORT               (1)    /*!< Support WAPI */
-// #define SOC_WIFI_CSI_SUPPORT                (1)    /*!< Support CSI */
-// #define SOC_WIFI_MESH_SUPPORT               (1)    /*!< Support WIFI MESH */
-// #define SOC_WIFI_HE_SUPPORT                 (1)    /*!< Support Wi-Fi 6 */
+#define SOC_WIFI_HW_TSF                     (1)    /*!< Support hardware TSF */
+#define SOC_WIFI_FTM_SUPPORT                (0)    /*!< Support FTM */
+#define SOC_WIFI_GCMP_SUPPORT               (1)    /*!< Support GCMP(GCMP128 and GCMP256) */
+#define SOC_WIFI_WAPI_SUPPORT               (1)    /*!< Support WAPI */
+#define SOC_WIFI_CSI_SUPPORT                (1)    /*!< Support CSI */
+#define SOC_WIFI_MESH_SUPPORT               (1)    /*!< Support WIFI MESH */
+#define SOC_WIFI_HE_SUPPORT                 (1)    /*!< Support Wi-Fi 6 */
 
 /*---------------------------------- Bluetooth CAPS ----------------------------------*/
 //  \#define SOC_BLE_SUPPORTED               (1)    /*!< Support Bluetooth Low Energy hardware */

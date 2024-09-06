@@ -31,6 +31,14 @@ config SOC_ASYNC_MEMCPY_SUPPORTED
     bool
     default y
 
+config SOC_PHY_SUPPORTED
+    bool
+    default y
+
+config SOC_WIFI_SUPPORTED
+    bool
+    default y
+
 config SOC_SUPPORTS_SECURE_DL_MODE
     bool
     default y
@@ -48,6 +56,10 @@ config SOC_RTC_FAST_MEM_SUPPORTED
     default y
 
 config SOC_RTC_MEM_SUPPORTED
+    bool
+    default y
+
+config SOC_GPSPI_SUPPORTED
     bool
     default y
 
@@ -202,6 +214,10 @@ config SOC_CPU_IDRAM_SPLIT_USING_PMP
 config SOC_CPU_PMP_REGION_GRANULARITY
     int
     default 128
+
+config SOC_CPU_HAS_LOCKUP_RESET
+    bool
+    default y
 
 config SOC_DMA_CAN_ACCESS_FLASH
     bool
@@ -434,6 +450,30 @@ config SOC_SPI_PERIPH_NUM
 config SOC_SPI_MAX_CS_NUM
     int
     default 6
+
+config SOC_SPI_MAX_PRE_DIVIDER
+    int
+    default 16
+
+config SOC_SPI_MAXIMUM_BUFFER_SIZE
+    int
+    default 64
+
+config SOC_SPI_SUPPORT_SLAVE_HD_VER2
+    bool
+    default y
+
+config SOC_SPI_SUPPORT_CLK_XTAL
+    bool
+    default y
+
+config SOC_SPI_SUPPORT_CLK_PLL
+    bool
+    default y
+
+config SOC_SPI_SUPPORT_CLK_RC_FAST
+    bool
+    default y
 
 config SOC_MEMSPI_IS_INDEPENDENT
     bool
@@ -727,6 +767,10 @@ config SOC_PM_RETENTION_HAS_CLOCK_BUG
     bool
     default y
 
+config SOC_EXT_MEM_CACHE_TAG_IN_CPU_DOMAIN
+    bool
+    default y
+
 config SOC_PM_PAU_LINK_NUM
     int
     default 4
@@ -752,6 +796,34 @@ config SOC_CLK_LP_FAST_SUPPORT_XTAL
     default y
 
 config SOC_RCC_IS_INDEPENDENT
+    bool
+    default y
+
+config SOC_WIFI_HW_TSF
+    bool
+    default y
+
+config SOC_WIFI_FTM_SUPPORT
+    bool
+    default n
+
+config SOC_WIFI_GCMP_SUPPORT
+    bool
+    default y
+
+config SOC_WIFI_WAPI_SUPPORT
+    bool
+    default y
+
+config SOC_WIFI_CSI_SUPPORT
+    bool
+    default y
+
+config SOC_WIFI_MESH_SUPPORT
+    bool
+    default y
+
+config SOC_WIFI_HE_SUPPORT
     bool
     default y
 

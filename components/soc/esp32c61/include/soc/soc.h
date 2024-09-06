@@ -138,7 +138,6 @@
 #define  APB_CLK_FREQ                                ( 40*1000000 )
 #define  MODEM_REQUIRED_MIN_APB_CLK_FREQ             ( 80*1000000 )
 #define  REF_CLK_FREQ                                ( 1000000 )
-#define  GPIO_MATRIX_DELAY_NS                        0
 //}}
 
 /* Overall memory map */
@@ -154,9 +153,9 @@
 #define SOC_DROM_LOW    SOC_IROM_LOW
 #define SOC_DROM_HIGH   SOC_IROM_HIGH
 #define SOC_IROM_MASK_LOW  0x40000000
-#define SOC_IROM_MASK_HIGH 0x4004AC00
-#define SOC_DROM_MASK_LOW  0x4004AC00
-#define SOC_DROM_MASK_HIGH 0x40070000
+#define SOC_IROM_MASK_HIGH 0x40040000
+#define SOC_DROM_MASK_LOW  0x40000000
+#define SOC_DROM_MASK_HIGH 0x40040000
 #define SOC_IRAM_LOW    0x40800000
 #define SOC_IRAM_HIGH   0x40850000
 #define SOC_DRAM_LOW    0x40800000

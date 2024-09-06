@@ -28,6 +28,10 @@ BLE_DOCS = ['api-guides/ble/index.rst',
             'api-guides/ble/ble-feature-support-status.rst',
             'api-guides/ble/host-feature-support-status.rst',
             'api-reference/bluetooth/bt_le.rst',
+            'api-guides/ble/get-started/ble-introduction.rst',
+            'api-guides/ble/get-started/ble-device-discovery.rst',
+            'api-guides/ble/get-started/ble-connection.rst',
+            'api-guides/ble/get-started/ble-data-exchange.rst',
             'api-reference/bluetooth/esp_gap_ble.rst',
             'api-reference/bluetooth/esp_gatt_defs.rst',
             'api-reference/bluetooth/esp_gatts.rst',
@@ -226,7 +230,7 @@ ESP32C2_DOCS = ['api-guides/RF_calibration.rst',
 
 ESP32C5_DOCS = ['api-guides/phy.rst']
 
-ESP32C61_DOCS = ['']
+ESP32C61_DOCS = ['api-guides/phy.rst']
 
 ESP32C6_DOCS = ['api-guides/RF_calibration.rst',
                 'api-reference/peripherals/sd_pullup_requirements.rst',
@@ -301,6 +305,7 @@ conditional_include_dict = {'SOC_BT_SUPPORTED':BT_DOCS,
                             'esp32c3':ESP32C3_DOCS,
                             'esp32c5':ESP32C5_DOCS,
                             'esp32c6':ESP32C6_DOCS,
+                            'esp32c61':ESP32C61_DOCS,
                             'esp32h2':ESP32H2_DOCS,
                             'esp32p4':ESP32P4_DOCS}
 

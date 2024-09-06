@@ -28,7 +28,8 @@ ONE_SHOT_TIMER_PERIOD = 5000000
 
 
 @pytest.mark.supported_targets
-@pytest.mark.temp_skip_ci(targets=['esp32c5'], reason='C5 has not supported light sleep')  # TODO: [ESP32C5] IDF-8638, IDF-10308
+# TODO: [ESP32C61] IDF-10993
+@pytest.mark.temp_skip_ci(targets=['esp32c61'], reason='C61 has not supported light sleep')
 @pytest.mark.generic
 @pytest.mark.parametrize(
     'config',

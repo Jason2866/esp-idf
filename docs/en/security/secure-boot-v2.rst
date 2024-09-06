@@ -5,9 +5,9 @@ Secure Boot v2
 
 :link_to_translation:`zh_CN:[中文]`
 
-{IDF_TARGET_SBV2_SCHEME:default="RSA-PSS", esp32c2="ECDSA", esp32c6="RSA-PSS or ECDSA", esp32h2="RSA-PSS or ECDSA", esp32p4="RSA-PSS or ECDSA", esp32c5="RSA-PSS or ECDSA"}
+{IDF_TARGET_SBV2_SCHEME:default="RSA-PSS", esp32c2="ECDSA", esp32c6="RSA-PSS or ECDSA", esp32h2="RSA-PSS or ECDSA", esp32p4="RSA-PSS or ECDSA", esp32c5="RSA-PSS or ECDSA", esp32c61="ECDSA"}
 
-{IDF_TARGET_SBV2_KEY:default="RSA-3072", esp32c2="ECDSA-256 or ECDSA-192", esp32c6="RSA-3072, ECDSA-256, or ECDSA-192", esp32h2="RSA-3072, ECDSA-256, or ECDSA-192", esp32p4="RSA-3072, ECDSA-256, or ECDSA-192", esp32c5="ECDSA-256, or ECDSA-192"}
+{IDF_TARGET_SBV2_KEY:default="RSA-3072", esp32c2="ECDSA-256 or ECDSA-192", esp32c6="RSA-3072, ECDSA-256, or ECDSA-192", esp32h2="RSA-3072, ECDSA-256, or ECDSA-192", esp32p4="RSA-3072, ECDSA-256, or ECDSA-192", esp32c5="RSA-3072, ECDSA-256, or ECDSA-192", esp32c61="ECDSA-256 or ECDSA-192"}
 
 {IDF_TARGET_SECURE_BOOT_OPTION_TEXT:default="", esp32c6="RSA is recommended because of faster verification time. You can choose between RSA and ECDSA scheme from the menu.", esp32h2="RSA is recommended because of faster verification time. You can choose between RSA and ECDSA scheme from the menu.", esp32p4="RSA is recommended because of faster verification time. You can choose between RSA and ECDSA scheme from the menu."}
 
@@ -19,7 +19,7 @@ Secure Boot v2
 
 {IDF_TARGET_CPU_FREQ:default="", esp32c6="160 MHz", esp32h2="96 MHz", esp32p4="360 MHz"}
 
-{IDF_TARGET_SBV2_DEFAULT_SCHEME:default="RSA", esp32c2="ECDSA (v2), esp32c5="ECDSA (v2)"}
+{IDF_TARGET_SBV2_DEFAULT_SCHEME:default="RSA", esp32c2="ECDSA (v2), esp32c5="ECDSA (v2), esp32c61="ECDSA (v2)"}
 
 {IDF_TARGET_EFUSE_WR_DIS_RD_DIS:default="ESP_EFUSE_WR_DIS_RD_DIS", esp32="ESP_EFUSE_WR_DIS_EFUSE_RD_DISABLE"}
 
@@ -654,23 +654,96 @@ Secure Boot Best Practices
 Technical Details
 -----------------
 
-The following sections contain low-level reference descriptions of various Secure Boot elements:
-
-
-Manual Commands
-~~~~~~~~~~~~~~~
+The following sections contain low-level reference descriptions of various Secure Boot elements.
 
 Secure Boot is integrated into the ESP-IDF build system, so ``idf.py build`` will sign an app image, and ``idf.py bootloader`` will produce a signed bootloader if :ref:`CONFIG_SECURE_BOOT_BUILD_SIGNED_BINARIES` is enabled.
 
-However, it is possible to use the ``idf.py`` tool to make standalone signatures and digests.
+However, it is possible to use the ``idf.py`` or the ``openssl`` tool to generate standalone signatures and verify them. Using ``idf.py`` is recommended, but in case you need to generate or verify signatures in non-ESP-IDF environments,
+you could also use the ``openssl`` commands as the Secure Boot V2 signature generation is compliant with the standard signing algorithms.
 
-To sign a binary image:
+Generating and Verifying signatures using ``idf.py``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. code-block::
+1. To sign a binary image:
 
-  idf.py secure-sign-data --keyfile ./my_signing_key.pem --output ./image_signed.bin image-unsigned.bin
+  .. code-block::
+
+    idf.py secure-sign-data --keyfile ./my_signing_key.pem --output ./image_signed.bin image-unsigned.bin
 
 Keyfile is the PEM file containing an {IDF_TARGET_SBV2_KEY} private signing key.
+
+2. To verify a signed binary image:
+
+  .. code-block::
+
+    idf.py secure-verify-signature --keyfile ./my_signing_key.pem image_signed.bin
+
+Keyfile is the PEM file containing an {IDF_TARGET_SBV2_KEY} public/\private signing key.
+
+Generating and Verifying signatures using OpenSSL
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+It is preferred to use the ``idf.py`` tool to generate and verify signatures, but in case you need to perform these operations using OpenSSL, following are the reference commands to do so:
+
+1. Generate digest of the image binary file whose signature needs to be calculated.
+
+    .. code-block:: bash
+
+        openssl dgst -sha256 -binary BINARY_FILE  > DIGEST_BINARY_FILE
+
+2. Generate signature of the image using the above calculated digest.
+
+    .. only:: SOC_SECURE_BOOT_V2_RSA
+
+        For generating an RSA-PSS signature:
+
+            .. code-block:: bash
+
+                openssl pkeyutl -sign \
+                    -in  DIGEST_BINARY_FILE \
+                    -inkey PRIVATE_SIGNING_KEY \
+                    -out SIGNATURE_FILE \
+                    -pkeyopt digest:sha256 \
+                    -pkeyopt rsa_padding_mode:pss \
+                    -pkeyopt rsa_pss_saltlen:32
+
+    .. only:: SOC_SECURE_BOOT_V2_ECC
+
+        For generating an ECDSA signature:
+
+            .. code-block:: bash
+
+                openssl pkeyutl -sign \
+                    -in  DIGEST_BINARY_FILE \
+                    -inkey PRIVATE_SIGNING_KEY \
+                    -out SIGNATURE_FILE
+
+3. Verify the generated signature.
+
+    .. only:: SOC_SECURE_BOOT_V2_RSA
+
+        For verifying an RSA-PSS signature:
+
+            .. code-block:: bash
+
+                openssl pkeyutl -verify \
+                    -in DIGEST_BINARY_FILE \
+                    -pubin -inkey PUBLIC_SIGNING_KEY \
+                    -sigfile SIGNATURE_FILE \
+                    -pkeyopt rsa_padding_mode:pss \
+                    -pkeyopt rsa_pss_saltlen:32 \
+                    -pkeyopt digest:sha256
+
+    .. only:: SOC_SECURE_BOOT_V2_ECC
+
+        For verifying an ECDSA signature:
+
+            .. code-block:: bash
+
+                openssl pkeyutl -verify \
+                    -in DIGEST_BINARY_FILE \
+                    -pubin -inkey PUBLIC_SIGNING_KEY \
+                    -sigfile SIGNATURE_FILE
 
 
 .. _secure-boot-v2-and-flash-encr:

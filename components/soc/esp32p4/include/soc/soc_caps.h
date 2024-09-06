@@ -122,7 +122,7 @@
 #define SOC_ADC_DIG_SUPPORTED_UNIT(UNIT)        1    //Digital controller supported ADC unit
 #define SOC_ADC_DMA_SUPPORTED                   1
 #define SOC_ADC_PERIPH_NUM                      (2)
-#define SOC_ADC_CHANNEL_NUM(PERIPH_NUM)         ((PERIPH_NUM==0)? 6: 8)
+#define SOC_ADC_CHANNEL_NUM(PERIPH_NUM)         ((PERIPH_NUM==0)? 8: 6)
 #define SOC_ADC_MAX_CHANNEL_NUM                 (8)
 #define SOC_ADC_ATTEN_NUM                       (4)
 
@@ -187,6 +187,8 @@
 #define SOC_CPU_HAS_PMA                 1
 #define SOC_CPU_IDRAM_SPLIT_USING_PMP   1
 #define SOC_CPU_PMP_REGION_GRANULARITY  128
+
+#define SOC_CPU_HAS_LOCKUP_RESET        1
 
 /*-------------------------- DIGITAL SIGNATURE CAPS ----------------------------------------*/
 /** The maximum length of a Digital Signature in bits. */
@@ -314,7 +316,7 @@
 #define SOC_I2S_HW_VERSION_2        (1)
 #define SOC_I2S_SUPPORTS_ETM        (1)
 #define SOC_I2S_SUPPORTS_XTAL       (1)
-// #define SOC_I2S_SUPPORTS_APLL       (1) // TODO: IDF-8884
+#define SOC_I2S_SUPPORTS_APLL       (1)
 #define SOC_I2S_SUPPORTS_PCM        (1)
 #define SOC_I2S_SUPPORTS_PDM        (1)
 #define SOC_I2S_SUPPORTS_PDM_TX     (1)
@@ -332,8 +334,10 @@
 /*-------------------------- ISP CAPS ----------------------------------------*/
 #define SOC_ISP_BF_SUPPORTED                     1
 #define SOC_ISP_CCM_SUPPORTED                    1
+#define SOC_ISP_DEMOSAIC_SUPPORTED               1
 #define SOC_ISP_DVP_SUPPORTED                    1
 #define SOC_ISP_SHARPEN_SUPPORTED                1
+#define SOC_ISP_COLOR_SUPPORTED                  1
 #define SOC_ISP_SHARE_CSI_BRG                    1
 
 #define SOC_ISP_NUMS                             1U
@@ -346,6 +350,9 @@
 #define SOC_ISP_BF_TEMPLATE_X_NUMS               3
 #define SOC_ISP_BF_TEMPLATE_Y_NUMS               3
 #define SOC_ISP_CCM_DIMENSION                    3
+#define SOC_ISP_DEMOSAIC_GRAD_RATIO_INT_BITS     2
+#define SOC_ISP_DEMOSAIC_GRAD_RATIO_DEC_BITS     4
+#define SOC_ISP_DEMOSAIC_GRAD_RATIO_RES_BITS     26
 #define SOC_ISP_DVP_DATA_WIDTH_MAX               16
 #define SOC_ISP_SHARPEN_TEMPLATE_X_NUMS          3
 #define SOC_ISP_SHARPEN_TEMPLATE_Y_NUMS          3
@@ -355,6 +362,11 @@
 #define SOC_ISP_SHARPEN_M_FREQ_COEF_INT_BITS     3
 #define SOC_ISP_SHARPEN_M_FREQ_COEF_DEC_BITS     5
 #define SOC_ISP_SHARPEN_M_FREQ_COEF_RES_BITS     24
+#define SOC_ISP_HIST_CTLR_NUMS                   1U
+#define SOC_ISP_HIST_BLOCK_X_NUMS                5
+#define SOC_ISP_HIST_BLOCK_Y_NUMS                5
+#define SOC_ISP_HIST_SEGMENT_NUMS                16
+#define SOC_ISP_HIST_INTERVAL_NUMS               15
 
 /*-------------------------- LEDC CAPS ---------------------------------------*/
 #define SOC_LEDC_SUPPORT_PLL_DIV_CLOCK      (1)
@@ -609,6 +621,9 @@
 #define SOC_EFUSE_DIS_DOWNLOAD_MSPI 1
 #define SOC_EFUSE_ECDSA_KEY 1
 
+/*-------------------------- Key Manager CAPS----------------------------*/
+#define SOC_KEY_MANAGER_ECDSA_KEY_DEPLOY    1 /*!< Key manager responsible to deploy ECDSA key */
+#define SOC_KEY_MANAGER_FE_KEY_DEPLOY       1 /*!< Key manager responsible to deploy Flash Encryption key */
 /*-------------------------- Secure Boot CAPS----------------------------*/
 #define SOC_SECURE_BOOT_V2_RSA              1
 #define SOC_SECURE_BOOT_V2_ECC              1
@@ -622,7 +637,6 @@
 #define SOC_FLASH_ENCRYPTION_XTS_AES_OPTIONS 1
 #define SOC_FLASH_ENCRYPTION_XTS_AES_128    1
 #define SOC_FLASH_ENCRYPTION_XTS_AES_256    1
-
 /*-------------------------- MEMPROT CAPS ------------------------------------*/
 
 /*-------------------------- UART CAPS ---------------------------------------*/
@@ -677,6 +691,8 @@
 #define SOC_PAU_IN_TOP_DOMAIN           (1)
 #define SOC_CPU_IN_TOP_DOMAIN           (1)
 
+#define SOC_PM_PAU_REGDMA_UPDATE_CACHE_BEFORE_WAIT_COMPARE  (1)
+
 /*-------------------------- PSRAM CAPS ----------------------------*/
 #define SOC_PSRAM_VDD_POWER_MPLL    (1)
 
@@ -684,7 +700,7 @@
 #define SOC_CLK_RC_FAST_SUPPORT_CALIBRATION       (1)
 #define SOC_MODEM_CLOCK_IS_INDEPENDENT            (0)
 
-// #define SOC_CLK_APLL_SUPPORTED                    (1)     /*!< Support Audio PLL */ TODO: IDF-8884
+#define SOC_CLK_APLL_SUPPORTED                    (1)     /*!< Support Audio PLL */
 #define SOC_CLK_MPLL_SUPPORTED                    (1)     /*!< Support MSPI PLL */
 #define SOC_CLK_XTAL32K_SUPPORTED                 (1)     /*!< Support to connect an external low frequency crystal */
 #define SOC_CLK_RC32K_SUPPORTED                   (1)     /*!< Support an internal 32kHz RC oscillator */
