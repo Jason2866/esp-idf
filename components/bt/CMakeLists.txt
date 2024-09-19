@@ -6,6 +6,8 @@ endif()
 
 if(CONFIG_IDF_TARGET_ESP32S3)
     set(target_name "esp32c3")
+elseif(CONFIG_IDF_TARGET_ESP32C61)
+    set(target_name "esp32c6")
 else()
     set(target_name "${idf_target}")
 endif()
@@ -156,6 +158,8 @@ if(CONFIG_BT_ENABLED)
             host/bluedroid/stack/avdt/include
             host/bluedroid/stack/a2dp/include
             host/bluedroid/stack/rfcomm/include
+            host/bluedroid/stack/obex/include
+            host/bluedroid/stack/goep/include
             host/bluedroid/stack/include
             host/bluedroid/common/include
             host/bluedroid/config/include)
@@ -183,6 +187,8 @@ if(CONFIG_BT_ENABLED)
                    "host/bluedroid/bta/av/bta_av_aact.c"
                    "host/bluedroid/bta/av/bta_av_act.c"
                    "host/bluedroid/bta/av/bta_av_api.c"
+                   "host/bluedroid/bta/av/bta_av_ca_act.c"
+                   "host/bluedroid/bta/av/bta_av_ca_sm.c"
                    "host/bluedroid/bta/av/bta_av_cfg.c"
                    "host/bluedroid/bta/av/bta_av_ci.c"
                    "host/bluedroid/bta/av/bta_av_main.c"
@@ -378,6 +384,8 @@ if(CONFIG_BT_ENABLED)
                    "host/bluedroid/stack/gatt/gatt_sr.c"
                    "host/bluedroid/stack/gatt/gatt_sr_hash.c"
                    "host/bluedroid/stack/gatt/gatt_utils.c"
+                   "host/bluedroid/stack/goep/goepc_api.c"
+                   "host/bluedroid/stack/goep/goepc_main.c"
                    "host/bluedroid/stack/hcic/hciblecmds.c"
                    "host/bluedroid/stack/hcic/hcicmds.c"
                    "host/bluedroid/stack/l2cap/l2c_api.c"
@@ -389,6 +397,9 @@ if(CONFIG_BT_ENABLED)
                    "host/bluedroid/stack/l2cap/l2c_ucd.c"
                    "host/bluedroid/stack/l2cap/l2c_utils.c"
                    "host/bluedroid/stack/l2cap/l2cap_client.c"
+                   "host/bluedroid/stack/obex/obex_api.c"
+                   "host/bluedroid/stack/obex/obex_main.c"
+                   "host/bluedroid/stack/obex/obex_tl_l2cap.c"
                    "host/bluedroid/stack/rfcomm/port_api.c"
                    "host/bluedroid/stack/rfcomm/port_rfc.c"
                    "host/bluedroid/stack/rfcomm/port_utils.c"
@@ -844,6 +855,14 @@ if(CONFIG_BT_ENABLED)
         target_link_directories(${COMPONENT_LIB} INTERFACE
                 "${CMAKE_CURRENT_LIST_DIR}/controller/lib_esp32c3_family/esp32s3")
         target_link_libraries(${COMPONENT_LIB} PUBLIC btdm_app)
+    elseif(CONFIG_IDF_TARGET_ESP32C6)
+        add_prebuilt_library(libble_app
+                "${CMAKE_CURRENT_LIST_DIR}/controller/lib_esp32c6/esp32c6-bt-lib/esp32c6/libble_app.a")
+        target_link_libraries(${COMPONENT_LIB} PRIVATE libble_app)
+    elseif(CONFIG_IDF_TARGET_ESP32C61)
+        add_prebuilt_library(libble_app
+                "${CMAKE_CURRENT_LIST_DIR}/controller/lib_esp32c6/esp32c6-bt-lib/esp32c61/libble_app.a")
+        target_link_libraries(${COMPONENT_LIB} PRIVATE libble_app)
     elseif(CONFIG_BT_CONTROLLER_ENABLED)
         add_prebuilt_library(libble_app "controller/lib_${target_name}/${target_name}-bt-lib/libble_app.a")
         target_link_libraries(${COMPONENT_LIB} PRIVATE libble_app)

@@ -331,7 +331,7 @@ static void esp_sdp_cb(esp_sdp_cb_event_t event, esp_sdp_cb_param_t *param)
 
 static void esp_hdl_sdp_cb_evt(uint16_t event, void *p_param)
 {
-    esp_bluetooth_sdp_record_t record = {0};
+    esp_bluetooth_sdp_raw_record_t record = {0};
     esp_sdp_cb_param_t *sdp_param = (esp_sdp_cb_param_t *)p_param;
     char bda_str[18] = {0};
 
@@ -347,7 +347,7 @@ static void esp_hdl_sdp_cb_evt(uint16_t event, void *p_param)
             record.hdr.rfcomm_channel_number = BT_UNUSED_RFCOMM;
             record.hdr.l2cap_psm = BT_L2CAP_DYNMIC_PSM;
             record.hdr.profile_version = BT_UNKONWN_PROFILE_VERSION;
-            esp_sdp_create_record(&record);
+            esp_sdp_create_record((esp_bluetooth_sdp_record_t *)&record);
         }
         break;
     case ESP_SDP_DEINIT_EVT:

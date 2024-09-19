@@ -32,6 +32,9 @@ tools/eclipse-code-style.xml
 tools/format.sh
 tools/mocks/**/*
 tools/set-submodules-to-github.sh
+tools/templates/sample_project/main/main.c
+tools/templates/sample_project/CMakeLists.txt
+tools/templates/sample_project/main/CMakeLists.txt
 tools/templates/sample_component/CMakeLists.txt
 tools/templates/sample_component/include/main.h
 tools/templates/sample_component/main.c
@@ -51,3 +54,7 @@ tools/esp_prov/**/*
 tools/ci/sort_yaml.py
 tools/ci/sg_rules/*
 tools/ci/previous_stage_job_status.py
+tools/legacy_exports/export_legacy.fish
+tools/legacy_exports/export_legacy.sh
+tools/legacy_exports/export_legacy.ps1
+tools/legacy_exports/export_legacy.bat
