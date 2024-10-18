@@ -67,6 +67,8 @@ const char *esp_partition_type_to_str(const uint32_t type)
     switch (type) {
     case PART_TYPE_APP: return "app";
     case PART_TYPE_DATA: return "data";
+    case PART_TYPE_BOOTLOADER: return "bootloader";
+    case PART_TYPE_PARTITION_TABLE: return "partition_table";
     default: return "unknown";
     }
 }
@@ -74,6 +76,18 @@ const char *esp_partition_type_to_str(const uint32_t type)
 const char *esp_partition_subtype_to_str(const uint32_t type, const uint32_t subtype)
 {
     switch (type) {
+    case PART_TYPE_BOOTLOADER:
+        switch (subtype) {
+        case PART_SUBTYPE_BOOTLOADER_PRIMARY: return "primary";
+        case PART_SUBTYPE_BOOTLOADER_OTA: return "ota";
+        default: return "unknown";
+        }
+    case PART_TYPE_PARTITION_TABLE:
+        switch (subtype) {
+        case PART_SUBTYPE_PARTITION_TABLE_PRIMARY: return "primary";
+        case PART_SUBTYPE_PARTITION_TABLE_OTA: return "ota";
+        default: return "unknown";
+        }
     case PART_TYPE_APP:
         switch (subtype) {
         case PART_SUBTYPE_FACTORY: return "factory";
@@ -545,6 +559,11 @@ esp_partition_file_mmap_ctrl_t *esp_partition_get_file_mmap_ctrl_input(void)
 esp_partition_file_mmap_ctrl_t *esp_partition_get_file_mmap_ctrl_act(void)
 {
     return &s_esp_partition_file_mmap_ctrl_act;
+}
+
+uint32_t esp_partition_get_main_flash_sector_size(void)
+{
+    return ESP_PARTITION_EMULATED_SECTOR_SIZE;
 }
 
 #ifdef CONFIG_ESP_PARTITION_ENABLE_STATS

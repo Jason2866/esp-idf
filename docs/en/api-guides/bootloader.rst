@@ -6,7 +6,7 @@ Bootloader
 The ESP-IDF Software Bootloader performs the following functions:
 
 1. Minimal initial configuration of internal modules;
-2. Initialize :doc:`/security/flash-encryption` and/or :doc:`Secure </security/secure-boot-v2>` features, if configured;
+2. Initialize :doc:`/security/flash-encryption` and/or :doc:`Secure Boot </security/secure-boot-v2>` features, if configured;
 3. Select the application partition to boot, based on the partition table and ota_data (if any);
 4. Load this image to RAM (IRAM & DRAM) and transfer management to the image that was just loaded.
 
@@ -181,8 +181,8 @@ Custom Bootloader
 
 The current bootloader implementation allows a project to extend it or modify it. There are two ways of doing it: by implementing hooks or by overriding it. Both ways are presented in :example:`custom_bootloader` folder in ESP-IDF examples:
 
-* `bootloader_hooks` which presents how to connect some hooks to the bootloader initialization
-* `bootloader_override` which presents how to override the bootloader implementation
+* :example:`custom_bootloader/bootloader_hooks` presents how to connect some hooks to the bootloader initialization
+* :example:`custom_bootloader/bootloader_override` presents how to override the bootloader implementation
 
 In the bootloader space, you cannot use the drivers and functions from other components. If necessary, then the required functionality should be placed in the project's `bootloader_components` directory (note that this will increase its size).
 
