@@ -54,6 +54,7 @@
 #include "hal/usb_serial_jtag_ll.h"
 #include "hal/usb_utmi_ll.h"
 #include "hal/wdt_hal.h"
+#include "hal/bitscrambler_ll.h"
 
 #include "esp_private/esp_modem_clock.h"
 #include "esp_private/esp_sleep_internal.h"
@@ -189,6 +190,15 @@ static void select_rtc_slow_clk(soc_rtc_slow_clk_src_t rtc_slow_clk_src)
         }
         rtc_clk_slow_src_set(rtc_slow_clk_src);
 
+        // Disable unused clock sources after clock source switching is complete.
+        // Regardless of the clock source selection, the internal 136K clock source will always keep on.
+        if (rtc_slow_clk_src != SOC_RTC_SLOW_CLK_SRC_XTAL32K) {
+            rtc_clk_32k_enable(false);
+        }
+        if (rtc_slow_clk_src != SOC_RTC_SLOW_CLK_SRC_RC32K) {
+            rtc_clk_rc32k_enable(false);
+        }
+
         if (SLOW_CLK_CAL_CYCLES > 0) {
             /* TODO: 32k XTAL oscillator has some frequency drift at startup.
              * Improve calibration routine to wait until the frequency is stable.
@@ -244,9 +254,9 @@ __attribute__((weak)) void esp_perip_clk_init(void)
         _pau_ll_enable_bus_clock(false);
         _parlio_ll_enable_bus_clock(0, false);
         _etm_ll_enable_bus_clock(0, false);
-        REG_CLR_BIT(HP_SYS_CLKRST_SOC_CLK_CTRL1_REG, HP_SYS_CLKRST_REG_BITSRAMBLER_SYS_CLK_EN);
-        REG_CLR_BIT(HP_SYS_CLKRST_SOC_CLK_CTRL1_REG, HP_SYS_CLKRST_REG_BITSRAMBLER_RX_SYS_CLK_EN);
-        REG_CLR_BIT(HP_SYS_CLKRST_SOC_CLK_CTRL1_REG, HP_SYS_CLKRST_REG_BITSRAMBLER_TX_SYS_CLK_EN);
+        _bitscrambler_ll_set_bus_clock_sys_enable(false);
+        _bitscrambler_ll_set_bus_clock_rx_enable(false);
+        _bitscrambler_ll_set_bus_clock_tx_enable(false);
 
 // Non-Console UART
 #if CONFIG_ESP_CONSOLE_UART_NUM != 0

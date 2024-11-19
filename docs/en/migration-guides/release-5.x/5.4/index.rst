@@ -9,3 +9,6 @@ Migration from 5.3 to 5.4
     gcc
     system
     bluetooth-classic
+    storage
+    wifi
+    protocols

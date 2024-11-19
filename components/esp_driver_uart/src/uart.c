@@ -27,6 +27,7 @@
 #include "driver/uart_select.h"
 #include "esp_private/esp_clk_tree_common.h"
 #include "esp_private/gpio.h"
+#include "esp_private/esp_gpio_reserve.h"
 #include "esp_private/uart_share_hw_ctrl.h"
 #include "esp_clk_tree.h"
 #include "sdkconfig.h"
@@ -221,7 +222,7 @@ static void uart_module_enable(uart_port_t uart_num)
             // Initialize sleep retention module for HP UART
             if (uart_num != CONFIG_ESP_CONSOLE_UART_NUM) { // Console uart retention has been taken care in sleep_sys_periph_stdout_console_uart_retention_init
                 assert(!uart_context[uart_num].retention_link_inited);
-                sleep_retention_module_t module = UART_LL_SLEEP_RETENTION_MODULE_ID(uart_num);
+                sleep_retention_module_t module = uart_reg_retention_info[uart_num].module;
                 sleep_retention_module_init_param_t init_param = {
                     .cbs = {
                         .create = {
@@ -260,7 +261,7 @@ static void uart_module_disable(uart_port_t uart_num)
         if (uart_num != CONFIG_ESP_CONSOLE_UART_NUM && uart_num < SOC_UART_HP_NUM) {
 #if SOC_UART_SUPPORT_SLEEP_RETENTION && CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP
             // Uninitialize sleep retention module for HP UART
-            sleep_retention_module_t module = UART_LL_SLEEP_RETENTION_MODULE_ID(uart_num);
+            sleep_retention_module_t module = uart_reg_retention_info[uart_num].module;
             assert(!uart_context[uart_num].retention_link_created); // HP UART sleep retention should have been freed at this moment
             if (uart_context[uart_num].retention_link_inited) {
                 sleep_retention_module_deinit(module);
@@ -746,8 +747,19 @@ esp_err_t uart_set_pin(uart_port_t uart_num, int tx_io_num, int rx_io_num, int r
     }
 #endif
 
+    // Potential IO reserved mask
+    uint64_t io_reserve_mask = 0;
+    io_reserve_mask |= (tx_io_num > 0 ? BIT64(tx_io_num) : 0);
+    io_reserve_mask |= (rx_io_num > 0 ? BIT64(rx_io_num) : 0);
+    io_reserve_mask |= (rts_io_num > 0 ? BIT64(rts_io_num) : 0);
+    io_reserve_mask |= (cts_io_num > 0 ? BIT64(cts_io_num) : 0);
+
+    // Since an IO cannot route peripheral signals via IOMUX and GPIO matrix at the same time,
+    // if tx and rx share the same IO, both signals need to be route to IOs through GPIO matrix
+    bool tx_rx_same_io = (tx_io_num == rx_io_num);
+
     /* In the following statements, if the io_num is negative, no need to configure anything. */
-    if (tx_io_num >= 0 && !uart_try_set_iomux_pin(uart_num, tx_io_num, SOC_UART_TX_PIN_IDX)) {
+    if (tx_io_num >= 0 && (tx_rx_same_io || !uart_try_set_iomux_pin(uart_num, tx_io_num, SOC_UART_TX_PIN_IDX))) {
         if (uart_num < SOC_UART_HP_NUM) {
             gpio_func_sel(tx_io_num, PIN_FUNC_GPIO);
             esp_rom_gpio_connect_out_signal(tx_io_num, UART_PERIPH_SIGNAL(uart_num, SOC_UART_TX_PIN_IDX), 0, 0);
@@ -756,27 +768,27 @@ esp_err_t uart_set_pin(uart_port_t uart_num, int tx_io_num, int rx_io_num, int r
         }
 #if SOC_LP_GPIO_MATRIX_SUPPORTED
         else {
-            rtc_gpio_init(tx_io_num);
-            rtc_gpio_iomux_func_sel(tx_io_num, RTCIO_LL_PIN_FUNC);
-
+            rtc_gpio_init(tx_io_num); // set as a LP_GPIO pin
             lp_gpio_connect_out_signal(tx_io_num, UART_PERIPH_SIGNAL(uart_num, SOC_UART_TX_PIN_IDX), 0, 0);
             // output enable is set inside lp_gpio_connect_out_signal func after the signal is connected
         }
 #endif
     }
 
-    if (rx_io_num >= 0 && !uart_try_set_iomux_pin(uart_num, rx_io_num, SOC_UART_RX_PIN_IDX)) {
+    if (rx_io_num >= 0 && (tx_rx_same_io || !uart_try_set_iomux_pin(uart_num, rx_io_num, SOC_UART_RX_PIN_IDX))) {
+        io_reserve_mask &= ~BIT64(rx_io_num); // input IO via GPIO matrix does not need to be reserved
         if (uart_num < SOC_UART_HP_NUM) {
             gpio_func_sel(rx_io_num, PIN_FUNC_GPIO);
-            gpio_set_pull_mode(rx_io_num, GPIO_PULLUP_ONLY); // This does not consider that RX signal can be read inverted by configuring the hardware (i.e. idle is at low level). However, it is only a weak pullup, the TX at the other end can always drive the line.
-            gpio_set_direction(rx_io_num, GPIO_MODE_INPUT);
+            gpio_input_enable(rx_io_num);
             esp_rom_gpio_connect_in_signal(rx_io_num, UART_PERIPH_SIGNAL(uart_num, SOC_UART_RX_PIN_IDX), 0);
         }
 #if SOC_LP_GPIO_MATRIX_SUPPORTED
         else {
-            rtc_gpio_set_direction(rx_io_num, RTC_GPIO_MODE_INPUT_ONLY);
-            rtc_gpio_init(rx_io_num);
-            rtc_gpio_iomux_func_sel(rx_io_num, RTCIO_LL_PIN_FUNC);
+            rtc_gpio_mode_t mode = (tx_rx_same_io ? RTC_GPIO_MODE_INPUT_OUTPUT : RTC_GPIO_MODE_INPUT_ONLY);
+            rtc_gpio_set_direction(rx_io_num, mode);
+            if (!tx_rx_same_io) { // set the same pin again as a LP_GPIO will overwrite connected out_signal, not desired, so skip
+                rtc_gpio_init(rx_io_num); // set as a LP_GPIO pin
+            }
 
             lp_gpio_connect_in_signal(rx_io_num, UART_PERIPH_SIGNAL(uart_num, SOC_UART_RX_PIN_IDX), 0);
         }
@@ -791,8 +803,7 @@ esp_err_t uart_set_pin(uart_port_t uart_num, int tx_io_num, int rx_io_num, int r
         }
 #if SOC_LP_GPIO_MATRIX_SUPPORTED
         else {
-            rtc_gpio_init(rts_io_num);
-            rtc_gpio_iomux_func_sel(rts_io_num, RTCIO_LL_PIN_FUNC);
+            rtc_gpio_init(rts_io_num); // set as a LP_GPIO pin
             lp_gpio_connect_out_signal(rts_io_num, UART_PERIPH_SIGNAL(uart_num, SOC_UART_RTS_PIN_IDX), 0, 0);
             // output enable is set inside lp_gpio_connect_out_signal func after the signal is connected
         }
@@ -800,22 +811,31 @@ esp_err_t uart_set_pin(uart_port_t uart_num, int tx_io_num, int rx_io_num, int r
     }
 
     if (cts_io_num >= 0  && !uart_try_set_iomux_pin(uart_num, cts_io_num, SOC_UART_CTS_PIN_IDX)) {
+        io_reserve_mask &= ~BIT64(cts_io_num); // input IO via GPIO matrix does not need to be reserved
         if (uart_num < SOC_UART_HP_NUM) {
             gpio_func_sel(cts_io_num, PIN_FUNC_GPIO);
-            gpio_set_pull_mode(cts_io_num, GPIO_PULLUP_ONLY);
-            gpio_set_direction(cts_io_num, GPIO_MODE_INPUT);
+            gpio_pullup_en(cts_io_num);
+            gpio_input_enable(cts_io_num);
             esp_rom_gpio_connect_in_signal(cts_io_num, UART_PERIPH_SIGNAL(uart_num, SOC_UART_CTS_PIN_IDX), 0);
         }
 #if SOC_LP_GPIO_MATRIX_SUPPORTED
         else {
             rtc_gpio_set_direction(cts_io_num, RTC_GPIO_MODE_INPUT_ONLY);
-            rtc_gpio_init(cts_io_num);
-            rtc_gpio_iomux_func_sel(cts_io_num, RTCIO_LL_PIN_FUNC);
-
+            rtc_gpio_init(cts_io_num); // set as a LP_GPIO pin
             lp_gpio_connect_in_signal(cts_io_num, UART_PERIPH_SIGNAL(uart_num, SOC_UART_CTS_PIN_IDX), 0);
         }
 #endif
     }
+
+    // IO reserve
+    uint64_t old_busy_mask = esp_gpio_reserve(io_reserve_mask);
+    uint64_t conflict_mask = old_busy_mask & io_reserve_mask;
+    while (conflict_mask > 0) {
+        uint8_t pos = __builtin_ctzll(conflict_mask);
+        conflict_mask &= ~(1ULL << pos);
+        ESP_LOGW(UART_TAG, "GPIO %d is not usable, maybe used by others", pos);
+    }
+
     return ESP_OK;
 }
 
@@ -856,8 +876,9 @@ esp_err_t uart_param_config(uart_port_t uart_num, const uart_config_t *uart_conf
     ESP_RETURN_ON_FALSE((uart_config->flow_ctrl < UART_HW_FLOWCTRL_MAX), ESP_FAIL, UART_TAG, "hw_flowctrl mode error");
     ESP_RETURN_ON_FALSE((uart_config->data_bits < UART_DATA_BITS_MAX), ESP_FAIL, UART_TAG, "data bit error");
 
+    bool allow_pd __attribute__((unused)) = (uart_config->flags.allow_pd || uart_config->flags.backup_before_sleep);
 #if !SOC_UART_SUPPORT_SLEEP_RETENTION
-    ESP_RETURN_ON_FALSE(uart_config->flags.backup_before_sleep == 0, ESP_ERR_NOT_SUPPORTED, UART_TAG, "register back up is not supported");
+    ESP_RETURN_ON_FALSE(allow_pd == 0, ESP_ERR_NOT_SUPPORTED, UART_TAG, "not able to power down in light sleep");
 #endif
 
     uart_module_enable(uart_num);
@@ -866,8 +887,8 @@ esp_err_t uart_param_config(uart_port_t uart_num, const uart_config_t *uart_conf
     // Create sleep retention link if desired
     if (uart_num != CONFIG_ESP_CONSOLE_UART_NUM && uart_num < SOC_UART_HP_NUM) {
         _lock_acquire(&(uart_context[uart_num].mutex));
-        sleep_retention_module_t module = UART_LL_SLEEP_RETENTION_MODULE_ID(uart_num);
-        if (uart_config->flags.backup_before_sleep && !uart_context[uart_num].retention_link_created) {
+        sleep_retention_module_t module = uart_reg_retention_info[uart_num].module;
+        if (allow_pd && !uart_context[uart_num].retention_link_created) {
             if (uart_context[uart_num].retention_link_inited) {
                 if (sleep_retention_module_allocate(module) == ESP_OK) {
                     uart_context[uart_num].retention_link_created = true;
@@ -878,7 +899,7 @@ esp_err_t uart_param_config(uart_port_t uart_num, const uart_config_t *uart_conf
             } else {
                 ESP_LOGW(UART_TAG, "retention module not initialized first, unable to create retention module");
             }
-        } else if (!uart_config->flags.backup_before_sleep && uart_context[uart_num].retention_link_created) {
+        } else if (!allow_pd && uart_context[uart_num].retention_link_created) {
             assert(uart_context[uart_num].retention_link_inited);
             sleep_retention_module_free(module);
             uart_context[uart_num].retention_link_created = false;
@@ -1142,12 +1163,6 @@ static void UART_ISR_ATTR uart_rx_intr_handler_default(void *param)
                     uart_event.type = UART_DATA;
                     uart_event.size = rx_fifo_len;
                     uart_event.timeout_flag = (uart_intr_status & UART_INTR_RXFIFO_TOUT) ? true : false;
-                    UART_ENTER_CRITICAL_ISR(&uart_selectlock);
-                    if (p_uart->uart_select_notif_callback) {
-                        p_uart->uart_select_notif_callback(uart_num, UART_SELECT_READ_NOTIF, &HPTaskAwoken);
-                        need_yield |= (HPTaskAwoken == pdTRUE);
-                    }
-                    UART_EXIT_CRITICAL_ISR(&uart_selectlock);
                 }
                 p_uart->rx_stash_len = rx_fifo_len;
                 //If we fail to push data to ring buffer, we will have to stash the data, and send next time.
@@ -1195,6 +1210,15 @@ static void UART_ISR_ATTR uart_rx_intr_handler_default(void *param)
                     }
                     p_uart->rx_buffered_len += p_uart->rx_stash_len;
                     UART_EXIT_CRITICAL_ISR(&(uart_context[uart_num].spinlock));
+                }
+
+                if (uart_event.type == UART_DATA) {
+                    UART_ENTER_CRITICAL_ISR(&uart_selectlock);
+                    if (p_uart->uart_select_notif_callback) {
+                        p_uart->uart_select_notif_callback(uart_num, UART_SELECT_READ_NOTIF, &HPTaskAwoken);
+                        need_yield |= (HPTaskAwoken == pdTRUE);
+                    }
+                    UART_EXIT_CRITICAL_ISR(&uart_selectlock);
                 }
             } else {
                 UART_ENTER_CRITICAL_ISR(&(uart_context[uart_num].spinlock));
@@ -1805,7 +1829,7 @@ esp_err_t uart_driver_delete(uart_port_t uart_num)
 #if SOC_UART_SUPPORT_SLEEP_RETENTION && CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP
     // Free sleep retention link for HP UART
     if (uart_num != CONFIG_ESP_CONSOLE_UART_NUM && uart_num < SOC_UART_HP_NUM) {
-        sleep_retention_module_t module = UART_LL_SLEEP_RETENTION_MODULE_ID(uart_num);
+        sleep_retention_module_t module = uart_reg_retention_info[uart_num].module;
         _lock_acquire(&(uart_context[uart_num].mutex));
         if (uart_context[uart_num].retention_link_created) {
             assert(uart_context[uart_num].retention_link_inited);
@@ -1979,7 +2003,7 @@ static esp_err_t uart_create_sleep_retention_link_cb(void *arg)
 {
     uart_context_t *group = (uart_context_t *)arg;
     uart_port_t uart_num = group->port_id;
-    sleep_retention_module_t module = UART_LL_SLEEP_RETENTION_MODULE_ID(uart_num);
+    sleep_retention_module_t module = uart_reg_retention_info[uart_num].module;
     esp_err_t err = sleep_retention_entries_create(uart_reg_retention_info[uart_num].regdma_entry_array,
                                                    uart_reg_retention_info[uart_num].array_size,
                                                    REGDMA_LINK_PRI_UART, module);

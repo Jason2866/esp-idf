@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2017-2021 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2017-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -818,6 +818,23 @@ int bt_mesh_proxy_client_disconnect(uint8_t conn_handle)
 
     bt_mesh_gattc_disconnect(conn);
     return 0;
+}
+
+uint16_t bt_mesh_proxy_client_get_conn_count(void)
+{
+    uint16_t count = 0;
+
+    for (size_t i = 0; i < ARRAY_SIZE(servers); i++) {
+        struct bt_mesh_proxy_server *server = &servers[i];
+
+        if (!server->conn || server->conn_type != CLI_PROXY) {
+            continue;
+        }
+
+        count++;
+    }
+
+    return count;
 }
 
 bool bt_mesh_proxy_client_relay(struct net_buf_simple *buf, uint16_t dst)

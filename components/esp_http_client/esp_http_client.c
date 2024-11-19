@@ -691,6 +691,11 @@ static bool init_common_tcp_transport(esp_http_client_handle_t client, const esp
         }
         esp_transport_tcp_set_interface_name(transport, client->if_name);
     }
+#if CONFIG_ESP_HTTP_CLIENT_ENABLE_HTTPS
+    if (config->alpn_protos) {
+        esp_transport_ssl_set_alpn_protocol(transport, config->alpn_protos);
+    }
+#endif
     return true;
 }
 
@@ -1247,15 +1252,15 @@ int esp_http_client_read(esp_http_client_handle_t client, char *buffer, int len)
         ESP_LOGD(TAG, "need_read=%d, byte_to_read=%d, rlen=%d, ridx=%d", need_read, byte_to_read, rlen, ridx);
 
         if (rlen <= 0) {
+            esp_log_level_t sev = ESP_LOG_WARN;
+            /* Check for cleanly closed connection */
+            if (rlen == ERR_TCP_TRANSPORT_CONNECTION_CLOSED_BY_FIN && client->response->is_chunked) {
+                /* Explicit call to parser for invoking `message_complete` callback */
+                http_parser_execute(client->parser, client->parser_settings, res_buffer->data, 0);
+                /* ...and lowering the message severity, as closed connection from server side is expected in chunked transport */
+                sev = ESP_LOG_DEBUG;
+            }
             if (errno != 0) {
-                esp_log_level_t sev = ESP_LOG_WARN;
-                /* Check for cleanly closed connection */
-                if (rlen == ERR_TCP_TRANSPORT_CONNECTION_CLOSED_BY_FIN && client->response->is_chunked) {
-                    /* Explicit call to parser for invoking `message_complete` callback */
-                    http_parser_execute(client->parser, client->parser_settings, res_buffer->data, 0);
-                    /* ...and lowering the message severity, as closed connection from server side is expected in chunked transport */
-                    sev = ESP_LOG_DEBUG;
-                }
                 ESP_LOG_LEVEL(sev, TAG, "esp_transport_read returned:%d and errno:%d ", rlen, errno);
             }
 

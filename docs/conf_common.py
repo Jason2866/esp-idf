@@ -129,7 +129,8 @@ USB_DOCS = ['api-reference/peripherals/usb_device.rst',
             'api-reference/peripherals/usb_host/usb_host_notes_index.rst',
             'api-reference/peripherals/usb_host/usb_host_notes_usbh.rst',
             'api-reference/peripherals/usb_host/usb_host_notes_enum.rst',
-            'api-reference/peripherals/usb_host/usb_host_notes_ext_hub.rst']
+            'api-reference/peripherals/usb_host/usb_host_notes_ext_hub.rst',
+            'api-reference/peripherals/usb_host/usb_host_notes_ext_port.rst']
 
 I80_LCD_DOCS = ['api-reference/peripherals/lcd/i80_lcd.rst']
 RGB_LCD_DOCS = ['api-reference/peripherals/lcd/rgb_lcd.rst']
@@ -207,7 +208,7 @@ ESP32S2_DOCS = ['hw-reference/esp32s2/**',
                 'api-reference/peripherals/ds.rst',
                 'api-reference/peripherals/temp_sensor.rst',
                 'api-reference/system/async_memcpy.rst',
-                'api-reference/peripherals/touch_pad.rst',
+                'api-reference/peripherals/cap_touch_sens.rst',
                 'api-reference/peripherals/touch_element.rst',
                 'api-guides/RF_calibration.rst',
                 'api-guides/phy.rst'] + FTDI_JTAG_DOCS + USB_OTG_DFU_DOCS + USB_OTG_CONSOLE_DOCS
@@ -215,7 +216,7 @@ ESP32S2_DOCS = ['hw-reference/esp32s2/**',
 ESP32S3_DOCS = ['hw-reference/esp32s3/**',
                 'api-reference/system/ipc.rst',
                 'api-guides/flash_psram_config.rst',
-                'api-reference/peripherals/touch_pad.rst',
+                'api-reference/peripherals/cap_touch_sens.rst',
                 'api-reference/peripherals/sd_pullup_requirements.rst',
                 'api-guides/RF_calibration.rst',
                 'api-guides/phy.rst'] + USB_OTG_DFU_DOCS + USB_OTG_CONSOLE_DOCS + QEMU_DOCS

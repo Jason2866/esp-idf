@@ -9,3 +9,6 @@
     gcc
     system
     bluetooth-classic
+    storage
+    wifi
+    protocols

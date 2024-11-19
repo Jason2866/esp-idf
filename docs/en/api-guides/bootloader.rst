@@ -3,16 +3,16 @@ Bootloader
 
 :link_to_translation:`zh_CN:[中文]`
 
-The ESP-IDF Software Bootloader performs the following functions:
+The ESP-IDF second stage bootloader performs the following functions:
 
 1. Minimal initial configuration of internal modules;
 2. Initialize :doc:`/security/flash-encryption` and/or :doc:`Secure Boot </security/secure-boot-v2>` features, if configured;
 3. Select the application partition to boot, based on the partition table and ota_data (if any);
 4. Load this image to RAM (IRAM & DRAM) and transfer management to the image that was just loaded.
 
-Bootloader is located at the address {IDF_TARGET_CONFIG_BOOTLOADER_OFFSET_IN_FLASH} in the flash.
+ESP-IDF second stage bootloader is located at the address {IDF_TARGET_CONFIG_BOOTLOADER_OFFSET_IN_FLASH} in the flash.
 
-For a full description of the startup process including the ESP-IDF bootloader, see :doc:`startup`.
+For a full description of the startup process including the ESP-IDF second stage bootloader, see :doc:`startup`.
 
 .. _bootloader-compatibility:
 
@@ -50,7 +50,7 @@ SPI Flash Configuration
 
 Each ESP-IDF application or bootloader .bin file contains a header with :ref:`CONFIG_ESPTOOLPY_FLASHMODE`, :ref:`CONFIG_ESPTOOLPY_FLASHFREQ`, :ref:`CONFIG_ESPTOOLPY_FLASHSIZE` embedded in it. These are used to configure the SPI flash during boot.
 
-The :ref:`first-stage-bootloader` in ROM reads the :ref:`second-stage-bootloader` header information from flash and uses this information to load the rest of the :ref:`second-stage-bootloader` from flash. However, at this time the system clock speed is lower than configured and not all flash modes are supported. When the :ref:`second-stage-bootloader` then runs, it will reconfigure the flash using values read from the currently selected app binary's header (and NOT from the :ref:`second-stage-bootloader` header). This allows an OTA update to change the SPI flash settings in use.
+The :ref:`first-stage-bootloader` reads the :ref:`second-stage-bootloader` header information from flash and uses this information to load the rest of the :ref:`second-stage-bootloader` from flash. However, at this time the system clock speed is lower than configured and not all flash modes are supported. When the :ref:`second-stage-bootloader` then runs, it will reconfigure the flash using values read from the currently selected app binary's header (and NOT from the :ref:`second-stage-bootloader` header). This allows an OTA update to change the SPI flash settings in use.
 
 .. only:: esp32
 
@@ -184,6 +184,8 @@ The current bootloader implementation allows a project to extend it or modify it
 * :example:`custom_bootloader/bootloader_hooks` presents how to connect some hooks to the bootloader initialization
 * :example:`custom_bootloader/bootloader_override` presents how to override the bootloader implementation
 
-In the bootloader space, you cannot use the drivers and functions from other components. If necessary, then the required functionality should be placed in the project's `bootloader_components` directory (note that this will increase its size).
+In the bootloader space, you cannot use the drivers and functions from other components unless they explicitly support run in bootloader. If necessary, then the required functionality should be placed in the project's `bootloader_components` directory (note that this will increase its size). Examples of components that can be used in the bootloader are:
+
+* :example:`storage/nvs_bootloader`
 
 If the bootloader grows too large then it can collide with the partition table, which is flashed at offset 0x8000 by default. Increase the :ref:`partition table offset <CONFIG_PARTITION_TABLE_OFFSET>` value to place the partition table later in the flash. This increases the space available for the bootloader.
