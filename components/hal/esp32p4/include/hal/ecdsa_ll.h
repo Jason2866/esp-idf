@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -93,7 +93,10 @@ static inline void ecdsa_ll_enable_bus_clock(bool enable)
 
 /// use a macro to wrap the function, force the caller to use it in a critical section
 /// the critical section needs to declare the __DECLARE_RCC_ATOMIC_ENV variable in advance
-#define ecdsa_ll_enable_bus_clock(...) (void)__DECLARE_RCC_ATOMIC_ENV; ecdsa_ll_enable_bus_clock(__VA_ARGS__)
+#define ecdsa_ll_enable_bus_clock(...) do { \
+        (void)__DECLARE_RCC_ATOMIC_ENV; \
+        ecdsa_ll_enable_bus_clock(__VA_ARGS__); \
+    } while(0)
 
 /**
  * @brief Reset the ECDSA peripheral module
@@ -430,6 +433,14 @@ static inline int ecdsa_ll_get_operation_result(void)
 static inline int ecdsa_ll_check_k_value(void)
 {
     return REG_GET_BIT(ECDSA_RESULT_REG, ECDSA_K_VALUE_WARNING);
+}
+
+/**
+ * @brief Check if the ECDSA deterministic mode is supported
+ */
+static inline bool ecdsa_ll_is_deterministic_mode_supported(void)
+{
+    return true;
 }
 
 #ifdef __cplusplus

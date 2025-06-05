@@ -10,6 +10,7 @@
 #pragma once
 
 #include <stdbool.h>
+#include "esp_attr.h"
 #include "hal/assert.h"
 #include "hal/misc.h"
 #include "hal/timer_types.h"
@@ -45,7 +46,10 @@ static inline void _timer_ll_enable_bus_clock(int group_id, bool enable)
 
 /// use a macro to wrap the function, force the caller to use it in a critical section
 /// the critical section needs to declare the __DECLARE_RCC_RC_ATOMIC_ENV variable in advance
-#define timer_ll_enable_bus_clock(...) (void)__DECLARE_RCC_RC_ATOMIC_ENV; _timer_ll_enable_bus_clock(__VA_ARGS__)
+#define timer_ll_enable_bus_clock(...) do { \
+        (void)__DECLARE_RCC_RC_ATOMIC_ENV; \
+        _timer_ll_enable_bus_clock(__VA_ARGS__); \
+    } while(0)
 
 /**
  * @brief Reset the timer group module
@@ -71,7 +75,10 @@ static inline void _timer_ll_reset_register(int group_id)
 
 /// use a macro to wrap the function, force the caller to use it in a critical section
 /// the critical section needs to declare the __DECLARE_RCC_RC_ATOMIC_ENV variable in advance
-#define timer_ll_reset_register(...) (void)__DECLARE_RCC_RC_ATOMIC_ENV; _timer_ll_reset_register(__VA_ARGS__)
+#define timer_ll_reset_register(...) do { \
+        (void)__DECLARE_RCC_RC_ATOMIC_ENV; \
+        _timer_ll_reset_register(__VA_ARGS__); \
+    } while(0)
 
 /**
  * @brief Set clock source for timer
@@ -329,6 +336,19 @@ static inline void timer_ll_enable_register_clock_always_on(timg_dev_t *hw, bool
 static inline volatile void *timer_ll_get_intr_status_reg(timg_dev_t *hw)
 {
     return &hw->int_st_timers.val;
+}
+
+/**
+ * @brief Set clock prescale for LACT timer
+ *
+ * @param hw Timer Group register base address
+ * @param timer_num Timer number in the group
+ * @param divider Prescale value (0 and 1 are not valid)
+ */
+FORCE_INLINE_ATTR void timer_ll_set_lact_clock_prescale(timg_dev_t *hw, uint32_t divider)
+{
+    HAL_ASSERT(divider>=2);
+    HAL_FORCE_MODIFY_U32_REG_FIELD(hw->lactconfig, lact_divider, divider);
 }
 
 #ifdef __cplusplus

@@ -55,10 +55,9 @@ typedef struct parlio_rx_unit_t {
     SemaphoreHandle_t               mutex;                  /*!< Mutex lock for concurrence safety,
                                                              *   which should be acquired and released in a same function */
 
+#if CONFIG_PM_ENABLE
     /* Power Management */
     esp_pm_lock_handle_t            pm_lock;                /*!< power management lock */
-#if CONFIG_PM_ENABLE
-    char                            pm_lock_name[PARLIO_PM_LOCK_NAME_LEN_MAX]; /*!< pm lock name */
 #endif
 
     /* Transaction Resources */
@@ -247,12 +246,6 @@ static esp_err_t parlio_rx_unit_set_gpio(parlio_rx_unit_handle_t rx_unit, const 
         ESP_RETURN_ON_FALSE(config->clk_in_gpio_num >= 0, ESP_ERR_INVALID_ARG, TAG, "clk_in_gpio_num must be set while the clock input from external");
         /* Connect the clock in signal to the GPIO matrix if it is set */
         gpio_input_enable(config->clk_in_gpio_num);
-
-        // deprecated, to be removed in in esp-idf v6.0
-        if (config->flags.io_loop_back) {
-            gpio_output_enable(config->clk_in_gpio_num);
-        }
-
         esp_rom_gpio_connect_in_signal(config->clk_in_gpio_num,
                                        parlio_periph_signals.groups[group_id].rx_units[unit_id].clk_in_sig, false);
     }
@@ -261,12 +254,6 @@ static esp_err_t parlio_rx_unit_set_gpio(parlio_rx_unit_handle_t rx_unit, const 
     if (config->clk_out_gpio_num >= 0) {
 #if SOC_PARLIO_RX_CLK_SUPPORT_OUTPUT
         gpio_func_sel(config->clk_out_gpio_num, PIN_FUNC_GPIO);
-
-        // deprecated, to be removed in in esp-idf v6.0
-        if (config->flags.io_loop_back) {
-            gpio_input_enable(config->clk_out_gpio_num);
-        }
-
         // connect the signal to the GPIO by matrix, it will also enable the output path properly
         esp_rom_gpio_connect_out_signal(config->clk_out_gpio_num,
                                         parlio_periph_signals.groups[group_id].rx_units[unit_id].clk_out_sig, false, false);
@@ -278,12 +265,6 @@ static esp_err_t parlio_rx_unit_set_gpio(parlio_rx_unit_handle_t rx_unit, const 
     /* Initialize the valid GPIO as input */
     if (config->valid_gpio_num >= 0) {
         gpio_input_enable(config->valid_gpio_num);
-
-        // deprecated, to be removed in in esp-idf v6.0
-        if (config->flags.io_loop_back) {
-            gpio_output_enable(config->valid_gpio_num);
-        }
-
         /* Not connect the signal here, the signal is lazy connected until the delimiter takes effect */
     }
 
@@ -292,12 +273,6 @@ static esp_err_t parlio_rx_unit_set_gpio(parlio_rx_unit_handle_t rx_unit, const 
         /* Loop the data_gpio_nums to connect data and valid signals via GPIO matrix */
         if (config->data_gpio_nums[i] >= 0) {
             gpio_input_enable(config->data_gpio_nums[i]);
-
-            // deprecated, to be removed in in esp-idf v6.0
-            if (config->flags.io_loop_back) {
-                gpio_output_enable(config->data_gpio_nums[i]);
-            }
-
             esp_rom_gpio_connect_in_signal(config->data_gpio_nums[i],
                                            parlio_periph_signals.groups[group_id].rx_units[unit_id].data_sigs[i], false);
         } else {
@@ -491,6 +466,7 @@ static esp_err_t parlio_select_periph_clock(parlio_rx_unit_handle_t rx_unit, con
 {
     parlio_hal_context_t *hal = &rx_unit->base.group->hal;
     parlio_clock_source_t clk_src = config->clk_src;
+    rx_unit->clk_src = clk_src;
     uint32_t src_freq_hz = 0;
     uint32_t exp_freq_hz = 0;
     hal_utils_clk_div_t clk_div = {
@@ -526,24 +502,21 @@ static esp_err_t parlio_select_periph_clock(parlio_rx_unit_handle_t rx_unit, con
     if (clk_src != PARLIO_CLK_SRC_EXTERNAL) {
         // XTAL and PLL clock source will be turned off in light sleep, so basically a NO_LIGHT_SLEEP lock is sufficient
         esp_pm_lock_type_t lock_type = ESP_PM_NO_LIGHT_SLEEP;
-        sprintf(rx_unit->pm_lock_name, "parlio_rx_%d_%d", rx_unit->base.group->group_id, rx_unit->base.unit_id); // e.g. parlio_rx_0_0
 #if CONFIG_IDF_TARGET_ESP32P4
         // use CPU_MAX lock to ensure PSRAM bandwidth and usability during DFS
         lock_type = ESP_PM_CPU_FREQ_MAX;
 #endif
-        esp_err_t ret  = esp_pm_lock_create(lock_type, 0, rx_unit->pm_lock_name, &rx_unit->pm_lock);
+        esp_err_t ret  = esp_pm_lock_create(lock_type, 0, parlio_periph_signals.groups[rx_unit->base.group->group_id].module_name, &rx_unit->pm_lock);
         ESP_RETURN_ON_ERROR(ret, TAG, "create pm lock failed");
     }
 #endif
 
-    esp_clk_tree_enable_src((soc_module_clk_t)clk_src, true);
     /* Set clock configuration */
     PARLIO_CLOCK_SRC_ATOMIC() {
         parlio_ll_rx_set_clock_source(hal->regs, clk_src);
         parlio_ll_rx_set_clock_div(hal->regs, &clk_div);
     }
 
-    rx_unit->clk_src = clk_src;
     /* warning if precision lost due to division */
     if ((clk_src != PARLIO_CLK_SRC_EXTERNAL) &&
             (config->exp_clk_freq_hz != rx_unit->cfg.exp_clk_freq_hz)) {
@@ -567,10 +540,12 @@ static esp_err_t parlio_destroy_rx_unit(parlio_rx_unit_handle_t rx_unit)
     if (rx_unit->trans_sem) {
         vSemaphoreDeleteWithCaps(rx_unit->trans_sem);
     }
+#if CONFIG_PM_ENABLE
     /* Free the power management lock */
     if (rx_unit->pm_lock) {
         ESP_RETURN_ON_ERROR(esp_pm_lock_delete(rx_unit->pm_lock), TAG, "delete pm lock failed");
     }
+#endif
     /* Delete the GDMA channel */
     if (rx_unit->dma_chan) {
         ESP_RETURN_ON_ERROR(gdma_disconnect(rx_unit->dma_chan), TAG, "disconnect dma channel failed");
@@ -594,6 +569,9 @@ static esp_err_t parlio_destroy_rx_unit(parlio_rx_unit_handle_t rx_unit)
     /* Unregister the RX unit from the PARLIO group */
     if (rx_unit->base.group) {
         parlio_unregister_unit_from_group(&rx_unit->base);
+    }
+    if (rx_unit->clk_src) {
+        ESP_RETURN_ON_ERROR(esp_clk_tree_enable_src((soc_module_clk_t)rx_unit->clk_src, false), TAG, "clock source disable failed");
     }
     /* Free the RX unit */
     free(rx_unit);
@@ -661,6 +639,7 @@ esp_err_t parlio_new_rx_unit(const parlio_rx_unit_config_t *config, parlio_rx_un
     }
     parlio_ll_rx_start(hal->regs, false);
     /* parlio_ll_clock_source_t and parlio_clock_source_t are binary compatible if the clock source is from internal */
+    ESP_GOTO_ON_ERROR(esp_clk_tree_enable_src((soc_module_clk_t)(config->clk_src), true), err, TAG, "clock source enable failed");
     ESP_GOTO_ON_ERROR(parlio_select_periph_clock(unit, config), err, TAG, "set clock source failed");
     /* Set the data width */
     parlio_ll_rx_set_bus_width(hal->regs, config->data_width);
@@ -713,10 +692,12 @@ esp_err_t parlio_rx_unit_enable(parlio_rx_unit_handle_t rx_unit, bool reset_queu
     ESP_GOTO_ON_FALSE(!rx_unit->is_enabled, ESP_ERR_INVALID_STATE, err, TAG, "the unit has enabled or running");
     rx_unit->is_enabled = true;
 
+#if CONFIG_PM_ENABLE
     /* Acquire the power management lock in case */
     if (rx_unit->pm_lock) {
         esp_pm_lock_acquire(rx_unit->pm_lock);
     }
+#endif
 
     /* For non-free running clock, the unit can't stop once enabled, otherwise the data alignment will go wrong */
     if (!rx_unit->cfg.flags.free_clk) {
@@ -740,6 +721,7 @@ esp_err_t parlio_rx_unit_enable(parlio_rx_unit_handle_t rx_unit, bool reset_queu
                 parlio_ll_rx_enable_clock(hal->regs, false);
             }
         }
+        assert(trans.delimiter);
         parlio_rx_set_delimiter_config(rx_unit, trans.delimiter);
         parlio_rx_mount_transaction_buffer(rx_unit, &trans);
         gdma_start(rx_unit->dma_chan, (intptr_t)rx_unit->curr_desc);
@@ -784,10 +766,12 @@ esp_err_t parlio_rx_unit_disable(parlio_rx_unit_handle_t rx_unit)
         free(rx_unit->dma_buf);
         rx_unit->dma_buf = NULL;
     }
+#if CONFIG_PM_ENABLE
     /* release power management lock */
     if (rx_unit->pm_lock) {
         esp_pm_lock_release(rx_unit->pm_lock);
     }
+#endif
     /* Erase the current transaction */
     memset(&rx_unit->curr_trans, 0, sizeof(parlio_rx_transaction_t));
 err:

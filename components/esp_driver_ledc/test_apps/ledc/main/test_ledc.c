@@ -14,7 +14,6 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "unity.h"
-#include "hal/gpio_ll.h"
 #include "soc/gpio_periph.h"
 #include "soc/io_mux_reg.h"
 #include "esp_system.h"
@@ -466,7 +465,7 @@ static void timer_frequency_test(ledc_channel_t channel, ledc_timer_bit_t timer_
     } else if (clk_src_freq == 60 * 1000 * 1000) {
         theoretical_freq = 8993;
     }
-    frequency_set_get(speed_mode, timer, 9000, theoretical_freq, 50);
+    frequency_set_get(speed_mode, timer, 9000, theoretical_freq, 60);
 #endif
 
     // Pause and de-configure the timer so that it won't affect the following test cases

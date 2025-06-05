@@ -67,10 +67,6 @@ if(CONFIG_ESP_ROM_HAS_FLASH_COUNT_PAGES_BUG OR CONFIG_ESP_ROM_HAS_CACHE_WRITEBAC
     list(APPEND sources "patches/esp_rom_cache_esp32s2_esp32s3.c")
 endif()
 
-if(CONFIG_ESP_ROM_CACHE_WB_INVLD_LOW_RANGE)
-    list(APPEND sources "patches/esp_rom_cache_esp32c61.c")
-endif()
-
 if(CONFIG_ESP_ROM_HAS_CACHE_WRITEBACK_BUG)
     list(APPEND sources "patches/esp_rom_cache_writeback_esp32s3.S")
 endif()
@@ -131,10 +127,8 @@ if(CONFIG_ESP_ROM_HAS_VERSION)
 endif()
 
 if(ESP_TEE_BUILD)
-    if(target STREQUAL "esp32c6")
-        rom_linker_script("spiflash")
-        rom_linker_script("heap")
-    endif()
+    rom_linker_script("spiflash")
+    rom_linker_script("heap")
 endif()
 
 if(BOOTLOADER_BUILD)
@@ -222,7 +216,7 @@ else() # Regular app build
         endif()
 
     elseif(target STREQUAL "esp32c3")
-        if(CONFIG_BT_CTRL_RUN_IN_FLASH_ONLY AND NOT CONFIG_BT_CTRL_HCI_MODE_UART_H4)
+        if(NOT CONFIG_BT_CTRL_HCI_MODE_UART_H4)
             if(NOT CONFIG_BT_CTRL_BLE_MASTER)
                 rom_linker_script("ble_master")
             endif()
@@ -262,7 +256,7 @@ else() # Regular app build
             endif()
         endif()
     elseif(target STREQUAL "esp32s3")
-        if(CONFIG_BT_CTRL_RUN_IN_FLASH_ONLY AND NOT CONFIG_BT_CTRL_HCI_MODE_UART_H4)
+        if(NOT CONFIG_BT_CTRL_HCI_MODE_UART_H4)
             if(NOT CONFIG_BT_CTRL_BLE_MASTER)
                 rom_linker_script("ble_master")
             endif()

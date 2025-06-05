@@ -64,7 +64,7 @@
 #define SOC_SPI_FLASH_SUPPORTED         1       //TODO: [ESP32H21] IDF-11526
 // #define SOC_RNG_SUPPORTED               1    //TODO: [ESP32H21] IDF-11503
 #define SOC_MODEM_CLOCK_SUPPORTED       1
-// #define SOC_REG_I2C_SUPPORTED           1    //TODO: [ESP32H21] IDF-11550
+#define SOC_REG_I2C_SUPPORTED           1
 // #define SOC_PHY_SUPPORTED               1
 // #define SOC_PCNT_SUPPORTED              1    //TODO: [ESP32H21] IDF-11566
 // #define SOC_MCPWM_SUPPORTED             1    //TODO: [ESP32H21] IDF-11601
@@ -161,8 +161,8 @@
 #define SOC_CPU_PMP_REGION_GRANULARITY  4
 
 /*-------------------------- MMU CAPS ----------------------------------------*/
-// #define SOC_MMU_PAGE_SIZE_CONFIGURABLE        (1)
-// #define SOC_MMU_PAGE_SIZE_8KB_SUPPORTED       (1)
+#define SOC_MMU_PAGE_SIZE_CONFIGURABLE        (1)
+#define SOC_MMU_PAGE_SIZE_8KB_SUPPORTED       (1)
 #define SOC_MMU_PERIPH_NUM                    (1U)
 #define SOC_MMU_LINEAR_ADDRESS_REGION_NUM     (1U)
 #define SOC_MMU_DI_VADDR_SHARED               (1) /*!< D/I vaddr are shared */
@@ -488,6 +488,7 @@
 /*------------------------- ECDSA CAPS -------------------------*/
 #define SOC_ECDSA_SUPPORT_EXPORT_PUBKEY     (1)
 #define SOC_ECDSA_SUPPORT_DETERMINISTIC_MODE   (1)
+#define SOC_ECDSA_SUPPORT_HW_DETERMINISTIC_LOOP (1)
 #define SOC_ECDSA_P192_CURVE_DEFAULT_DISABLED   (1)
 
 /*-------------------------- UART CAPS ---------------------------------------*/

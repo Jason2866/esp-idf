@@ -14,6 +14,9 @@
 extern "C" {
 #endif
 
+// Features supported
+#define ESP_TRANSPORT_WS_STORE_RESPONSE_HEADERS     1
+
 typedef enum ws_transport_opcodes {
     WS_TRANSPORT_OPCODES_CONT =  0x00,
     WS_TRANSPORT_OPCODES_TEXT =  0x01,
@@ -35,6 +38,8 @@ typedef struct {
     const char *user_agent;                 /*!< WS user agent */
     const char *headers;                    /*!< WS additional headers */
     const char *auth;                       /*!< HTTP authorization header */
+    char *response_headers;                 /*!< The buffer to copy the http response header */
+    size_t response_headers_len;            /*!< The length of the http response header */
     bool        propagate_control_frames;   /*!< If true, control frames are passed to the reader
                                              *   If false, only user frames are propagated, control frames are handled
                                              *   automatically during read operations
@@ -107,6 +112,19 @@ esp_err_t esp_transport_ws_set_headers(esp_transport_handle_t t, const char *hea
 esp_err_t esp_transport_ws_set_auth(esp_transport_handle_t t, const char *auth);
 
 /**
+ * @brief      Set the buffer to copy the http response header
+ *
+ * @param[in]  t     The transport handle
+ * @param[in]  response_header  The buffer to copy the http response header
+ * @param[in]  response_header_len  The length of the http response header
+ *
+ * @return
+ *     - ESP_OK
+ *     - ESP_FAIL
+ */
+esp_err_t esp_transport_ws_set_response_headers(esp_transport_handle_t t, char *response_header, size_t response_header_len);
+
+/**
  * @brief               Set websocket transport parameters
  *
  * @param t             websocket transport handle
@@ -152,7 +170,7 @@ bool esp_transport_ws_get_fin_flag(esp_transport_handle_t t);
 /**
  * @brief               Returns the HTTP status code of the websocket handshake
  *
- * This API should be called after the connection atempt otherwise its result is meaningless
+ * This API should be called after the connection attempt otherwise its result is meaningless
  *
  * @param t             websocket transport handle
  *
@@ -161,6 +179,17 @@ bool esp_transport_ws_get_fin_flag(esp_transport_handle_t t);
  *      -1 on failure
  */
 int esp_transport_ws_get_upgrade_request_status(esp_transport_handle_t t);
+
+/**
+ * @brief               Returns websocket redir host for the last connection attempt
+ *
+ * @param t             websocket transport handle
+ *
+ * @return
+ *      - URI of the redirection host
+ *      - NULL if no redirection was attempted
+ */
+char* esp_transport_ws_get_redir_uri(esp_transport_handle_t t);
 
 /**
  * @brief               Returns websocket op-code for last received data

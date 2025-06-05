@@ -99,6 +99,7 @@ esp_err_t gptimer_select_periph_clock(gptimer_t *timer, gptimer_clock_source_t s
         periph_rtc_dig_clk8m_enable();
     }
 #endif // SOC_TIMER_GROUP_SUPPORT_RC_FAST
+    timer->clk_src = src_clk;
 
     // get clock source frequency
     ESP_RETURN_ON_ERROR(esp_clk_tree_src_get_freq_hz((soc_module_clk_t)src_clk, ESP_CLK_TREE_SRC_FREQ_PRECISION_CACHED, &counter_src_hz),
@@ -134,13 +135,11 @@ esp_err_t gptimer_select_periph_clock(gptimer_t *timer, gptimer_clock_source_t s
 #endif // CONFIG_IDF_TARGET_ESP32C2
 
     if (need_pm_lock) {
-        sprintf(timer->pm_lock_name, "gptimer_%d_%d", group_id, timer_id); // e.g. gptimer_0_0
-        ESP_RETURN_ON_ERROR(esp_pm_lock_create(pm_lock_type, 0, timer->pm_lock_name, &timer->pm_lock),
+        ESP_RETURN_ON_ERROR(esp_pm_lock_create(pm_lock_type, 0, timer_group_periph_signals.groups[group_id].module_name[timer_id], &timer->pm_lock),
                             TAG, "create pm lock failed");
     }
 #endif // CONFIG_PM_ENABLE
 
-    esp_clk_tree_enable_src((soc_module_clk_t)src_clk, true);
     // !!! HARDWARE SHARED RESOURCE !!!
     // on some ESP chip, different peripheral's clock source setting are mixed in the same register
     // so we need to make this done in an atomic way
@@ -148,7 +147,6 @@ esp_err_t gptimer_select_periph_clock(gptimer_t *timer, gptimer_clock_source_t s
         timer_ll_set_clock_source(group_id, timer_id, src_clk);
         timer_ll_enable_clock(group_id, timer_id, true);
     }
-    timer->clk_src = src_clk;
     uint32_t prescale = counter_src_hz / resolution_hz; // potential resolution loss here
     timer_ll_set_clock_prescale(timer->hal.dev, timer_id, prescale);
     timer->resolution_hz = counter_src_hz / prescale; // this is the real resolution
@@ -165,12 +163,14 @@ esp_err_t gptimer_get_intr_handle(gptimer_handle_t timer, intr_handle_t *ret_int
     return ESP_OK;
 }
 
+#if CONFIG_PM_ENABLE
 esp_err_t gptimer_get_pm_lock(gptimer_handle_t timer, esp_pm_lock_handle_t *ret_pm_lock)
 {
     ESP_RETURN_ON_FALSE(timer && ret_pm_lock, ESP_ERR_INVALID_ARG, TAG, "invalid argument");
     *ret_pm_lock = timer->pm_lock;
     return ESP_OK;
 }
+#endif // CONFIG_PM_ENABLE
 
 int gptimer_get_group_id(gptimer_handle_t timer, int *group_id)
 {

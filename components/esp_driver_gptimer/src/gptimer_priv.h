@@ -28,6 +28,7 @@
 #include "hal/timer_hal.h"
 #include "hal/timer_ll.h"
 #include "clk_ctrl_os.h"
+#include "esp_private/esp_clk_tree_common.h"
 #include "esp_private/sleep_retention.h"
 #include "esp_private/periph_ctrl.h"
 
@@ -50,8 +51,6 @@ extern "C" {
 #endif
 
 #define GPTIMER_ALLOW_INTR_PRIORITY_MASK ESP_INTR_FLAG_LOWMED
-
-#define GPTIMER_PM_LOCK_NAME_LEN_MAX 16
 
 #define GPTIMER_USE_RETENTION_LINK  (SOC_TIMER_SUPPORT_SLEEP_RETENTION && CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP)
 
@@ -95,9 +94,8 @@ struct gptimer_t {
     gptimer_alarm_cb_t on_alarm;
     void *user_ctx;
     gptimer_clock_source_t clk_src;
-    esp_pm_lock_handle_t pm_lock; // power management lock
 #if CONFIG_PM_ENABLE
-    char pm_lock_name[GPTIMER_PM_LOCK_NAME_LEN_MAX]; // pm lock name
+    esp_pm_lock_handle_t pm_lock; // power management lock
 #endif
     struct {
         uint32_t intr_shared: 1;

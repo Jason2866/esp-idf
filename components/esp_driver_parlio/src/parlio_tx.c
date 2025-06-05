@@ -10,43 +10,6 @@
 #include "driver/parlio_tx.h"
 #include "parlio_priv.h"
 
-typedef struct {
-    uint32_t idle_value; // Parallel IO bus idle value
-    const void *payload; // payload to be transmitted
-    size_t payload_bits; // payload size in bits
-    int dma_link_idx;  // index of DMA link list
-    struct {
-        uint32_t loop_transmission : 1; // whether the transmission is in loop mode
-    } flags;                           // Extra configuration flags
-} parlio_tx_trans_desc_t;
-
-typedef struct parlio_tx_unit_t {
-    struct parlio_unit_t base; // base unit
-    size_t data_width;     // data width
-    intr_handle_t intr;    // allocated interrupt handle
-    esp_pm_lock_handle_t pm_lock;   // power management lock
-    gdma_channel_handle_t dma_chan; // DMA channel
-    gdma_link_list_handle_t dma_link[PARLIO_DMA_LINK_NUM]; // DMA link list handle
-    size_t int_mem_align; // Alignment for internal memory
-    size_t ext_mem_align; // Alignment for external memory
-#if CONFIG_PM_ENABLE
-    char pm_lock_name[PARLIO_PM_LOCK_NAME_LEN_MAX]; // pm lock name
-#endif
-    portMUX_TYPE spinlock;     // prevent resource accessing by user and interrupt concurrently
-    uint32_t out_clk_freq_hz;  // output clock frequency
-    parlio_clock_source_t clk_src;  // Parallel IO internal clock source
-    size_t max_transfer_bits;  // maximum transfer size in bits
-    size_t queue_depth;        // size of transaction queue
-    size_t num_trans_inflight; // indicates the number of transactions that are undergoing but not recycled to ready_queue
-    QueueHandle_t trans_queues[PARLIO_TX_QUEUE_MAX]; // transaction queues
-    parlio_tx_trans_desc_t *cur_trans; // points to current transaction
-    uint32_t idle_value_mask;          // mask of idle value
-    _Atomic parlio_tx_fsm_t fsm;       // Driver FSM state
-    parlio_tx_done_callback_t on_trans_done; // callback function when the transmission is done
-    void *user_data;                   // user data passed to the callback function
-    parlio_tx_trans_desc_t trans_desc_pool[];   // transaction descriptor pool
-} parlio_tx_unit_t;
-
 static void parlio_tx_default_isr(void *args);
 
 static esp_err_t parlio_tx_create_trans_queue(parlio_tx_unit_t *tx_unit, const parlio_tx_unit_config_t *config)
@@ -82,12 +45,17 @@ exit:
 
 static esp_err_t parlio_destroy_tx_unit(parlio_tx_unit_t *tx_unit)
 {
+    if (tx_unit->bs_handle) {
+        ESP_RETURN_ON_FALSE(false, ESP_ERR_INVALID_STATE, TAG, "please call parlio_tx_unit_undecorate_bitscrambler() before delete the tx unit");
+    }
     if (tx_unit->intr) {
         ESP_RETURN_ON_ERROR(esp_intr_free(tx_unit->intr), TAG, "delete interrupt service failed");
     }
+#if CONFIG_PM_ENABLE
     if (tx_unit->pm_lock) {
         ESP_RETURN_ON_ERROR(esp_pm_lock_delete(tx_unit->pm_lock), TAG, "delete pm lock failed");
     }
+#endif
     if (tx_unit->dma_chan) {
         ESP_RETURN_ON_ERROR(gdma_disconnect(tx_unit->dma_chan), TAG, "disconnect dma channel failed");
         ESP_RETURN_ON_ERROR(gdma_del_channel(tx_unit->dma_chan), TAG, "delete dma channel failed");
@@ -106,6 +74,9 @@ static esp_err_t parlio_destroy_tx_unit(parlio_tx_unit_t *tx_unit)
             ESP_RETURN_ON_ERROR(gdma_del_link_list(tx_unit->dma_link[i]), TAG, "delete dma link list failed");
         }
     }
+    if (tx_unit->clk_src) {
+        ESP_RETURN_ON_ERROR(esp_clk_tree_enable_src((soc_module_clk_t)tx_unit->clk_src, false), TAG, "clock source disable failed");
+    }
     free(tx_unit);
     return ESP_OK;
 }
@@ -119,12 +90,6 @@ static esp_err_t parlio_tx_unit_configure_gpio(parlio_tx_unit_t *tx_unit, const 
     for (size_t i = 0; i < config->data_width; i++) {
         if (config->data_gpio_nums[i] >= 0) {
             gpio_func_sel(config->data_gpio_nums[i], PIN_FUNC_GPIO);
-
-            // deprecated, to be removed in in esp-idf v6.0
-            if (config->flags.io_loop_back) {
-                gpio_input_enable(config->data_gpio_nums[i]);
-            }
-
             // connect the signal to the GPIO by matrix, it will also enable the output path properly
             esp_rom_gpio_connect_out_signal(config->data_gpio_nums[i],
                                             parlio_periph_signals.groups[group_id].tx_units[unit_id].data_sigs[i], false, false);
@@ -134,10 +99,6 @@ static esp_err_t parlio_tx_unit_configure_gpio(parlio_tx_unit_t *tx_unit, const 
     if (config->valid_gpio_num >= 0) {
         gpio_func_sel(config->valid_gpio_num, PIN_FUNC_GPIO);
 
-        // deprecated, to be removed in in esp-idf v6.0
-        if (config->flags.io_loop_back) {
-            gpio_input_enable(config->valid_gpio_num);
-        }
 #if !PARLIO_LL_TX_DATA_LINE_AS_VALID_SIG
         // Configure CS signal if supported
         // Note: the default value of CS signal is low, so we need to invert the CS to keep compatible with the default value
@@ -155,24 +116,12 @@ static esp_err_t parlio_tx_unit_configure_gpio(parlio_tx_unit_t *tx_unit, const 
     }
     if (config->clk_out_gpio_num >= 0) {
         gpio_func_sel(config->clk_out_gpio_num, PIN_FUNC_GPIO);
-
-        // deprecated, to be removed in in esp-idf v6.0
-        if (config->flags.io_loop_back) {
-            gpio_input_enable(config->clk_out_gpio_num);
-        }
-
         // connect the signal to the GPIO by matrix, it will also enable the output path properly
         esp_rom_gpio_connect_out_signal(config->clk_out_gpio_num,
                                         parlio_periph_signals.groups[group_id].tx_units[unit_id].clk_out_sig, false, false);
     }
     if (config->clk_in_gpio_num >= 0) {
         gpio_input_enable(config->clk_in_gpio_num);
-
-        // deprecated, to be removed in in esp-idf v6.0
-        if (config->flags.io_loop_back) {
-            gpio_output_enable(config->clk_in_gpio_num);
-        }
-
         esp_rom_gpio_connect_in_signal(config->clk_in_gpio_num,
                                        parlio_periph_signals.groups[group_id].tx_units[unit_id].clk_in_sig, false);
     }
@@ -236,6 +185,7 @@ static esp_err_t parlio_select_periph_clock(parlio_tx_unit_t *tx_unit, const par
 {
     parlio_hal_context_t *hal = &tx_unit->base.group->hal;
     parlio_clock_source_t clk_src = config->clk_src;
+    tx_unit->clk_src = clk_src;
     if (config->clk_in_gpio_num >= 0 && clk_src != PARLIO_CLK_SRC_EXTERNAL) {
         ESP_LOGW(TAG, "input clock GPIO is set, use external clk src");
         clk_src = PARLIO_CLK_SRC_EXTERNAL;
@@ -255,12 +205,11 @@ static esp_err_t parlio_select_periph_clock(parlio_tx_unit_t *tx_unit, const par
     if (clk_src != PARLIO_CLK_SRC_EXTERNAL) {
         // XTAL and PLL clock source will be turned off in light sleep, so basically a NO_LIGHT_SLEEP lock is sufficient
         esp_pm_lock_type_t lock_type = ESP_PM_NO_LIGHT_SLEEP;
-        sprintf(tx_unit->pm_lock_name, "parlio_tx_%d_%d", tx_unit->base.group->group_id, tx_unit->base.unit_id); // e.g. parlio_tx_0_0
 #if CONFIG_IDF_TARGET_ESP32P4
         // use CPU_MAX lock to ensure PSRAM bandwidth and usability during DFS
         lock_type = ESP_PM_CPU_FREQ_MAX;
 #endif
-        esp_err_t ret  = esp_pm_lock_create(lock_type, 0, tx_unit->pm_lock_name, &tx_unit->pm_lock);
+        esp_err_t ret  = esp_pm_lock_create(lock_type, 0, parlio_periph_signals.groups[tx_unit->base.group->group_id].module_name, &tx_unit->pm_lock);
         ESP_RETURN_ON_ERROR(ret, TAG, "create pm lock failed");
     }
 #endif
@@ -278,7 +227,6 @@ static esp_err_t parlio_select_periph_clock(parlio_tx_unit_t *tx_unit, const par
 #else
     tx_unit->out_clk_freq_hz = hal_utils_calc_clk_div_integer(&clk_info, &clk_div.integer);
 #endif
-    esp_clk_tree_enable_src((soc_module_clk_t)clk_src, true);
     PARLIO_CLOCK_SRC_ATOMIC() {
         // turn on the tx module clock to sync the clock divider configuration because of the CDC (Cross Domain Crossing)
         parlio_ll_tx_enable_clock(hal->regs, true);
@@ -290,8 +238,6 @@ static esp_err_t parlio_select_periph_clock(parlio_tx_unit_t *tx_unit, const par
     if (tx_unit->out_clk_freq_hz != config->output_clk_freq_hz) {
         ESP_LOGW(TAG, "precision loss, real output frequency: %"PRIu32, tx_unit->out_clk_freq_hz);
     }
-    tx_unit->clk_src = clk_src;
-
     return ESP_OK;
 }
 
@@ -339,6 +285,7 @@ esp_err_t parlio_new_tx_unit(const parlio_tx_unit_config_t *config, parlio_tx_un
     parlio_group_t *group = unit->base.group;
     parlio_hal_context_t *hal = &group->hal;
     // select the clock source
+    ESP_GOTO_ON_ERROR(esp_clk_tree_enable_src((soc_module_clk_t)(config->clk_src), true), err, TAG, "clock source enable failed");
     ESP_GOTO_ON_ERROR(parlio_select_periph_clock(unit, config), err, TAG, "set clock source failed");
 
     // install interrupt service
@@ -526,6 +473,11 @@ static void parlio_tx_do_transaction(parlio_tx_unit_t *tx_unit, parlio_tx_trans_
     parlio_ll_tx_set_idle_data_value(hal->regs, t->idle_value);
     parlio_ll_tx_set_trans_bit_len(hal->regs, t->payload_bits);
 
+    if (tx_unit->bs_handle) {
+        // load the bitscrambler program and start it
+        tx_unit->bs_enable_fn(tx_unit, t);
+    }
+
     gdma_start(tx_unit->dma_chan, gdma_link_get_head_addr(tx_unit->dma_link[t->dma_link_idx]));
     // wait until the data goes from the DMA to TX unit's FIFO
     while (parlio_ll_tx_is_ready(hal->regs) == false);
@@ -541,11 +493,13 @@ esp_err_t parlio_tx_unit_enable(parlio_tx_unit_handle_t tx_unit)
     parlio_hal_context_t *hal = &tx_unit->base.group->hal;
     ESP_RETURN_ON_FALSE(tx_unit, ESP_ERR_INVALID_ARG, TAG, "invalid argument");
     parlio_tx_fsm_t expected_fsm = PARLIO_TX_FSM_INIT;
-    if (atomic_compare_exchange_strong(&tx_unit->fsm, &expected_fsm, PARLIO_TX_FSM_ENABLE_WAIT)) {
+    if (atomic_compare_exchange_strong(&tx_unit->fsm, &expected_fsm, PARLIO_TX_FSM_WAIT)) {
+#if CONFIG_PM_ENABLE
         // acquire power management lock
         if (tx_unit->pm_lock) {
             esp_pm_lock_acquire(tx_unit->pm_lock);
         }
+#endif
         parlio_ll_enable_interrupt(hal->regs, PARLIO_LL_EVENT_TX_MASK, true);
         atomic_store(&tx_unit->fsm, PARLIO_TX_FSM_ENABLE);
     } else {
@@ -560,7 +514,7 @@ esp_err_t parlio_tx_unit_enable(parlio_tx_unit_handle_t tx_unit)
     // check if we need to start one pending transaction
     parlio_tx_trans_desc_t *t = NULL;
     expected_fsm = PARLIO_TX_FSM_ENABLE;
-    if (atomic_compare_exchange_strong(&tx_unit->fsm, &expected_fsm, PARLIO_TX_FSM_RUN_WAIT)) {
+    if (atomic_compare_exchange_strong(&tx_unit->fsm, &expected_fsm, PARLIO_TX_FSM_WAIT)) {
         // check if we need to start one transaction
         if (xQueueReceive(tx_unit->trans_queues[PARLIO_TX_QUEUE_PROGRESS], &t, 0) == pdTRUE) {
             // sanity check
@@ -581,11 +535,11 @@ esp_err_t parlio_tx_unit_disable(parlio_tx_unit_handle_t tx_unit)
     bool valid_state = false;
     // check the supported states, and switch to intermediate state: INIT_WAIT
     parlio_tx_fsm_t expected_fsm = PARLIO_TX_FSM_ENABLE;
-    if (atomic_compare_exchange_strong(&tx_unit->fsm, &expected_fsm, PARLIO_TX_FSM_INIT_WAIT)) {
+    if (atomic_compare_exchange_strong(&tx_unit->fsm, &expected_fsm, PARLIO_TX_FSM_WAIT)) {
         valid_state = true;
     }
     expected_fsm = PARLIO_TX_FSM_RUN;
-    if (atomic_compare_exchange_strong(&tx_unit->fsm, &expected_fsm, PARLIO_TX_FSM_INIT_WAIT)) {
+    if (atomic_compare_exchange_strong(&tx_unit->fsm, &expected_fsm, PARLIO_TX_FSM_WAIT)) {
         valid_state = true;
         assert(tx_unit->cur_trans);
         // recycle the interrupted transaction
@@ -616,10 +570,12 @@ esp_err_t parlio_tx_unit_disable(parlio_tx_unit_handle_t tx_unit)
     // change the EOF condition to be the data length, so the EOF will be triggered normally
     parlio_ll_tx_set_eof_condition(hal->regs, PARLIO_LL_TX_EOF_COND_DATA_LEN);
 
+#if CONFIG_PM_ENABLE
     // release power management lock
     if (tx_unit->pm_lock) {
         esp_pm_lock_release(tx_unit->pm_lock);
     }
+#endif
 
     // finally we switch to the INIT state
     atomic_store(&tx_unit->fsm, PARLIO_TX_FSM_INIT);
@@ -693,6 +649,12 @@ esp_err_t parlio_tx_unit_transmit(parlio_tx_unit_handle_t tx_unit, const void *p
         t->idle_value = config->idle_value & tx_unit->idle_value_mask;
         t->flags.loop_transmission = config->flags.loop_transmission;
 
+        if (tx_unit->bs_handle) {
+            t->bitscrambler_program = config->bitscrambler_program;
+        } else if (config->bitscrambler_program) {
+            ESP_RETURN_ON_ERROR(ESP_ERR_INVALID_STATE, TAG, "TX unit is not decorated with bitscrambler");
+        }
+
         // send the transaction descriptor to progress queue
         ESP_RETURN_ON_FALSE(xQueueSend(tx_unit->trans_queues[PARLIO_TX_QUEUE_PROGRESS], &t, 0) == pdTRUE,
                             ESP_ERR_INVALID_STATE, TAG, "failed to send transaction descriptor to progress queue");
@@ -700,7 +662,7 @@ esp_err_t parlio_tx_unit_transmit(parlio_tx_unit_handle_t tx_unit, const void *p
 
         // check if we need to start one pending transaction
         parlio_tx_fsm_t expected_fsm = PARLIO_TX_FSM_ENABLE;
-        if (atomic_compare_exchange_strong(&tx_unit->fsm, &expected_fsm, PARLIO_TX_FSM_RUN_WAIT)) {
+        if (atomic_compare_exchange_strong(&tx_unit->fsm, &expected_fsm, PARLIO_TX_FSM_WAIT)) {
             // check if we need to start one transaction
             if (xQueueReceive(tx_unit->trans_queues[PARLIO_TX_QUEUE_PROGRESS], &t, 0) == pdTRUE) {
                 atomic_store(&tx_unit->fsm, PARLIO_TX_FSM_RUN);
@@ -733,6 +695,10 @@ static void parlio_tx_default_isr(void *args)
         parlio_ll_clear_interrupt_status(hal->regs, PARLIO_LL_EVENT_TX_EOF);
         parlio_ll_tx_start(hal->regs, false);
 
+        if (tx_unit->bs_handle && tx_unit->cur_trans->bitscrambler_program) {
+            tx_unit->bs_disable_fn(tx_unit);
+        }
+
         // invoke callback before sending the transaction to complete queue
         parlio_tx_done_callback_t done_cb = tx_unit->on_trans_done;
         if (done_cb) {
@@ -743,7 +709,7 @@ static void parlio_tx_default_isr(void *args)
 
         parlio_tx_trans_desc_t *trans_desc = NULL;
         parlio_tx_fsm_t expected_fsm = PARLIO_TX_FSM_RUN;
-        if (atomic_compare_exchange_strong(&tx_unit->fsm, &expected_fsm, PARLIO_TX_FSM_ENABLE_WAIT)) {
+        if (atomic_compare_exchange_strong(&tx_unit->fsm, &expected_fsm, PARLIO_TX_FSM_WAIT)) {
             trans_desc = tx_unit->cur_trans;
             // move current finished transaction to the complete queue
             xQueueSendFromISR(tx_unit->trans_queues[PARLIO_TX_QUEUE_COMPLETE], &trans_desc, &high_task_woken);
@@ -756,7 +722,7 @@ static void parlio_tx_default_isr(void *args)
 
         // if the tx unit is till in enable state (i.e. not disabled by user), let's try start the next pending transaction
         expected_fsm = PARLIO_TX_FSM_ENABLE;
-        if (atomic_compare_exchange_strong(&tx_unit->fsm, &expected_fsm, PARLIO_TX_FSM_RUN_WAIT)) {
+        if (atomic_compare_exchange_strong(&tx_unit->fsm, &expected_fsm, PARLIO_TX_FSM_WAIT)) {
             if (xQueueReceiveFromISR(tx_unit->trans_queues[PARLIO_TX_QUEUE_PROGRESS], &trans_desc, &high_task_woken) == pdTRUE) {
                 // sanity check
                 assert(trans_desc);

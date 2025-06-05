@@ -243,16 +243,6 @@ static inline void ecdsa_ll_set_k_type(ecdsa_sign_type_t type)
 }
 
 /**
- * @brief Set the loop number value that is used for deterministic derivation of K
- *
- * @param loop_number Loop number for deterministic K
- */
-static inline void ecdsa_ll_set_deterministic_loop(uint16_t loop_number)
-{
-    REG_SET_FIELD(ECDSA_CONF_REG, ECDSA_DETERMINISTIC_LOOP, loop_number);
-}
-
-/**
  * @brief Set the stage of ECDSA operation
  *
  * @param stage Stage of operation
@@ -410,16 +400,20 @@ static inline int ecdsa_ll_get_operation_result(void)
 }
 
 /**
- * @brief Check if the k value is greater than the curve order.
- *
- * @return 0, k value is not greater than the curve order. In this case, the k value is the set k value.
- * @return 1, k value is greater than than the curve order. In this case, the k value is the set (k mod n).
+ * @brief Check if the ECDSA curves configuration is supported
  */
-static inline int ecdsa_ll_check_k_value(void)
+static inline bool ecdsa_ll_is_configurable_curve_supported(void)
 {
-    return REG_GET_BIT(ECDSA_RESULT_REG, ECDSA_K_VALUE_WARNING);
+    return true;
 }
 
+/**
+ * @brief Check if the ECDSA deterministic mode is supported
+ */
+static inline bool ecdsa_ll_is_deterministic_mode_supported(void)
+{
+    return true;
+}
 
 #ifdef __cplusplus
 }

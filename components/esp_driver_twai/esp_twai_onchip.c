@@ -71,7 +71,9 @@ typedef struct {
     uint32_t valid_fd_timing;
     twai_event_callbacks_t cbs;
     void *user_data;
+#ifdef CONFIG_PM_ENABLE
     esp_pm_lock_handle_t pm_lock;
+#endif
 
     _Atomic twai_error_state_t state;
     uint16_t tx_error_count;
@@ -285,9 +287,11 @@ static void _node_isr_main(void *arg)
 
 static void _node_destroy(twai_onchip_ctx_t *twai_ctx)
 {
+#ifdef CONFIG_PM_ENABLE
     if (twai_ctx->pm_lock) {
         esp_pm_lock_delete(twai_ctx->pm_lock);
     }
+#endif
     if (twai_ctx->intr_hdl) {
         esp_intr_free(twai_ctx->intr_hdl);
     }
@@ -372,6 +376,8 @@ static esp_err_t _node_set_bit_timing(twai_node_handle_t node, const twai_timing
 #endif
 
     if (new_clock_src != twai_ctx->curr_clk_src) {
+        // TODO: IDF-13144
+        ESP_ERROR_CHECK(esp_clk_tree_enable_src((soc_module_clk_t)(new_clock_src), true));
         twai_ctx->curr_clk_src = new_clock_src;
         _twai_rcc_clock_sel(twai_ctx->ctrlr_id, new_clock_src);
     }
@@ -579,8 +585,8 @@ esp_err_t twai_new_node_onchip(const twai_onchip_node_config_t *node_config, twa
     ESP_RETURN_ON_FALSE(node_config->tx_queue_depth > 0, ESP_ERR_INVALID_ARG, TAG, "tx_queue_depth at least 1");
     ESP_RETURN_ON_FALSE(!node_config->intr_priority || (BIT(node_config->intr_priority) & ESP_INTR_FLAG_LOWMED), ESP_ERR_INVALID_ARG, TAG, "Invalid intr_priority level");
 
-    // Allocate TWAI node object memory
-    twai_onchip_ctx_t *node = heap_caps_calloc(1, sizeof(twai_onchip_ctx_t) + twai_hal_get_mem_requirment(), TWAI_MALLOC_CAPS);
+    // Allocate TWAI node from internal memory because it contains atomic variable
+    twai_onchip_ctx_t *node = heap_caps_calloc(1, sizeof(twai_onchip_ctx_t) + twai_hal_get_mem_requirment(), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
     ESP_RETURN_ON_FALSE(node, ESP_ERR_NO_MEM, TAG, "No mem");
     node->ctrlr_id = -1;
     // Acquire controller

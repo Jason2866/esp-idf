@@ -572,13 +572,6 @@ void IRAM_ATTR esp_pm_impl_switch_mode(pm_mode_t mode,
  */
 static void IRAM_ATTR on_freq_update(uint32_t old_ticks_per_us, uint32_t ticks_per_us)
 {
-    uint32_t old_apb_ticks_per_us = MIN(old_ticks_per_us, 80);
-    uint32_t apb_ticks_per_us = MIN(ticks_per_us, 80);
-    /* Update APB frequency value used by the timer */
-    if (old_apb_ticks_per_us != apb_ticks_per_us) {
-        esp_timer_private_update_apb_freq(apb_ticks_per_us);
-    }
-
 #ifdef CONFIG_FREERTOS_SYSTICK_USES_CCOUNT
 #ifdef XT_RTOS_TIMER_INT
     /* Calculate new tick divisor */
@@ -933,7 +926,7 @@ void esp_pm_impl_init(void)
         ;
     }
 
-    esp_clk_tree_enable_src((soc_module_clk_t)clk_source, true);
+    ESP_ERROR_CHECK(esp_clk_tree_enable_src((soc_module_clk_t)clk_source, true));
     /* When DFS is enabled, override system setting and use REFTICK as UART clock source */
     HP_UART_SRC_CLK_ATOMIC() {
         uart_ll_set_sclk(UART_LL_GET_HW(CONFIG_ESP_CONSOLE_UART_NUM), (soc_module_clk_t)clk_source);

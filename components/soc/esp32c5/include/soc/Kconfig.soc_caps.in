@@ -255,6 +255,10 @@ config SOC_PM_SUPPORTED
     bool
     default y
 
+config SOC_CLOCK_TREE_MANAGEMENT_SUPPORTED
+    bool
+    default y
+
 config SOC_SPIRAM_SUPPORTED
     bool
     default y
@@ -504,6 +508,10 @@ config SOC_GDMA_SUPPORT_SLEEP_RETENTION
     default y
 
 config SOC_AHB_GDMA_SUPPORT_PSRAM
+    bool
+    default y
+
+config SOC_GDMA_SUPPORT_WEIGHTED_ARBITRATION
     bool
     default y
 
@@ -1195,6 +1203,14 @@ config SOC_SPI_MEM_SUPPORT_CACHE_32BIT_ADDR_MAP
     bool
     default y
 
+config SOC_SPI_MEM_SUPPORT_TIMING_TUNING
+    bool
+    default y
+
+config SOC_MEMSPI_TIMING_TUNING_BY_MSPI_DELAY
+    bool
+    default y
+
 config SOC_MEMSPI_SRC_FREQ_80M_SUPPORTED
     bool
     default y
@@ -1424,6 +1440,10 @@ config SOC_APM_CTRL_FILTER_SUPPORTED
     default y
 
 config SOC_APM_LP_APM0_SUPPORTED
+    bool
+    default y
+
+config SOC_APM_SUPPORT_TEE_PERI_ACCESS_CTRL
     bool
     default y
 
@@ -1659,7 +1679,7 @@ config SOC_RCC_IS_INDEPENDENT
     bool
     default y
 
-config SOC_CLK_ANA_I2C_MST_HAS_ROOT_GATE
+config SOC_CLK_ANA_I2C_MST_DEPENDS_ON_MODEM_APB
     bool
     default y
 
@@ -1689,7 +1709,7 @@ config SOC_WIFI_HW_TSF
 
 config SOC_WIFI_FTM_SUPPORT
     bool
-    default n
+    default y
 
 config SOC_WIFI_GCMP_SUPPORT
     bool
@@ -1756,5 +1776,9 @@ config SOC_LP_CORE_SINGLE_INTERRUPT_VECTOR
     default y
 
 config SOC_LP_CORE_SUPPORT_ETM
+    bool
+    default y
+
+config SOC_LP_CORE_SUPPORT_STORE_LOAD_EXCEPTIONS
     bool
     default y

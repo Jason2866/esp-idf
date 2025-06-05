@@ -9,7 +9,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "soc/soc.h"
-#include "soc/regi2c_defs.h"
 #include "soc/hp_sys_clkrst_reg.h"
 #include "soc/lpperi_struct.h"
 #include "soc/i2c_ana_mst_struct.h"
@@ -18,6 +17,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#define ANA_I2C_MST_CLK_HAS_ROOT_GATING 1   /*!< Any regi2c operation needs enable the analog i2c master clock first */
 
 /**
  * @brief Enable analog I2C master clock
@@ -28,7 +29,10 @@ static inline __attribute__((always_inline)) void _regi2c_ctrl_ll_master_enable_
 }
 
 // LPPERI.clk_en is a shared register, so this function must be used in an atomic way
-#define regi2c_ctrl_ll_master_enable_clock(...) (void)__DECLARE_RCC_RC_ATOMIC_ENV; _regi2c_ctrl_ll_master_enable_clock(__VA_ARGS__)
+#define regi2c_ctrl_ll_master_enable_clock(...) do { \
+        (void)__DECLARE_RCC_RC_ATOMIC_ENV; \
+        _regi2c_ctrl_ll_master_enable_clock(__VA_ARGS__); \
+    } while(0)
 
 /**
  * @brief Check whether analog I2C master clock is enabled
@@ -48,7 +52,10 @@ static inline __attribute__((always_inline)) void _regi2c_ctrl_ll_master_reset(v
 }
 
 // LPPERI.reset_en is a shared register, so this function must be used in an atomic way
-#define regi2c_ctrl_ll_master_reset(...) (void)__DECLARE_RCC_RC_ATOMIC_ENV; _regi2c_ctrl_ll_master_reset(__VA_ARGS__)
+#define regi2c_ctrl_ll_master_reset(...) do { \
+        (void)__DECLARE_RCC_RC_ATOMIC_ENV; \
+        _regi2c_ctrl_ll_master_reset(__VA_ARGS__); \
+    } while(0)
 
 /**
  * @brief Configure analog I2C master clock
@@ -124,7 +131,7 @@ static inline void regi2c_ctrl_ll_i2c_sar_periph_enable(void)
 }
 
 /**
- * @brief Disable the I2C internal bus to do I2C read/write operation to the SAR_ADC register
+ * @brief Disable the I2C internal bus to do I2C read/write operation to the SAR_ADC and TSENS registers
  */
 static inline void regi2c_ctrl_ll_i2c_sar_periph_disable(void)
 {

@@ -109,7 +109,7 @@ BITSCRAMBLER_DOCS = ['api-reference/peripherals/bitscrambler.rst']
 
 CLK_TREE_DOCS = ['api-reference/peripherals/clk_tree.rst']
 
-UART_DOCS = ['api-reference/peripherals/uart.rst']
+UART_DOCS = ['api-reference/peripherals/uart.rst', 'api-reference/peripherals/uhci.rst']
 
 SDMMC_DOCS = ['api-reference/peripherals/sdmmc_host.rst']
 
@@ -287,7 +287,7 @@ ESP32C2_DOCS = ['api-guides/RF_calibration.rst', 'api-guides/phy.rst']
 
 ESP32C5_DOCS = ['api-guides/phy.rst', 'api-reference/peripherals/sd_pullup_requirements.rst']
 
-ESP32C61_DOCS = ['api-guides/phy.rst']
+ESP32C61_DOCS = []  # TODO: IDF-13141, re-open for c61 eco3
 
 ESP32C6_DOCS = [
     'api-guides/RF_calibration.rst',
@@ -296,6 +296,10 @@ ESP32C6_DOCS = [
 ] + ESP_TEE_DOCS
 
 ESP32H2_DOCS = ['api-guides/RF_calibration.rst', 'api-guides/phy.rst']
+
+ESP32H4_DOCS = [
+    'api-reference/system/ipc.rst',
+]
 
 ESP32P4_DOCS = [
     'api-reference/system/ipc.rst',
@@ -373,6 +377,7 @@ conditional_include_dict = {
     'esp32c6': ESP32C6_DOCS,
     'esp32c61': ESP32C61_DOCS,
     'esp32h2': ESP32H2_DOCS,
+    'esp32h4': ESP32H4_DOCS,
     'esp32p4': ESP32P4_DOCS,
 }
 
