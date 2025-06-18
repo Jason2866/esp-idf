@@ -57,7 +57,7 @@ ppTxFragmentProc = 0x40001e08;
 esf_buf_setup = 0x40001e0c;
 hal_crypto_set_key_entry = 0x40001e18;
 /*pm_start = 0x40001e34;*/
-pm_stop = 0x40001e38;
+/*pm_stop = 0x40001e38;*/
 hal_set_sta_tbtt = 0x40001e4c;
 //pm_update_next_tbtt = 0x40001e50;
 pm_set_sleep_type = 0x40001e54;
@@ -129,7 +129,7 @@ s_trans_id = 0x3fcdfac4;
  ***************************************/
 
 /* Functions */
-coex_core_event_duration_get = 0x40002178;
+/* coex_core_event_duration_get = 0x40002178; */
 /* coex_core_timer_idx_get = 0x4000218c; */
 coex_hw_timer_tick_get = 0x400021b8;
 
