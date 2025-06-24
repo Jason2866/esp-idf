@@ -15,6 +15,8 @@ RTC 子系统控制
 
 RTC 控制 API 已经从 ``driver/rtc_cntl.h`` 移动到了 ``esp_private/rtc_ctrl.h``。
 
+.. _deprecate_adc_driver:
+
 ADC
 -----------------
 
@@ -30,7 +32,7 @@ ADC 单次模式的驱动已更新。
 
 - 头文件引用路径由 ``driver/adc.h`` 更新为 ``esp_adc/adc_continuous.h``。
 
-但是，引用两种模式的旧版路径 ``driver/adc.h`` 会默认触发如下编译警告，可通过配置 Kconfig 选项 :ref:`CONFIG_ADC_SUPPRESS_DEPRECATE_WARN` 关闭该警告。
+但是，引用两种模式的旧版路径 ``driver/adc.h`` 会默认触发如下编译警告。
 
 .. code-block:: text
 
@@ -45,7 +47,7 @@ ADC 校准驱动已更新。
 
 旧版驱动仍然可用，其头文件引用路径为 ``esp_adc_cal.h``。如果用户要使用旧版路径，需要将组件 ``esp_adc`` 添加到文件 CMakeLists.txt 的组件需求表中。
 
-默认情况下，引用路径 ``esp_adc_cal.h`` 会默认触发如下编译警告，可通过配置 Kconfig 选项 :ref:`CONFIG_ADC_CALI_SUPPRESS_DEPRECATE_WARN` 关闭该警告。
+默认情况下，引用路径 ``esp_adc_cal.h`` 会默认触发如下编译警告。
 
 .. code-block:: text
 
@@ -119,12 +121,18 @@ GPIO
     - 更新前，通道配置由通道分配在 :cpp:func:`sdm_new_channel` 完成。在新驱动中，只有 ``density`` 可在运行时由 :cpp:func:`sdm_channel_set_pulse_density` 更新。其他参数如 ``gpio number``、 ``prescale`` 只能在通道分配时进行设置。
     - 在进行下一步通道操作前，用户应通过调用 :cpp:func:`sdm_channel_enable` 提前 **使能** 该通道。该函数有助于管理一些系统级服务，如 **电源管理**。
 
-定时器组驱动
------------------------------------------
+    .. _deprecate_gptimer_legacy_driver:
+
+.. only:: not SOC_SDM_SUPPORTED
+
+    .. _deprecate_gptimer_legacy_driver:
+
+旧版定时器组驱动被弃用
+----------------------
 
 为统一和简化通用定时器的使用，定时器组驱动已更新为 :doc:`GPTimer <../../../api-reference/peripherals/gptimer>`。
 
-尽管我们推荐使用新的驱动 API， 旧版驱动仍然可用，其头文件引用路径为 ``driver/timer.h``。但是，引用 ``driver/timer.h`` 会默认触发如下编译警告，可通过配置 Kconfig 选项 :ref:`CONFIG_GPTIMER_SUPPRESS_DEPRECATE_WARN` 关闭该警告。
+尽管我们推荐使用新的驱动 API， 旧版驱动仍然可用，其头文件引用路径为 ``driver/timer.h``。但是，引用 ``driver/timer.h`` 会默认触发如下编译警告，可通过配置 Kconfig 选项 ``CONFIG_GPTIMER_SUPPRESS_DEPRECATE_WARN`` 关闭该警告。
 
 .. code-block:: text
 
@@ -242,12 +250,14 @@ LEDC
 
 .. only:: SOC_PCNT_SUPPORTED
 
-    脉冲计数器 (PCNT) 驱动
+    .. _deprecate_pcnt_legacy_driver:
+
+    旧版 PCNT 驱动被弃用
     ----------------------------------
 
     为统一和简化 PCNT 外设，PCNT 驱动已更新，详见 :doc:`PCNT <../../../api-reference/peripherals/pcnt>`。
 
-    尽管我们推荐使用新的驱动 API，旧版驱动仍然可用，保留在头文件引用路径 ``driver/pcnt.h`` 中。但是，引用路径 ``driver/pcnt.h`` 会默认触发如下编译警告，可通过配置 Kconfig 选项 :ref:`CONFIG_PCNT_SUPPRESS_DEPRECATE_WARN` 来关闭该警告。
+    尽管我们推荐使用新的驱动 API，旧版驱动仍然可用，保留在头文件引用路径 ``driver/pcnt.h`` 中。但是，引用路径 ``driver/pcnt.h`` 会默认触发如下编译警告，可通过配置 Kconfig 选项 ``CONFIG_PCNT_SUPPRESS_DEPRECATE_WARN`` 来关闭该警告。
 
     .. code-block:: text
 
@@ -286,12 +296,14 @@ LEDC
 
 .. only:: SOC_TEMP_SENSOR_SUPPORTED
 
-    温度传感器驱动
+    .. _deprecate_tsens_legacy_driver:
+
+    旧版温度传感器驱动已被弃用
     ------------------------------------------------------------
 
     温度传感器的驱动已更新，推荐用户使用新驱动。旧版驱动仍然可用，但是无法与新驱动同时使用。
 
-    新驱动的头文件引用路径为 ``driver/temperature_sensor.h``。旧版驱动仍然可用，保留在引用路径 ``driver/temp_sensor.h`` 中。但是，引用路径 ``driver/temp_sensor.h`` 会默认触发如下编译警告，可通过设置 Kconfig 选项 :ref:`CONFIG_TEMP_SENSOR_SUPPRESS_DEPRECATE_WARN` 来关闭该警告。
+    新驱动的头文件引用路径为 ``driver/temperature_sensor.h``。旧版驱动仍然可用，保留在引用路径 ``driver/temp_sensor.h`` 中。但是，引用路径 ``driver/temp_sensor.h`` 会默认触发如下编译警告，可通过设置 Kconfig 选项 ``CONFIG_TEMP_SENSOR_SUPPRESS_DEPRECATE_WARN`` 来关闭该警告。
 
     .. code-block:: text
 
@@ -456,12 +468,14 @@ LCD
 
 .. only:: SOC_I2S_SUPPORTED
 
+    .. _deprecate_i2s_legacy_driver:
+
     I2S 驱动
     -----------------------
 
     旧版 I2S 驱动在支持 ESP32-C3 和 ESP32-S3 新功能时暴露了很多缺点，为解决这些缺点，I2S 驱动已更新（请参考:doc:`I2S Driver <../../../api-reference/peripherals/i2s>`）。用户可以通过引用不同 I2S 模式对应的头文件来使用新版驱动的 API，如 :component_file:`esp_driver_i2s/include/driver/i2s_std.h`， :component_file:`esp_driver_i2s/include/driver/i2s_pdm.h` 以及 :component_file:`esp_driver_i2s/include/driver/i2s_tdm.h`。
 
-    为保证前向兼容，旧版驱动的 API 仍然在 :component_file:`driver/deprecated/driver/i2s.h` 中可用。但使用旧版 API 会触发编译警告，该警告可通过配置 Kconfig 选项 :ref:`CONFIG_I2S_SUPPRESS_DEPRECATE_WARN` 来关闭。
+    为保证前向兼容，旧版驱动的 API 仍然在 ``driver/i2s.h`` 可用。但使用旧版 API 会触发编译警告，该警告可通过配置 Kconfig 选项 ``CONFIG_I2S_SUPPRESS_DEPRECATE_WARN`` 来关闭。
 
     以下是更新后的 I2S 文件概况。
 

@@ -18,6 +18,7 @@
 #include "esp_private/gdma.h"
 #include "esp_private/gdma_link.h"
 #include "esp_private/esp_dma_utils.h"
+#include "esp_private/critical_section.h"
 #include "esp_memory_utils.h"
 #include "esp_cache.h"
 #include "esp_async_memcpy.h"
@@ -237,12 +238,12 @@ static esp_err_t mcp_gdma_del(async_memcpy_context_t *ctx)
 static async_memcpy_transaction_t *try_pop_trans_from_ready_queue(async_memcpy_gdma_context_t *mcp_gdma)
 {
     async_memcpy_transaction_t *trans = NULL;
-    portENTER_CRITICAL_SAFE(&mcp_gdma->spin_lock);
+    esp_os_enter_critical_safe(&mcp_gdma->spin_lock);
     trans = STAILQ_FIRST(&mcp_gdma->ready_queue_head);
     if (trans) {
         STAILQ_REMOVE_HEAD(&mcp_gdma->ready_queue_head, ready_queue_entry);
     }
-    portEXIT_CRITICAL_SAFE(&mcp_gdma->spin_lock);
+    esp_os_exit_critical_safe(&mcp_gdma->spin_lock);
     return trans;
 }
 
@@ -270,12 +271,12 @@ static void try_start_pending_transaction(async_memcpy_gdma_context_t *mcp_gdma)
 static async_memcpy_transaction_t *try_pop_trans_from_idle_queue(async_memcpy_gdma_context_t *mcp_gdma)
 {
     async_memcpy_transaction_t *trans = NULL;
-    portENTER_CRITICAL_SAFE(&mcp_gdma->spin_lock);
+    esp_os_enter_critical_safe(&mcp_gdma->spin_lock);
     trans = STAILQ_FIRST(&mcp_gdma->idle_queue_head);
     if (trans) {
         STAILQ_REMOVE_HEAD(&mcp_gdma->idle_queue_head, idle_queue_entry);
     }
-    portEXIT_CRITICAL_SAFE(&mcp_gdma->spin_lock);
+    esp_os_exit_critical_safe(&mcp_gdma->spin_lock);
     return trans;
 }
 
@@ -379,15 +380,8 @@ static esp_err_t mcp_gdma_memcpy(async_memcpy_context_t *ctx, void *dst, void *s
 
     // read the cache line size of internal and external memory, we use this information to check if a given memory is behind the cache
     // write back the source data if it's behind the cache
-    size_t int_mem_cache_line_size = cache_hal_get_cache_line_size(CACHE_LL_LEVEL_INT_MEM, CACHE_TYPE_DATA);
-    size_t ext_mem_cache_line_size = cache_hal_get_cache_line_size(CACHE_LL_LEVEL_EXT_MEM, CACHE_TYPE_DATA);
-    bool need_write_back = false;
-    if (esp_ptr_external_ram(src)) {
-        need_write_back = ext_mem_cache_line_size > 0;
-    } else if (esp_ptr_internal(src)) {
-        need_write_back = int_mem_cache_line_size > 0;
-    }
-    if (need_write_back) {
+    size_t cache_line_size = esp_cache_get_line_size_by_addr(src);
+    if (cache_line_size > 0) {
         esp_cache_msync(src, n, ESP_CACHE_MSYNC_FLAG_DIR_C2M | ESP_CACHE_MSYNC_FLAG_UNALIGNED);
     }
 
@@ -420,10 +414,10 @@ static esp_err_t mcp_gdma_memcpy(async_memcpy_context_t *ctx, void *dst, void *s
     trans->cb = cb_isr;
     trans->cb_args = cb_args;
 
-    portENTER_CRITICAL(&mcp_gdma->spin_lock);
+    esp_os_enter_critical(&mcp_gdma->spin_lock);
     // insert the trans to ready queue
     STAILQ_INSERT_TAIL(&mcp_gdma->ready_queue_head, trans, ready_queue_entry);
-    portEXIT_CRITICAL(&mcp_gdma->spin_lock);
+    esp_os_exit_critical(&mcp_gdma->spin_lock);
 
     // check driver state, if there's no running transaction, start a new one
     try_start_pending_transaction(mcp_gdma);
@@ -433,9 +427,9 @@ static esp_err_t mcp_gdma_memcpy(async_memcpy_context_t *ctx, void *dst, void *s
 err:
     if (trans) {
         // return back the trans to idle queue
-        portENTER_CRITICAL(&mcp_gdma->spin_lock);
+        esp_os_enter_critical(&mcp_gdma->spin_lock);
         STAILQ_INSERT_TAIL(&mcp_gdma->idle_queue_head, trans, idle_queue_entry);
-        portEXIT_CRITICAL(&mcp_gdma->spin_lock);
+        esp_os_exit_critical(&mcp_gdma->spin_lock);
     }
     return ret;
 }
@@ -463,10 +457,10 @@ static bool mcp_gdma_rx_eof_callback(gdma_channel_handle_t dma_chan, gdma_event_
         }
         trans->cb = NULL;
 
-        portENTER_CRITICAL_ISR(&mcp_gdma->spin_lock);
+        esp_os_enter_critical_isr(&mcp_gdma->spin_lock);
         // insert the trans object to the idle queue
         STAILQ_INSERT_TAIL(&mcp_gdma->idle_queue_head, trans, idle_queue_entry);
-        portEXIT_CRITICAL_ISR(&mcp_gdma->spin_lock);
+        esp_os_exit_critical_isr(&mcp_gdma->spin_lock);
 
         atomic_store(&mcp_gdma->fsm, MCP_FSM_IDLE);
     }

@@ -39,6 +39,8 @@ extern "C" {
 #define ADC_LL_GET_HIGH_THRES_MASK(monitor_id)    ((monitor_id == 0) ? APB_SARADC_APB_SARADC_THRES0_HIGH_INT_ST_M : APB_SARADC_APB_SARADC_THRES1_HIGH_INT_ST_M)
 #define ADC_LL_GET_LOW_THRES_MASK(monitor_id)     ((monitor_id == 0) ? APB_SARADC_APB_SARADC_THRES0_LOW_INT_ST_M : APB_SARADC_APB_SARADC_THRES1_LOW_INT_ST_M)
 
+#define ADC_LL_NEED_APB_PERIPH_CLAIM(ADC_UNIT)      (1)
+
 /*---------------------------------------------------------------
                     Oneshot
 ---------------------------------------------------------------*/
@@ -821,7 +823,7 @@ static inline adc_atten_t adc_ll_get_atten(adc_unit_t adc_n, adc_channel_t chann
 __attribute__((always_inline))
 static inline void adc_ll_calibration_init(adc_unit_t adc_n)
 {
-    REGI2C_WRITE_MASK(I2C_SAR_ADC, ADC_SAR1_DREF_ADDR, 4);
+    REGI2C_WRITE_MASK(I2C_SAR_ADC, ADC_SAR1_DREF_ADDR, 1);
 }
 
 /**

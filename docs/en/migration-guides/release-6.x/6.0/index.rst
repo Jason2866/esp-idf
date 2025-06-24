@@ -6,5 +6,8 @@ Migration from 5.5 to 6.0
 .. toctree::
     :maxdepth: 1
 
+    build-system
     peripherals
+    security
     tools
+    system
