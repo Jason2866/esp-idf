@@ -232,6 +232,7 @@ typedef struct {
 typedef enum {
     /* 2xx - Success */
     HttpStatus_Ok                = 200,
+    HttpStatus_PartialContent    = 206,
 
     /* 3xx - Redirection */
     HttpStatus_MultipleChoices   = 300,
@@ -588,7 +589,7 @@ int esp_http_client_write(esp_http_client_handle_t client, const char *buffer, i
  * @param[in]  client  The esp_http_client handle
  *
  * @return
- *     - (0) if stream doesn't contain content-length header, or chunked encoding (checked by `esp_http_client_is_chunked` response)
+ *     - (0) if stream doesn't contain content-length header, or chunked encoding (checked by `esp_http_client_is_chunked_response`)
  *     - (-1: ESP_FAIL) if any errors
  *     - (-ESP_ERR_HTTP_EAGAIN = -0x7007) if call is timed-out before any data was ready
  *     - Download data length defined by content-length header
@@ -641,6 +642,19 @@ int esp_http_client_get_status_code(esp_http_client_handle_t client);
  *     - Content-Length value as bytes
  */
 int64_t esp_http_client_get_content_length(esp_http_client_handle_t client);
+
+/**
+ * @brief      Get http response content range (from header Content-Range)
+ *             The returned value is valid only if this function is invoked after
+ *             a successful call to `esp_http_client_perform`.
+ *             Content-Range is set to -1 if parsing fails or if the Content-Range header is not present.
+ *
+ * @param[in]  client  The esp_http_client handle
+ *
+ * @return
+ *     - Content-Range value as bytes
+ */
+int64_t esp_http_client_get_content_range(esp_http_client_handle_t client);
 
 /**
  * @brief      Close http connection, still kept all http request resources

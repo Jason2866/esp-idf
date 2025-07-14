@@ -116,6 +116,10 @@
 #include "esp32h21/rom/rtc.h"
 #include "esp32h21/rom/cache.h"
 #include "hal/gpio_ll.h"
+#elif CONFIG_IDF_TARGET_ESP32H4
+#include "esp32h4/rom/rtc.h"
+#include "esp32h4/rom/cache.h"
+#include "hal/gpio_ll.h"
 #elif CONFIG_IDF_TARGET_ESP32P4
 #include "esp32p4/rom/rtc.h"
 #include "hal/gpio_ll.h"
@@ -188,6 +192,9 @@
 #define DEFAULT_SLEEP_OUT_OVERHEAD_US       (118)
 #define DEFAULT_HARDWARE_OUT_OVERHEAD_US    (9)
 #elif CONFIG_IDF_TARGET_ESP32H21
+#define DEFAULT_SLEEP_OUT_OVERHEAD_US       (118)
+#define DEFAULT_HARDWARE_OUT_OVERHEAD_US    (9)
+#elif CONFIG_IDF_TARGET_ESP32H4
 #define DEFAULT_SLEEP_OUT_OVERHEAD_US       (118)
 #define DEFAULT_HARDWARE_OUT_OVERHEAD_US    (9)
 #elif CONFIG_IDF_TARGET_ESP32P4
@@ -746,10 +753,12 @@ static SLEEP_FN_ATTR void misc_modules_sleep_prepare(uint32_t sleep_flags, bool 
     pvt_func_enable(false);
 #endif
 
+#if SOC_ADC_SUPPORTED
     if (s_sleep_sub_mode_ref_cnt[ESP_SLEEP_USE_ADC_TSEN_MONITOR_MODE] == 0) {
         // TODO: IDF-7370
         sar_periph_ctrl_power_disable();
     }
+#endif
 }
 
 /**
@@ -780,9 +789,11 @@ static SLEEP_FN_ATTR void misc_modules_wake_prepare(uint32_t sleep_flags)
         sleep_usb_otg_phy_restore();
     }
 #endif
+#if SOC_ADC_SUPPORTED
     if (s_sleep_sub_mode_ref_cnt[ESP_SLEEP_USE_ADC_TSEN_MONITOR_MODE] == 0) {
         sar_periph_ctrl_power_enable();
     }
+#endif
 #if CONFIG_PM_POWER_DOWN_CPU_IN_LIGHT_SLEEP && SOC_PM_CPU_RETENTION_BY_RTCCNTL
     sleep_disable_cpu_retention();
 #endif
@@ -1855,7 +1866,7 @@ esp_err_t esp_sleep_enable_touchpad_wakeup(void)
 
 int esp_sleep_get_touchpad_wakeup_status(void)
 {
-    if (esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_TOUCHPAD) {
+    if (!(esp_sleep_get_wakeup_causes() & BIT(ESP_SLEEP_WAKEUP_TOUCHPAD))) {
         return -1;
     }
     uint32_t chan_num;
@@ -2080,7 +2091,7 @@ static void ext1_wakeup_prepare(void)
 
 uint64_t esp_sleep_get_ext1_wakeup_status(void)
 {
-    if (esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_EXT1) {
+    if (!(esp_sleep_get_wakeup_causes() & BIT(ESP_SLEEP_WAKEUP_EXT1))) {
         return 0;
     }
     uint32_t status = rtc_hal_ext1_get_wakeup_status();
@@ -2104,7 +2115,7 @@ uint64_t esp_sleep_get_ext1_wakeup_status(void)
 #if SOC_GPIO_SUPPORT_DEEPSLEEP_WAKEUP && SOC_DEEP_SLEEP_SUPPORTED
 uint64_t esp_sleep_get_gpio_wakeup_status(void)
 {
-    if (esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_GPIO) {
+    if (!(esp_sleep_get_wakeup_causes() & BIT(ESP_SLEEP_WAKEUP_GPIO))) {
         return 0;
     }
     return rtc_hal_gpio_get_wakeup_status();
@@ -2337,6 +2348,97 @@ esp_sleep_wakeup_cause_t esp_sleep_get_wakeup_cause(void)
     } else {
         return ESP_SLEEP_WAKEUP_UNDEFINED;
     }
+}
+
+uint32_t esp_sleep_get_wakeup_causes(void)
+{
+    uint32_t wakeup_cause = 0;
+
+    if (esp_rom_get_reset_reason(0) != RESET_REASON_CORE_DEEP_SLEEP && !s_light_sleep_wakeup) {
+        wakeup_cause |= BIT(ESP_SLEEP_WAKEUP_UNDEFINED);
+        return wakeup_cause;
+    }
+
+#if SOC_PMU_SUPPORTED
+    uint32_t wakeup_cause_raw = pmu_ll_hp_get_wakeup_cause(&PMU);
+#else
+    uint32_t wakeup_cause_raw = rtc_cntl_ll_get_wakeup_cause();
+#endif
+
+    if (wakeup_cause_raw & RTC_TIMER_TRIG_EN) {
+        wakeup_cause |= BIT(ESP_SLEEP_WAKEUP_TIMER);
+    }
+    if (wakeup_cause_raw & RTC_GPIO_TRIG_EN) {
+        wakeup_cause |= BIT(ESP_SLEEP_WAKEUP_GPIO);
+    }
+    if (wakeup_cause_raw & RTC_UART0_TRIG_EN) {
+        wakeup_cause |= BIT(ESP_SLEEP_WAKEUP_UART);
+    }
+    if (wakeup_cause_raw & RTC_UART1_TRIG_EN) {
+        wakeup_cause |= BIT(ESP_SLEEP_WAKEUP_UART1);
+    }
+#if SOC_PMU_SUPPORTED && (SOC_UART_HP_NUM > 2)
+    if (wakeup_cause_raw & RTC_UART2_TRIG_EN) {
+        wakeup_cause |= BIT(ESP_SLEEP_WAKEUP_UART2);
+    }
+#endif
+#if SOC_PM_SUPPORT_EXT0_WAKEUP
+    if (wakeup_cause_raw & RTC_EXT0_TRIG_EN) {
+        wakeup_cause |= BIT(ESP_SLEEP_WAKEUP_EXT0);
+    }
+#endif
+#if SOC_PM_SUPPORT_EXT1_WAKEUP
+    if (wakeup_cause_raw & RTC_EXT1_TRIG_EN) {
+        wakeup_cause |= BIT(ESP_SLEEP_WAKEUP_EXT1);
+    }
+#endif
+#if SOC_PM_SUPPORT_TOUCH_SENSOR_WAKEUP
+    if (wakeup_cause_raw & RTC_TOUCH_TRIG_EN) {
+        wakeup_cause |= BIT(ESP_SLEEP_WAKEUP_TOUCHPAD);
+    }
+#endif
+#if SOC_ULP_FSM_SUPPORTED
+    if (wakeup_cause_raw & RTC_ULP_TRIG_EN) {
+        wakeup_cause |= BIT(ESP_SLEEP_WAKEUP_ULP);
+    }
+#endif
+#if SOC_PM_SUPPORT_WIFI_WAKEUP
+    if (wakeup_cause_raw & RTC_WIFI_TRIG_EN) {
+        wakeup_cause |= BIT(ESP_SLEEP_WAKEUP_WIFI);
+    }
+#endif
+#if SOC_PM_SUPPORT_BT_WAKEUP
+    if (wakeup_cause_raw & RTC_BT_TRIG_EN) {
+        wakeup_cause |= BIT(ESP_SLEEP_WAKEUP_BT);
+    }
+#endif
+#if SOC_RISCV_COPROC_SUPPORTED
+    if (wakeup_cause_raw & RTC_COCPU_TRIG_EN) {
+        wakeup_cause |= BIT(ESP_SLEEP_WAKEUP_ULP);
+    }
+    if (wakeup_cause_raw & RTC_COCPU_TRAP_TRIG_EN) {
+        wakeup_cause |= BIT(ESP_SLEEP_WAKEUP_COCPU_TRAP_TRIG);
+    }
+#endif
+#if SOC_LP_CORE_SUPPORTED
+    if (wakeup_cause_raw & RTC_LP_CORE_TRIG_EN) {
+        wakeup_cause |= BIT(ESP_SLEEP_WAKEUP_ULP);
+    }
+#endif
+#if SOC_LP_VAD_SUPPORTED
+    if (wakeup_cause_raw & RTC_LP_VAD_TRIG_EN) {
+        wakeup_cause |= BIT(ESP_SLEEP_WAKEUP_VAD);
+    }
+#endif
+#if SOC_VBAT_SUPPORTED
+    if (wakeup_cause_raw & RTC_VBAT_UNDER_VOLT_TRIG_EN) {
+        wakeup_cause |= BIT(ESP_SLEEP_WAKEUP_VBAT_UNDER_VOLT);
+    }
+#endif
+    if (wakeup_cause == 0) {
+        wakeup_cause |= BIT(ESP_SLEEP_WAKEUP_UNDEFINED);
+    }
+    return wakeup_cause;
 }
 
 esp_err_t esp_sleep_pd_config(esp_sleep_pd_domain_t domain, esp_sleep_pd_option_t option)
