@@ -1,6 +1,6 @@
 {
   "name": "framework-espidf",
-  "version": "3.50500+rc1",
+  "version": "3.50500",
   "description": "Espressif IoT Development Framework",
   "keywords": [
     "framework",
