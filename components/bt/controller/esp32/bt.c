@@ -252,6 +252,7 @@ extern uint32_t _bt_controller_data_end;
 extern void config_bt_funcs_reset(void);
 extern void config_ble_funcs_reset(void);
 extern void config_btdm_funcs_reset(void);
+extern void btdm_aa_check_enhance_enable(void);
 
 #ifdef CONFIG_BT_BLUEDROID_ENABLED
 extern void bt_stack_enableSecCtrlVsCmd(bool en);
@@ -1540,12 +1541,14 @@ static esp_err_t btdm_low_power_mode_init(void)
     bool select_src_ret __attribute__((unused));
     bool set_div_ret __attribute__((unused));
     if (btdm_lpclk_sel == ESP_BT_SLEEP_CLOCK_MAIN_XTAL) {
+        ESP_LOGI(BTDM_LOG_TAG, "Using main XTAL as clock source");
         select_src_ret = btdm_lpclk_select_src(BTDM_LPCLK_SEL_XTAL);
         set_div_ret = btdm_lpclk_set_div(esp_clk_xtal_freq() * 2 / MHZ - 1);
         assert(select_src_ret && set_div_ret);
         btdm_lpcycle_us_frac = RTC_CLK_CAL_FRACT;
         btdm_lpcycle_us = 2 << (btdm_lpcycle_us_frac);
     } else { // btdm_lpclk_sel == BTDM_LPCLK_SEL_XTAL32K
+        ESP_LOGI(BTDM_LOG_TAG, "Using external 32.768 kHz crystal/oscillator as clock source");
         select_src_ret = btdm_lpclk_select_src(BTDM_LPCLK_SEL_XTAL32K);
         set_div_ret = btdm_lpclk_set_div(0);
         assert(select_src_ret && set_div_ret);
@@ -1848,6 +1851,10 @@ static void patch_apply(void)
 
 #ifndef CONFIG_BTDM_CTRL_MODE_BR_EDR_ONLY
     config_ble_funcs_reset();
+#endif
+
+#if BTDM_CTRL_CHECK_CONNECT_IND_ACCESS_ADDRESS_ENABLED
+    btdm_aa_check_enhance_enable();
 #endif
 }
 

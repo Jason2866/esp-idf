@@ -441,6 +441,12 @@ menu "Controller debug features"
     config BT_LE_PTR_CHECK_ENABLED
         bool "Enable boundary check for internal memory"
         default n
+
+    config BT_LE_MEM_CHECK_ENABLED
+        bool "Enable memory allocation check"
+        default n
+        help
+            Used in internal tests only. Enable the memory allocation check.
 endmenu
 
 config BT_LE_LL_RESOLV_LIST_SIZE
@@ -881,3 +887,7 @@ menu "Reserved Memory Config"
             The actual reserved memory count will be the minimum value between the maximum connection instances and
             the BT_LE_CONN_RESERVED_MEMORY_COUNT.
 endmenu
+
+config BT_LE_DTM_ENABLED
+    bool "Enable Direct Test Mode (DTM) feature"
+    default n
