@@ -248,6 +248,7 @@ extern uint32_t _bt_controller_data_end;
 extern void config_bt_funcs_reset(void);
 extern void config_ble_funcs_reset(void);
 extern void config_btdm_funcs_reset(void);
+extern void btdm_aa_check_enhance_enable(void);
 
 #ifdef CONFIG_BT_BLUEDROID_ENABLED
 extern void bt_stack_enableSecCtrlVsCmd(bool en);
@@ -257,6 +258,7 @@ extern void bt_stack_enableCoexVsCmd(bool en);
 extern void scan_stack_enableAdvFlowCtrlVsCmd(bool en);
 extern void adv_stack_enableClearLegacyAdvVsCmd(bool en);
 extern void advFilter_stack_enableDupExcListVsCmd(bool en);
+extern void arr_stack_enableMultiConnVsCmd(bool en);
 #endif // (CONFIG_BT_NIMBLE_ENABLED) || (CONFIG_BT_BLUEDROID_ENABLED)
 
 /* Local Function Declare
@@ -961,7 +963,7 @@ static void btdm_sleep_enter_phase1_wrapper(uint32_t lpcycles)
     assert(us_to_sleep > BTDM_MIN_TIMER_UNCERTAINTY_US);
     // allow a maximum time uncertainty to be about 488ppm(1/2048) at least as clock drift
     // and set the timer in advance
-    uint32_t uncertainty = (us_to_sleep >> 11);
+    uint32_t uncertainty = (us_to_sleep / 1000);
     if (uncertainty < BTDM_MIN_TIMER_UNCERTAINTY_US) {
         uncertainty = BTDM_MIN_TIMER_UNCERTAINTY_US;
     }
@@ -1536,12 +1538,14 @@ static esp_err_t btdm_low_power_mode_init(void)
     bool select_src_ret __attribute__((unused));
     bool set_div_ret __attribute__((unused));
     if (btdm_lpclk_sel == ESP_BT_SLEEP_CLOCK_MAIN_XTAL) {
+        ESP_LOGI(BTDM_LOG_TAG, "Using main XTAL as clock source");
         select_src_ret = btdm_lpclk_select_src(BTDM_LPCLK_SEL_XTAL);
         set_div_ret = btdm_lpclk_set_div(esp_clk_xtal_freq() * 2 / MHZ - 1);
         assert(select_src_ret && set_div_ret);
         btdm_lpcycle_us_frac = RTC_CLK_CAL_FRACT;
         btdm_lpcycle_us = 2 << (btdm_lpcycle_us_frac);
     } else { // btdm_lpclk_sel == BTDM_LPCLK_SEL_XTAL32K
+        ESP_LOGI(BTDM_LOG_TAG, "Using external 32.768 kHz crystal/oscillator as clock source");
         select_src_ret = btdm_lpclk_select_src(BTDM_LPCLK_SEL_XTAL32K);
         set_div_ret = btdm_lpclk_set_div(0);
         assert(select_src_ret && set_div_ret);
@@ -1720,6 +1724,7 @@ esp_err_t esp_bt_controller_init(esp_bt_controller_config_t *cfg)
     scan_stack_enableAdvFlowCtrlVsCmd(true);
     adv_stack_enableClearLegacyAdvVsCmd(true);
     advFilter_stack_enableDupExcListVsCmd(true);
+    arr_stack_enableMultiConnVsCmd(true);
 #endif // (CONFIG_BT_NIMBLE_ENABLED) || (CONFIG_BT_BLUEDROID_ENABLED)
 
     btdm_controller_status = ESP_BT_CONTROLLER_STATUS_INITED;
@@ -1759,6 +1764,7 @@ esp_err_t esp_bt_controller_deinit(void)
     scan_stack_enableAdvFlowCtrlVsCmd(false);
     adv_stack_enableClearLegacyAdvVsCmd(false);
     advFilter_stack_enableDupExcListVsCmd(false);
+    arr_stack_enableMultiConnVsCmd(false);
 #endif // (CONFIG_BT_NIMBLE_ENABLED) || (CONFIG_BT_BLUEDROID_ENABLED)
 
     return ESP_OK;
@@ -1844,6 +1850,10 @@ static void patch_apply(void)
 
 #ifndef CONFIG_BTDM_CTRL_MODE_BR_EDR_ONLY
     config_ble_funcs_reset();
+#endif
+
+#if BTDM_CTRL_CHECK_CONNECT_IND_ACCESS_ADDRESS_ENABLED
+    btdm_aa_check_enhance_enable();
 #endif
 }
 
