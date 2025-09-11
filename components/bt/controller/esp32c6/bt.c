@@ -157,8 +157,7 @@ extern void r_ble_rtc_wake_up_state_clr(void);
 extern int os_msys_init(void);
 extern void os_msys_deinit(void);
 #if CONFIG_BT_CTRL_RUN_IN_FLASH_ONLY
-extern void r_ble_ll_scan_start_time_init_compensation(uint32_t init_compensation);
-extern void r_priv_sdk_config_insert_proc_time_set(uint16_t insert_proc_time);
+extern void esp_ble_controller_flash_only_param_config(void);
 #endif // CONFIG_BT_CTRL_RUN_IN_FLASH_ONLY
 #if CONFIG_FREERTOS_USE_TICKLESS_IDLE
 extern sleep_retention_entries_config_t *r_esp_ble_mac_retention_link_get(uint8_t *size, uint8_t extra);
@@ -917,8 +916,20 @@ static void ble_rtc_clk_init(esp_bt_controller_config_t *cfg)
 #if CONFIG_RTC_CLK_SRC_INT_RC
         s_bt_lpclk_src = MODEM_CLOCK_LPCLK_SRC_RC_SLOW;
 #elif CONFIG_RTC_CLK_SRC_EXT_CRYS
+        uint32_t clk_freq = 0;
+
         if (rtc_clk_slow_src_get() == SOC_RTC_SLOW_CLK_SRC_XTAL32K) {
-            s_bt_lpclk_src = MODEM_CLOCK_LPCLK_SRC_XTAL32K;
+            if (!esp_clk_tree_src_get_freq_hz(SOC_MOD_CLK_XTAL32K, ESP_CLK_TREE_SRC_FREQ_PRECISION_EXACT, &clk_freq)) {
+                if (clk_freq > 32700 && clk_freq < 33800) {
+                    s_bt_lpclk_src = MODEM_CLOCK_LPCLK_SRC_XTAL32K;
+                } else {
+                    ESP_LOGW(NIMBLE_PORT_LOG_TAG, "32.768kHz XTAL detection error, switch to main XTAL as Bluetooth sleep clock");
+                    s_bt_lpclk_src = MODEM_CLOCK_LPCLK_SRC_MAIN_XTAL;
+                }
+            } else {
+                ESP_LOGW(NIMBLE_PORT_LOG_TAG, "32.768kHz XTAL detection error, switch to main XTAL as Bluetooth sleep clock");
+                s_bt_lpclk_src = MODEM_CLOCK_LPCLK_SRC_MAIN_XTAL;
+            }
         } else {
             ESP_LOGW(NIMBLE_PORT_LOG_TAG, "32.768kHz XTAL not detected, fall back to main XTAL as Bluetooth sleep clock");
             s_bt_lpclk_src = MODEM_CLOCK_LPCLK_SRC_MAIN_XTAL;
@@ -1179,8 +1190,7 @@ esp_err_t esp_bt_controller_enable(esp_bt_mode_t mode)
 #endif // CONFIG_SW_COEXIST_ENABLE
 
 #if CONFIG_BT_CTRL_RUN_IN_FLASH_ONLY
-    r_ble_ll_scan_start_time_init_compensation(500);
-    r_priv_sdk_config_insert_proc_time_set(500);
+    esp_ble_controller_flash_only_param_config();
 #endif // CONFIG_BT_CTRL_RUN_IN_FLASH_ONLY
 
     if (ble_stack_enable() != 0) {
@@ -1768,3 +1778,10 @@ ble_capture_info_user_handler(uint8_t type, uint32_t reason, uint32_t param1, ui
     }
     return 0;
 }
+
+#if CONFIG_BT_LE_MEM_CHECK_ENABLED
+void ble_memory_count_limit_set(uint16_t count_limit)
+{
+    bt_osi_mem_count_limit_set(count_limit);
+}
+#endif // CONFIG_BT_LE_MEM_CHECK_ENABLED

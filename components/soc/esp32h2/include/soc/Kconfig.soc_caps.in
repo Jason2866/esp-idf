@@ -651,7 +651,7 @@ config SOC_RMT_SUPPORT_RX_DEMODULATION
     bool
     default y
 
-config SOC_RMT_SUPPORT_TX_ASYNC_STOP
+config SOC_RMT_SUPPORT_ASYNC_STOP
     bool
     default y
 
@@ -1072,6 +1072,10 @@ config SOC_ECC_CONSTANT_TIME_POINT_MUL
     default y
 
 config SOC_ECDSA_USES_MPI
+    bool
+    default y
+
+config SOC_ECDSA_P192_CURVE_DEFAULT_DISABLED
     bool
     default y
 

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2015-2021 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2015-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -11,6 +11,7 @@
 #include <assert.h>
 
 #include "http_utils.h"
+#include "esp_check.h"
 
 #ifndef mem_check
 #define mem_check(x) assert(x)
@@ -66,6 +67,7 @@ char *http_utils_append_string(char **str, const char *new_str, int len)
             old_len = strlen(old_str);
             old_str = realloc(old_str, old_len + l + 1);
             mem_check(old_str);
+            // Ensure the new string is null-terminated
             old_str[old_len + l] = 0;
         } else {
             old_str = calloc(1, l + 1);

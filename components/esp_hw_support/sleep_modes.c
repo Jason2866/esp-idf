@@ -256,7 +256,8 @@ static bool s_light_sleep_wakeup = false;
 static portMUX_TYPE spinlock_rtc_deep_sleep = portMUX_INITIALIZER_UNLOCKED;
 
 static const char *TAG = "sleep";
-static RTC_FAST_ATTR bool s_adc_tsen_enabled = false;
+/* APP core of esp32 can't access to RTC FAST MEMORY, do not define it with RTC_FAST_ATTR */
+static RTC_SLOW_ATTR bool s_adc_tsen_enabled = false;
 //in this mode, 2uA is saved, but RTC memory can't use at high temperature, and RTCIO can't be used as INPUT.
 static bool s_ultra_low_enabled = false;
 
@@ -357,12 +358,12 @@ esp_deep_sleep_wake_stub_fn_t esp_get_deep_sleep_wake_stub(void)
 }
 
 #if CONFIG_IDF_TARGET_ESP32
-/* APP core of esp32 can't access to RTC FAST MEMORY, do not define it with RTC_IRAM_ATTR */
-void
+/* APP core of esp32 can't access to RTC FAST MEMORY, link to RTC SLOW MEMORY instead*/
+RTC_SLOW_ATTR
 #else
-void RTC_IRAM_ATTR
+RTC_IRAM_ATTR
 #endif
-esp_set_deep_sleep_wake_stub(esp_deep_sleep_wake_stub_fn_t new_stub)
+void esp_set_deep_sleep_wake_stub(esp_deep_sleep_wake_stub_fn_t new_stub)
 {
 #if SOC_PM_SUPPORT_DEEPSLEEP_CHECK_STUB_ONLY
     wake_stub_fn_handler = new_stub;
@@ -371,7 +372,14 @@ esp_set_deep_sleep_wake_stub(esp_deep_sleep_wake_stub_fn_t new_stub)
 #endif
 }
 
-void RTC_IRAM_ATTR esp_default_wake_deep_sleep(void)
+
+#if CONFIG_IDF_TARGET_ESP32
+/* APP core of esp32 can't access to RTC FAST MEMORY, link to RTC SLOW MEMORY instead*/
+RTC_SLOW_ATTR
+#else
+RTC_IRAM_ATTR
+#endif
+void esp_default_wake_deep_sleep(void)
 {
     /* Clear MMU for CPU 0 */
 #if CONFIG_IDF_TARGET_ESP32
@@ -867,7 +875,7 @@ static esp_err_t IRAM_ATTR esp_sleep_start(uint32_t pd_flags, esp_sleep_mode_t m
 #if SOC_PMU_SUPPORTED
     pmu_sleep_config_t config;
     pmu_sleep_init(pmu_sleep_config_default(&config, sleep_flags, s_config.sleep_time_adjustment,
-            s_config.rtc_clk_cal_period, s_config.fast_clk_cal_period,
+            rtc_clk_slow_src_get(), s_config.rtc_clk_cal_period, s_config.fast_clk_cal_period,
             deep_sleep), deep_sleep);
 #else
     rtc_sleep_config_t config;
@@ -1265,7 +1273,7 @@ esp_err_t esp_light_sleep_start(void)
      */
 #if SOC_PMU_SUPPORTED
     int sleep_time_sw_adjustment = LIGHT_SLEEP_TIME_OVERHEAD_US + sleep_time_overhead_in + s_config.sleep_time_overhead_out;
-    int sleep_time_hw_adjustment = pmu_sleep_calculate_hw_wait_time(pd_flags, s_config.rtc_clk_cal_period, s_config.fast_clk_cal_period);
+    int sleep_time_hw_adjustment = pmu_sleep_calculate_hw_wait_time(pd_flags, rtc_clk_slow_src_get(), s_config.rtc_clk_cal_period, s_config.fast_clk_cal_period);
     s_config.sleep_time_adjustment = sleep_time_sw_adjustment + sleep_time_hw_adjustment;
 #else
     uint32_t rtc_cntl_xtl_buf_wait_slp_cycles = rtc_time_us_to_slowclk(RTC_CNTL_XTL_BUF_WAIT_SLP_US, s_config.rtc_clk_cal_period);
@@ -2010,17 +2018,33 @@ esp_err_t esp_sleep_pd_config(esp_sleep_pd_domain_t domain, esp_sleep_pd_option_
     if (domain >= ESP_PD_DOMAIN_MAX || option > ESP_PD_OPTION_AUTO) {
         return ESP_ERR_INVALID_ARG;
     }
+    esp_err_t err = ESP_OK;
     portENTER_CRITICAL_SAFE(&s_config.lock);
-
-    int refs = (option == ESP_PD_OPTION_ON)  ? s_config.domain[domain].refs++ \
-             : (option == ESP_PD_OPTION_OFF) ? --s_config.domain[domain].refs \
-             : s_config.domain[domain].refs;
-    if (refs == 0) {
+    int refs = 0;
+    if (s_config.domain[domain].pd_option == ESP_PD_OPTION_AUTO) {
+        s_config.domain[domain].refs = (option == ESP_PD_OPTION_ON) ? 1 : 0;
         s_config.domain[domain].pd_option = option;
+    } else {
+        if (option == ESP_PD_OPTION_AUTO) {
+            s_config.domain[domain].refs = 0;
+            s_config.domain[domain].pd_option = option;
+        } else {
+            refs = (option == ESP_PD_OPTION_ON)  ? s_config.domain[domain].refs++ \
+                 : (option == ESP_PD_OPTION_OFF) ? --s_config.domain[domain].refs \
+                 : s_config.domain[domain].refs;
+            if (refs == 0) {
+                s_config.domain[domain].pd_option = option;
+            } else if (refs < 0) {
+                s_config.domain[domain].refs = 0;
+                err = ESP_ERR_INVALID_STATE;
+            }
+        }
     }
     portEXIT_CRITICAL_SAFE(&s_config.lock);
-    assert(refs >= 0);
-    return ESP_OK;
+    if (err == ESP_ERR_INVALID_STATE) {
+        ESP_LOGE(TAG, "Domain is already in ESP_PD_OPTION_OFF state, please check whether the domain pd_option is managed symmetrically.");
+    }
+    return err;
 }
 
 /**
@@ -2208,11 +2232,11 @@ static uint32_t get_power_down_flags(void)
 
 #if CONFIG_IDF_TARGET_ESP32
 /* APP core of esp32 can't access to RTC FAST MEMORY, do not define it with RTC_IRAM_ATTR */
-void
+RTC_SLOW_ATTR
 #else
-void RTC_IRAM_ATTR
+RTC_IRAM_ATTR
 #endif
-esp_deep_sleep_disable_rom_logging(void)
+void esp_deep_sleep_disable_rom_logging(void)
 {
     rtc_suppress_rom_log();
 }

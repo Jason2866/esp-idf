@@ -240,6 +240,13 @@ config BT_LE_CTE_FEATURE_ENABLED
         communication scenarios. If you are using chip esp32h2, ensure that encryption is
         disabled when using this feature.
 
+config BT_LE_PERIODIC_ADV_WITH_RESPONSE_ENABLED
+    bool "Enable BLE periodic advertising with response"
+    depends on BT_LE_50_FEATURE_SUPPORT
+    default n
+    help
+        This enables BLE periodic advertising with response feature
+
 menu "Memory Settings"
     depends on !BT_NIMBLE_ENABLED
 
@@ -441,6 +448,12 @@ menu "Controller debug features"
     config BT_LE_PTR_CHECK_ENABLED
         bool "Enable boundary check for internal memory"
         default n
+
+    config BT_LE_MEM_CHECK_ENABLED
+        bool "Enable memory allocation check"
+        default n
+        help
+            Used in internal tests only. Enable the memory allocation check.
 endmenu
 
 config BT_LE_LL_RESOLV_LIST_SIZE
@@ -881,3 +894,7 @@ menu "Reserved Memory Config"
             The actual reserved memory count will be the minimum value between the maximum connection instances and
             the BT_LE_CONN_RESERVED_MEMORY_COUNT.
 endmenu
+
+config BT_LE_DTM_ENABLED
+    bool "Enable Direct Test Mode (DTM) feature"
+    default n

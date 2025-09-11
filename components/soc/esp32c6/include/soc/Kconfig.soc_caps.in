@@ -651,7 +651,7 @@ config SOC_RMT_SUPPORT_RX_DEMODULATION
     bool
     default y
 
-config SOC_RMT_SUPPORT_TX_ASYNC_STOP
+config SOC_RMT_SUPPORT_ASYNC_STOP
     bool
     default y
 
@@ -1192,6 +1192,10 @@ config SOC_PM_PAU_LINK_NUM
     default 4
 
 config SOC_PM_PAU_REGDMA_UPDATE_CACHE_BEFORE_WAIT_COMPARE
+    bool
+    default y
+
+config SOC_PM_PMU_MIN_SLP_SLOW_CLK_CYCLE_FIXED
     bool
     default y
 

@@ -281,7 +281,7 @@
 #define SOC_RMT_MEM_WORDS_PER_CHANNEL         48 /*!< Each channel owns 48 words memory (1 word = 4 Bytes) */
 #define SOC_RMT_SUPPORT_RX_PINGPONG           1  /*!< Support Ping-Pong mode on RX path */
 #define SOC_RMT_SUPPORT_RX_DEMODULATION       1  /*!< Support signal demodulation on RX path (i.e. remove carrier) */
-#define SOC_RMT_SUPPORT_TX_ASYNC_STOP         1  /*!< Support stop transmission asynchronously */
+#define SOC_RMT_SUPPORT_ASYNC_STOP            1  /*!< Support stop transmission asynchronously */
 #define SOC_RMT_SUPPORT_TX_LOOP_COUNT         1  /*!< Support transmit specified number of cycles in loop mode */
 #define SOC_RMT_SUPPORT_TX_LOOP_AUTO_STOP     1  /*!< Hardware support of auto-stop in loop mode */
 #define SOC_RMT_SUPPORT_TX_SYNCHRO            1  /*!< Support coordinate a group of TX channels to start simultaneously */
@@ -499,6 +499,7 @@
 #define SOC_PM_PAU_LINK_NUM             (4)
 
 #define SOC_PM_PAU_REGDMA_UPDATE_CACHE_BEFORE_WAIT_COMPARE  (1)
+#define SOC_PM_PMU_MIN_SLP_SLOW_CLK_CYCLE_FIXED    (1)
 
 /*-------------------------- CLOCK SUBSYSTEM CAPS ----------------------------------------*/
 #define SOC_CLK_RC_FAST_SUPPORT_CALIBRATION       (1)

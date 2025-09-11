@@ -54,11 +54,11 @@ lmacInit = 0x40001dc8;
 hal_init = 0x40001dd0;
 mac_txrx_init = 0x40001de0;
 lmac_stop_hw_txq = 0x40001df8;
-ppTxFragmentProc = 0x40001e08;
+/*ppTxFragmentProc = 0x40001e08;*/
 esf_buf_setup = 0x40001e0c;
 hal_crypto_set_key_entry = 0x40001e18;
 pm_start = 0x40001e34;
-pm_stop = 0x40001e38;
+/*pm_stop = 0x40001e38;*/
 hal_set_sta_tbtt = 0x40001e4c;
 //pm_update_next_tbtt = 0x40001e50;
 pm_set_sleep_type = 0x40001e54;
@@ -104,11 +104,12 @@ cnx_coexist_timeout_process = 0x400020ac;
 ieee80211_add_extcap = 0x400020cc;
 //ieee80211_alloc_proberesp = 0x400020d8;
 esp_wifi_80211_tx = 0x400020f8;
-ieee80211_crypto_aes_128_cmac_decrypt = 0x40002104;
+/* ieee80211_crypto_aes_128_cmac_decrypt = 0x40002104; */
 ieee80211_output_do = 0x4000210c;
 ieee80211_send_nulldata = 0x40002110;
 //ieee80211_setup_robust_mgmtframe = 0x40002114;
 //ieee80211_mgmt_output = 0x40002118;
+ieee80211_encap_null_data = 0x4000211c;
 //ieee80211_send_deauth_no_bss = 0x40002120;
 //ieee80211_tx_mgt_cb = 0x4000212c;
 //sta_rx_csa = 0x40002134;
@@ -130,8 +131,8 @@ s_trans_id = 0x3fcdfac4;
  ***************************************/
 
 /* Functions */
-coex_core_event_duration_get = 0x40002178;
-coex_core_timer_idx_get = 0x4000218c;
+/* coex_core_event_duration_get = 0x40002178; */
+/* coex_core_timer_idx_get = 0x4000218c; */
 coex_hw_timer_tick_get = 0x400021b8;
 
 
@@ -203,7 +204,7 @@ pm_beacon_offset_init = 0x400030b0;
 pm_beacon_offset_deinit = 0x400030b4;
 pm_get_tbtt_count = 0x400030b8;
 pm_coex_schm_overall_period_get = 0x400030bc;
-pm_coex_pwr_update = 0x400030c0;
+//pm_coex_pwr_update = 0x400030c0;
 /* Data (.data, .bss, .rodata) */
 s_pm_beacon_offset_ptr = 0x3fcdfa64;
 s_pm_beacon_offset_config_ptr = 0x3fcdfa60;
