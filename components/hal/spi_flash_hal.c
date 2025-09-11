@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2015-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2015-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -35,7 +35,7 @@ static uint32_t get_flash_clock_divider(const spi_flash_hal_config_t *cfg)
         HAL_LOGE(TAG, "Target frequency %dMHz higher than src %dMHz.", cfg_freq_mhz, src_freq_mhz);
         abort();
     }
-#if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32C3
+#if SOC_IS(ESP32) || SOC_IS(ESP32S2) || SOC_IS(ESP32C3)
     if (cfg_freq_mhz == 26 || cfg_freq_mhz == 27) {
         best_div = 3;
     } else
@@ -135,9 +135,9 @@ esp_err_t spi_flash_hal_init(spi_flash_hal_context_t *data_out, const spi_flash_
         data_out->auto_waiti_pes = cfg->auto_waiti_pes;
     }
 
-#if CONFIG_SPI_FLASH_SOFTWARE_RESUME
-    data_out->flags &= ~SPI_FLASH_HOST_CONTEXT_FLAG_AUTO_RESUME;
-#endif
+    if (cfg->software_resume) {
+        data_out->flags &= ~SPI_FLASH_HOST_CONTEXT_FLAG_AUTO_RESUME;
+    }
 
 #if SOC_SPI_MEM_SUPPORT_FLASH_OPI_MODE
     if (cfg->octal_mode_en) {

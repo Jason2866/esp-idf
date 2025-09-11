@@ -83,8 +83,6 @@ typedef struct bluetooth_sdp_hdr_overlay {
     int32_t profile_version;                        /*!< Profile version */
     int user1_ptr_len;                              /*!< User data1 length, only used for searching RAW record */
     uint8_t *user1_ptr;                             /*!< User data1 pointer to the raw SDP response data, only used for searching RAW record */
-    int user2_ptr_len __attribute__((deprecated));  /*!< User data2 length, only used for searching RAW record */
-    uint8_t *user2_ptr __attribute__((deprecated)); /*!< User data2 pointer, only used for searching RAW record */
 } esp_bluetooth_sdp_hdr_overlay_t;
 
 /**
@@ -225,6 +223,7 @@ typedef union {
      */
     struct sdp_remove_record_evt_param {
         esp_sdp_status_t status; /*!< Status */
+        int record_handle;       /*!< SDP record handle */
     } remove_record;             /*!< SDP callback param of ESP_SDP_REMOVE_RECORD_COMP_EVT */
 
 } esp_sdp_cb_param_t;

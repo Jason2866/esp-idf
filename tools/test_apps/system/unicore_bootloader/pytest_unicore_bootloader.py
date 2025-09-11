@@ -4,15 +4,15 @@ import os
 import re
 
 import pytest
-from artifacts_handler import ArtifactType
 from idf_ci_utils import IDF_PATH
 from pytest_embedded import Dut
 from pytest_embedded_idf.utils import idf_parametrize
+from pytest_embedded_idf.utils import soc_filtered_targets
 
 
 @pytest.mark.generic
 @pytest.mark.parametrize('config', ['multicore', 'multicore_psram'], indirect=True)
-@idf_parametrize('target', ['esp32', 'esp32s3', 'esp32p4'], indirect=['target'])
+@idf_parametrize('target', soc_filtered_targets('SOC_CPU_CORES_NUM > 1'), indirect=['target'])
 def test_multicore_app_and_unicore_bootloader(dut: Dut, app_downloader, config) -> None:  # type: ignore
     dut.expect('Multicore bootloader')
     dut.expect('Multicore app')
@@ -24,7 +24,8 @@ def test_multicore_app_and_unicore_bootloader(dut: Dut, app_downloader, config) 
     path_to_unicore_build = os.path.join(dut.app.app_path, f'build_{dut.target}_{app_config}')
     if app_downloader:
         app_downloader.download_app(
-            os.path.relpath(path_to_unicore_build, IDF_PATH), ArtifactType.BUILD_DIR_WITHOUT_MAP_AND_ELF_FILES
+            os.path.relpath(path_to_unicore_build, IDF_PATH),
+            'flash',
         )
 
     dut.serial.bootloader_flash(path_to_unicore_build)
@@ -38,7 +39,7 @@ def test_multicore_app_and_unicore_bootloader(dut: Dut, app_downloader, config) 
 
 @pytest.mark.generic
 @pytest.mark.parametrize('config', ['unicore', 'unicore_psram'], indirect=True)
-@idf_parametrize('target', ['esp32', 'esp32s3', 'esp32p4'], indirect=['target'])
+@idf_parametrize('target', soc_filtered_targets('SOC_CPU_CORES_NUM > 1'), indirect=['target'])
 def test_unicore_app_and_multicore_bootloader(dut: Dut, app_downloader, config) -> None:  # type: ignore
     dut.expect('Unicore bootloader')
     dut.expect('Unicore app')
@@ -50,7 +51,8 @@ def test_unicore_app_and_multicore_bootloader(dut: Dut, app_downloader, config) 
     path_to_multicore_build = os.path.join(dut.app.app_path, f'build_{dut.target}_{app_config}')
     if app_downloader:
         app_downloader.download_app(
-            os.path.relpath(path_to_multicore_build, IDF_PATH), ArtifactType.BUILD_DIR_WITHOUT_MAP_AND_ELF_FILES
+            os.path.relpath(path_to_multicore_build, IDF_PATH),
+            'flash',
         )
 
     dut.serial.bootloader_flash(path_to_multicore_build)

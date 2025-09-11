@@ -8,8 +8,9 @@
 #include "hal/ecdsa_ll.h"
 #include "hal/ecdsa_hal.h"
 #include "hal/efuse_hal.h"
+#include "soc/soc_caps.h"
 
-#if CONFIG_HAL_ECDSA_GEN_SIG_CM
+#if HAL_CONFIG(ECDSA_GEN_SIG_CM)
 #include "esp_fault.h"
 #include "esp_random.h"
 #include "soc/chip_revision.h"
@@ -21,6 +22,9 @@
 
 #define ECDSA_HAL_P192_COMPONENT_LEN        24
 #define ECDSA_HAL_P256_COMPONENT_LEN        32
+#if SOC_ECDSA_SUPPORT_CURVE_P384
+#define ECDSA_HAL_P384_COMPONENT_LEN        48
+#endif /* SOC_ECDSA_SUPPORT_CURVE_P384 */
 
 static void configure_ecdsa_periph(ecdsa_hal_config_t *conf)
 {
@@ -98,7 +102,7 @@ static void ecdsa_hal_gen_signature_inner(const uint8_t *hash, uint8_t *r_out,
     }
 }
 
-#if CONFIG_HAL_ECDSA_GEN_SIG_CM
+#if HAL_CONFIG(ECDSA_GEN_SIG_CM)
 __attribute__((optimize("O0"))) static void ecdsa_hal_gen_signature_with_countermeasure(const uint8_t *hash, uint8_t *r_out,
                        uint8_t *s_out, uint16_t len)
 {
@@ -126,14 +130,18 @@ __attribute__((optimize("O0"))) static void ecdsa_hal_gen_signature_with_counter
     }
 
 }
-#endif /* CONFIG_HAL_ECDSA_GEN_SIG_CM */
+#endif /* HAL_CONFIG_ECDSA_GEN_SIG_CM */
 
 
 
 void ecdsa_hal_gen_signature(ecdsa_hal_config_t *conf, const uint8_t *hash,
                         uint8_t *r_out, uint8_t *s_out, uint16_t len)
 {
-    if (len != ECDSA_HAL_P192_COMPONENT_LEN && len != ECDSA_HAL_P256_COMPONENT_LEN) {
+    if (len != ECDSA_HAL_P192_COMPONENT_LEN && len != ECDSA_HAL_P256_COMPONENT_LEN
+#if SOC_ECDSA_SUPPORT_CURVE_P384
+    && len != ECDSA_HAL_P384_COMPONENT_LEN
+#endif /* SOC_ECDSA_SUPPORT_CURVE_P384 */
+    ) {
         HAL_ASSERT(false && "Incorrect length");
     }
 
@@ -147,26 +155,28 @@ void ecdsa_hal_gen_signature(ecdsa_hal_config_t *conf, const uint8_t *hash,
 
     configure_ecdsa_periph(conf);
 
-#if CONFIG_HAL_ECDSA_GEN_SIG_CM
-#if CONFIG_IDF_TARGET_ESP32H2
+#if HAL_CONFIG(ECDSA_GEN_SIG_CM)
+#if SOC_IS(ESP32H2)
     if (!ESP_CHIP_REV_ABOVE(efuse_hal_chip_revision(), 102)) {
         ecdsa_hal_gen_signature_with_countermeasure(hash, r_out, s_out, len);
-    } else {
-        ecdsa_hal_gen_signature_inner(hash, r_out, s_out, len);
+        return;
     }
-#else
-    ecdsa_hal_gen_signature_with_countermeasure(hash, r_out, s_out, len);
 #endif
-#else /* CONFIG_HAL_ECDSA_GEN_SIG_CM */
+    ecdsa_hal_gen_signature_with_countermeasure(hash, r_out, s_out, len);
+#else /* HAL_CONFIG_ECDSA_GEN_SIG_CM */
     ecdsa_hal_gen_signature_inner(hash, r_out, s_out, len);
-#endif /* !CONFIG_HAL_ECDSA_GEN_SIG_CM */
+#endif /* !HAL_CONFIG_ECDSA_GEN_SIG_CM */
 
 }
 
 int ecdsa_hal_verify_signature(ecdsa_hal_config_t *conf, const uint8_t *hash, const uint8_t *r, const uint8_t *s,
                                const uint8_t *pub_x, const uint8_t *pub_y, uint16_t len)
 {
-    if (len != ECDSA_HAL_P192_COMPONENT_LEN && len != ECDSA_HAL_P256_COMPONENT_LEN) {
+    if (len != ECDSA_HAL_P192_COMPONENT_LEN && len != ECDSA_HAL_P256_COMPONENT_LEN
+#if SOC_ECDSA_SUPPORT_CURVE_P384
+    && len != ECDSA_HAL_P384_COMPONENT_LEN
+#endif /* SOC_ECDSA_SUPPORT_CURVE_P384 */
+    ) {
         HAL_ASSERT(false && "Incorrect length");
     }
 
@@ -202,7 +212,11 @@ int ecdsa_hal_verify_signature(ecdsa_hal_config_t *conf, const uint8_t *hash, co
 #ifdef SOC_ECDSA_SUPPORT_EXPORT_PUBKEY
 void ecdsa_hal_export_pubkey(ecdsa_hal_config_t *conf, uint8_t *pub_x, uint8_t *pub_y, uint16_t len)
 {
-    if (len != ECDSA_HAL_P192_COMPONENT_LEN && len != ECDSA_HAL_P256_COMPONENT_LEN) {
+    if (len != ECDSA_HAL_P192_COMPONENT_LEN && len != ECDSA_HAL_P256_COMPONENT_LEN
+#if SOC_ECDSA_SUPPORT_CURVE_P384
+    && len != ECDSA_HAL_P384_COMPONENT_LEN
+#endif /* SOC_ECDSA_SUPPORT_CURVE_P384 */
+    ) {
         HAL_ASSERT(false && "Incorrect length");
     }
 

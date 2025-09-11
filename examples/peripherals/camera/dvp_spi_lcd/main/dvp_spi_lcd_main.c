@@ -91,7 +91,7 @@ static void lcd_display_init(esp_lcd_panel_handle_t *lcd_panel_hdl, esp_lcd_pane
     ESP_LOGI(TAG, "New ST7789 panel");
     const esp_lcd_panel_dev_config_t panel_dev_cfg = {
         .reset_gpio_num   = EXAMPLE_LCD_RST,
-        .color_space      = ESP_LCD_COLOR_SPACE_RGB,
+        .rgb_ele_order    = LCD_RGB_ELEMENT_ORDER_RGB,
         .bits_per_pixel   = EXAMPLE_RGB565_BITS_PER_PIXEL,
     };
     ESP_ERROR_CHECK(esp_lcd_new_panel_st7789(lcd_io_hdl, &panel_dev_cfg, &panel_handle));
@@ -118,13 +118,6 @@ void app_main(void)
 
     esp_lcd_panel_handle_t lcd_panel_hdl = NULL;
     esp_lcd_panel_io_handle_t lcd_io_hdl = NULL;
-
-    size_t cam_buffer_size = CONFIG_EXAMPLE_CAM_HRES * CONFIG_EXAMPLE_CAM_VRES * EXAMPLE_RGB565_BITS_PER_PIXEL / 8;
-    void *cam_buffer = heap_caps_malloc(cam_buffer_size, EXAMPLE_DVP_CAM_BUF_ALLOC_CAPS);
-    if (!cam_buffer) {
-        ESP_LOGE(TAG, "no mem for cam_buffer");
-        return;
-    }
 
     lcd_display_init(&lcd_panel_hdl, lcd_io_hdl);
 
@@ -165,6 +158,12 @@ void app_main(void)
         ESP_LOGE(TAG, "dvp init fail[%d]", ret);
         return;
     }
+
+    //--------Allocate Camera Buffer----------//
+    size_t cam_buffer_size = CONFIG_EXAMPLE_CAM_HRES * CONFIG_EXAMPLE_CAM_VRES * EXAMPLE_RGB565_BITS_PER_PIXEL / 8;
+    void *cam_buffer = NULL;
+
+    cam_buffer = esp_cam_ctlr_alloc_buffer(cam_handle, cam_buffer_size, EXAMPLE_DVP_CAM_BUF_ALLOC_CAPS);
 
     //--------Camera Sensor and SCCB Init-----------//
     example_sensor_config_t cam_sensor_config = {

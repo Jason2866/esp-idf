@@ -238,17 +238,8 @@ menu "Hardware Settings"
                 so that these functions can be IRAM-safe and able to be called in the other IRAM interrupt context.
     endmenu
 
-    menu "ETM Configuration"
-        depends on SOC_ETM_SUPPORTED
-        config ETM_ENABLE_DEBUG_LOG
-            bool "Enable debug log"
-            default n
-            help
-                whether to enable the debug log message for ETM core driver.
-                Note that, this option only controls the ETM related driver log, won't affect other drivers.
-    endmenu # ETM Configuration
-
     rsource "./dma/Kconfig.dma"
+    rsource "./etm/Kconfig.etm"
 
     menu "Main XTAL Config"
         orsource "./port/$IDF_TARGET/Kconfig.xtal"
@@ -264,6 +255,7 @@ menu "Hardware Settings"
     config ESP_BRINGUP_BYPASS_CPU_CLK_SETTING
         bool
         default y if !SOC_CLK_TREE_SUPPORTED
+        default y if ESP32P4_REV_MIN_200 # TODO: IDF-13574
         default n
         help
             This option is only used for new chip bringup, when
@@ -273,6 +265,7 @@ menu "Hardware Settings"
     config ESP_BRINGUP_BYPASS_RANDOM_SETTING
         bool
         default y if !SOC_RNG_SUPPORTED
+        default y if ESP32P4_REV_MIN_200 # TODO: IDF-13574
         default n
         help
             This option is only used for new chip bringup, when

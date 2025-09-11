@@ -51,7 +51,7 @@ The Mocked Device has a Final State Machine (FSM), which could be configured to 
 
 FSM is described in the **mock_dev_stage_t** structure and could be found in [mock_dev.h](main/mock_dev.h).
 
-Available stages: 
+Available stages:
 - Request Short Device Descriptor
 - Request Full Device Descriptor
 - Request Short Configuration Descriptor
@@ -165,7 +165,7 @@ TEST_CASE("enum::complete", "[mock_enum_device]")
                 }
             },
         };
-        
+
     // Test remained logic
 }
 ```
@@ -213,7 +213,7 @@ When all the hardware have been configured and prepared, the Test can be run via
 
 The description is provided, assuming that the test is run under Linux and Host board has a /dev/ttyACM0 path, Mocked Device has a /dev/ttyUSB0 path, and we are in the esp-idf root folder.
 
-To run the pytest, esp-idf must be installed and configured with ```--enable-pytest```.
+To run the pytest, esp-idf must be installed and configured with `--enable-ci`.
 
 ### Prepare Host
 
@@ -346,4 +346,3 @@ E (121120) USBH: Dev 33 EP 0 STALL
 E (121120) ENUM: Bad transfer status 4: CHECK_CONFIG
 E (121120) ENUM: [0:0] CHECK_CONFIG FAILED
 ```
-

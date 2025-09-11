@@ -49,6 +49,26 @@ GPIO
 
 :func:`gpio_iomux_in` 和 :func:`gpio_iomux_out` 已被 :func:`gpio_iomux_input` 和 :func:`gpio_iomux_output` 函数取代， 并移至 ``esp_private/gpio.h`` 头文件中作为仅供内部使用的私有 API。
 
+LEDC
+----
+
+- :func:`ledc_timer_set` 已被移除。请使用 :func:`ledc_timer_config` 或 :func:`ledc_set_freq` 代替。
+
+- ``LEDC_APB_CLK_HZ`` 和 ``LEDC_REF_CLK_HZ`` 已被移除。
+
+- esp_driver_gpio 不再作为 esp_driver_ledc 的公共依赖组件。
+
+- :func:`ledc_isr_register` 已被弃用。LEDC 中断处理由驱动内部实现，如果需要注册中断回调，仅需要注册事件回调即可。
+
+- :cpp:member:`ledc_channel_config_t::intr_type` 已被弃用。`LEDC_INTR_FADE_END` 中断使能/禁用控制由驱动内部处理。用户仍可以通过 :cpp:func:`ledc_cb_register` 注册该中断的回调。
+
+- :cpp:enumerator:`soc_periph_ledc_clk_src_legacy_t::LEDC_USE_RTC8M_CLK` 已被移除。请使用 ``LEDC_USE_RC_FAST_CLK`` 代替。
+
+UART
+----
+
+``UART_FIFO_LEN`` 已被移除。请使用 ``UART_HW_FIFO_LEN`` 代替。
+
 I2C
 ---
 
@@ -65,9 +85,20 @@ I2C 从机在 v5.4 上已经被重新设计。在当前版本上，老的 I2C �
 ~~~~~~~~~~~~~~~~~~
 
 - ``i2c_slave_receive`` 被移除， 在新驱动中使用回调接收数据。
-- ``i2c_slave_transmit`` 已被 ``i2c_slave_write`` 取代.
+- ``i2c_slave_transmit`` 已被 ``i2c_slave_write`` 取代。
 - ``i2c_slave_write_ram`` 被移除。
 - ``i2c_slave_read_ram`` 被移除。
+
+同时，I2C的主机驱动也有一些API用法上的改动
+
+主要用法更新
+~~~~~~~~~~~~~~~~~~
+
+当主机在I2C总线上检测到NACK，以下的函数目前会返回 ``ESP_ERR_INVALID_RESPONSE``，而不是像之前一样返回 ``ESP_ERR_INVALID_STATE``：
+- ``i2c_master_transmit``
+- ``i2c_master_multi_buffer_transmit``
+- ``i2c_master_transmit_receive``
+- ``i2c_master_execute_defined_operations``
 
 旧版定时器组驱动被移除
 ----------------------
@@ -115,3 +146,35 @@ SDMMC
     ------------------------------------
 
     旧版的温度传感器驱动 ``driver/temp_sensor.h`` 在 5.1 的版本中就已经被弃用（请参考 :ref:`deprecate_tsens_legacy_driver`）。从 6.0 版本开始，旧版驱动被完全移除。新驱动位于 :component:`esp_driver_tsens` 组件中，头文件引用路径为 ``driver/temperature_sensor.h``。
+
+.. only:: SOC_SDM_SUPPORTED
+
+    旧版 Sigma-Delta 调制器驱动被移除
+    ---------------------------------
+
+    旧版的 Sigma-Delta 调制器驱动 ``driver/sigmadelta.h`` 在 5.0 的版本中就已经被弃用（请参考 :ref:`deprecate_sdm_legacy_driver`）。从 6.0 版本开始，旧版驱动被完全移除。新驱动位于 :component:`esp_driver_sdm` 组件中，头文件引用路径为 ``driver/sdm.h``。
+
+LCD
+---
+
+- LCD 驱动中的 GPIO 编号已经从 ``int`` 类型修改为更加类型安全的 ``gpio_num_t`` 类型。比如原来使用 ``5`` 作为 GPIO 编号，现在需要使用 ``GPIO_NUM_5``。
+- :cpp:type:`esp_lcd_i80_bus_config_t` 结构体中的 ``psram_trans_align`` 和 ``sram_trans_align`` 均已被 :cpp:member:`esp_lcd_i80_bus_config_t::dma_burst_size` 成员取代，用来设置 DMA 的突发传输大小。
+- :cpp:type:`esp_lcd_rgb_panel_config_t` 结构体中的 ``psram_trans_align`` 和 ``sram_trans_align`` 均已被 :cpp:member:`esp_lcd_rgb_panel_config_t::dma_burst_size` 成员取代，用来设置 DMA 的突发传输大小。
+- :cpp:type:`esp_lcd_panel_io_spi_config_t` 结构体中的 ``octal_mode`` 和 ``quad_mode`` 标志均已删除，驱动已经可以自动探测到当前 SPI 总线的数据线模式。
+- :cpp:type:`esp_lcd_panel_dev_config_t` 结构体中的 ``color_space`` 和 ``rgb_endian`` 配置均已被 :cpp:member:`esp_lcd_panel_dev_config_t::rgb_ele_order` 成员取代，用来设置 RGB 元素的排列顺序。对应的类型 ``lcd_color_rgb_endian_t`` 和 ``esp_lcd_color_space_t`` 也已被移除，请使用 :cpp:type:`lcd_rgb_element_order_t` 替代。
+- ``esp_lcd_panel_disp_off`` 函数已被移除。请使用 :func:`esp_lcd_panel_disp_on_off` 函数来控制显示内容的开关。
+- :cpp:type:`esp_lcd_rgb_panel_event_callbacks_t` 中的 ``on_bounce_frame_finish`` 成员已被 :cpp:member:`esp_lcd_rgb_panel_event_callbacks_t::on_frame_buf_complete` 成员取代，用于指示一个完整的帧缓冲区已被发送给 LCD 控制器。
+
+SPI
+---
+
+:ref:`CONFIG_SPI_MASTER_IN_IRAM` 选项在 menuconfig 中默认不可见，并且依赖于 :ref:`CONFIG_FREERTOS_IN_IRAM`。这样修改是为了防止位于 IRAM 中的 SPI 函数调用位于 flash 中的 FreeRTOS 函数时可能发生的崩溃。
+
+要启用 SPI 主机 IRAM 优化：
+
+1. 在 menuconfig 中进入 ``Component config`` → ``FreeRTOS`` → ``Port``
+2. 启用 ``Place FreeRTOS functions in IRAM`` (:ref:`CONFIG_FREERTOS_IN_IRAM`)
+3. 在 menuconfig 中进入 ``Component config`` → ``ESP-Driver:SPI Configurations``
+4. 启用 ``Place transmitting functions of SPI master into IRAM`` (:ref:`CONFIG_SPI_MASTER_IN_IRAM`)
+
+请注意，启用 :ref:`CONFIG_FREERTOS_IN_IRAM` 会显著增加 IRAM 使用量。在优化 SPI 性能时，需进行权衡。

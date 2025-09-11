@@ -5,14 +5,13 @@ idf_build_get_property(non_os_build NON_OS_BUILD)
 if(${target} STREQUAL "linux")
     idf_component_register(SRCS "port/linux/esp_random.c"
                                  "port/linux/chip_info.c"
-                           INCLUDE_DIRS "include")
+                           INCLUDE_DIRS "include" "etm/include")
     return()
 endif()
 
 set(requires soc)
 # only esp_hw_support/adc_share_hw_ctrl.c requires efuse component
-# TODO: remove esp_security from REQUIRES in ESP-IDF v6.0 (see IDF-10733)
-set(priv_requires efuse spi_flash bootloader_support esp_security)
+set(priv_requires efuse spi_flash bootloader_support)
 
 if(${target} STREQUAL "esp32c6")
     list(APPEND priv_requires hal)
@@ -30,13 +29,16 @@ if(NOT non_os_build)
                      "rtc_module.c"
                      "regi2c_ctrl.c"
                      "esp_gpio_reserve.c"
-                     "sar_periph_ctrl_common.c"
+                     "sar_tsens_ctrl.c"
                      "port/${target}/io_mux.c"
                      "port/${target}/esp_clk_tree.c"
                      "dma/esp_dma_utils.c"
                      "dma/gdma_link.c"
                      "spi_bus_lock.c"
                      "clk_utils.c")
+    if(CONFIG_SOC_USB_OTG_SUPPORTED)
+        list(APPEND srcs "usb_phy/usb_phy.c")
+    endif()
     if(CONFIG_SOC_CLK_TREE_SUPPORTED)
         list(APPEND srcs "port/esp_clk_tree_common.c")
     endif()
@@ -120,7 +122,7 @@ if(NOT non_os_build)
     endif()
 
     if(CONFIG_SOC_ETM_SUPPORTED)
-        list(APPEND srcs "esp_etm.c")
+        list(APPEND srcs "etm/esp_etm.c")
     endif()
 
     if(CONFIG_SOC_PAU_SUPPORTED)
@@ -172,15 +174,14 @@ else()
     list(APPEND priv_requires "esp_system")
 endif()
 
-set(public_include_dirs "include" "include/soc" "include/soc/${target}"
-                        "dma/include" "ldo/include" "debug_probe/include"
+set(public_include_dirs "include" "include/soc"
+                        "dma/include" "ldo/include" "debug_probe/include" "etm/include"
                         "mspi_timing_tuning/include" "mspi_timing_tuning/tuning_scheme_impl/include"
                         "power_supply/include")
 
-if(CONFIG_IDF_TARGET_ESP32H4)
-    list(REMOVE_ITEM srcs
-        "sleep_modes.c"
-        "sleep_gpio.c" # TODO: [ESP32H4] IDF-12279, IDF-12281
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/include/soc/${target}")
+    list(APPEND public_include_dirs
+        "include/soc/${target}"
     )
 endif()
 

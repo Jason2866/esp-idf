@@ -216,29 +216,22 @@ function(__kconfig_generate_config sdkconfig sdkconfig_defaults)
     set(sdkconfig_json ${config_dir}/sdkconfig.json)
     set(sdkconfig_json_menus ${config_dir}/kconfig_menus.json)
 
+    set(kconfgen_output_options
+    --output header ${sdkconfig_header}
+    --output cmake ${sdkconfig_cmake}
+    --output json ${sdkconfig_json}
+    --output json_menus ${sdkconfig_json_menus})
     idf_build_get_property(output_sdkconfig __OUTPUT_SDKCONFIG)
     if(output_sdkconfig)
-        execute_process(
-            COMMAND ${prepare_kconfig_files_command})
-        execute_process(
-            COMMAND ${kconfgen_basecommand}
-            --output header ${sdkconfig_header}
-            --output cmake ${sdkconfig_cmake}
-            --output json ${sdkconfig_json}
-            --output json_menus ${sdkconfig_json_menus}
-            --output config ${sdkconfig}
-            RESULT_VARIABLE config_result)
-    else()
-        execute_process(
-            COMMAND ${prepare_kconfig_files_command})
-        execute_process(
-            COMMAND ${kconfgen_basecommand}
-            --output header ${sdkconfig_header}
-            --output cmake ${sdkconfig_cmake}
-            --output json ${sdkconfig_json}
-            --output json_menus ${sdkconfig_json_menus}
-            RESULT_VARIABLE config_result)
+        list(APPEND kconfgen_output_options --output config ${sdkconfig})
     endif()
+
+    execute_process(
+        COMMAND ${prepare_kconfig_files_command})
+    execute_process(
+        COMMAND ${kconfgen_basecommand}
+        ${kconfgen_output_options}
+        RESULT_VARIABLE config_result)
 
     if(config_result)
         message(FATAL_ERROR "Failed to run kconfgen (${kconfgen_basecommand}). Error ${config_result}")
@@ -267,7 +260,20 @@ function(__kconfig_generate_config sdkconfig sdkconfig_defaults)
     idf_build_set_property(SDKCONFIG_JSON_MENUS ${sdkconfig_json_menus})
     idf_build_set_property(CONFIG_DIR ${config_dir})
 
-    set(MENUCONFIG_CMD ${python} -m menuconfig)
+    # newer versions of esp-idf-kconfig renamed menuconfig to esp_menuconfig
+    # Order matters here, we want to use esp_menuconfig if it is available
+    execute_process(
+        COMMAND ${python} -c "import esp_menuconfig"
+        RESULT_VARIABLE ESP_MENUCONFIG_AVAILABLE
+        OUTPUT_QUIET ERROR_QUIET
+    )
+    if(ESP_MENUCONFIG_AVAILABLE EQUAL 0)
+        set(MENUCONFIG_CMD ${python} -m esp_menuconfig)
+    else()
+        set(MENUCONFIG_CMD ${python} -m menuconfig)
+    endif()
+
+
     set(TERM_CHECK_CMD ${python} ${idf_path}/tools/check_term.py)
 
     if(NOT ${ARG_CREATE_MENUCONFIG_TARGET})
@@ -285,7 +291,7 @@ function(__kconfig_generate_config sdkconfig sdkconfig_defaults)
         --env "IDF_ENV_FPGA=${idf_env_fpga}"
         --env "IDF_INIT_VERSION=${idf_init_version}"
         --dont-write-deprecated
-        --output config ${sdkconfig}
+        ${kconfgen_output_options}
         COMMAND ${TERM_CHECK_CMD}
         COMMAND ${CMAKE_COMMAND} -E env
         "COMPONENT_KCONFIGS_SOURCE_FILE=${kconfigs_path}"
@@ -305,7 +311,7 @@ function(__kconfig_generate_config sdkconfig sdkconfig_defaults)
         --env "IDF_TOOLCHAIN=${idf_toolchain}"
         --env "IDF_ENV_FPGA=${idf_env_fpga}"
         --env "IDF_INIT_VERSION=${idf_init_version}"
-        --output config ${sdkconfig}
+        ${kconfgen_output_options}
         )
 
     # Custom target to run kconfserver from the build tool

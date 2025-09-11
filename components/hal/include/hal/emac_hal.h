@@ -12,6 +12,7 @@
 #include "esp_err.h"
 #include "hal/eth_types.h"
 #include "soc/soc_caps.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -25,7 +26,7 @@ extern "C" {
 #define TYPE_SIZE_ERR_MSG(DATATYPE, SIZE)  #DATATYPE " should occupy " STR(SIZE) " bytes in memory"
 #define ASSERT_TYPE_SIZE(DATATYPE, SIZE) ESP_STATIC_ASSERT(sizeof(DATATYPE) == SIZE, TYPE_SIZE_ERR_MSG(DATATYPE, SIZE))
 
-#if CONFIG_IDF_TARGET_ESP32P4
+#if SOC_IS(ESP32P4)
 // Descriptor must be 64B aligned for ESP32P4 due to cache arrangement
 #define EMAC_HAL_DMA_DESC_SIZE                              (64)
 #else
@@ -191,7 +192,7 @@ ASSERT_TYPE_SIZE(eth_dma_rx_descriptor_t, EMAC_HAL_DMA_DESC_SIZE);
 
 typedef struct emac_mac_dev_s *emac_mac_soc_regs_t;
 typedef struct emac_dma_dev_s *emac_dma_soc_regs_t;
-#if CONFIG_IDF_TARGET_ESP32
+#if SOC_IS(ESP32)
 typedef struct emac_ext_dev_s *emac_ext_soc_regs_t;
 #else
 typedef void *emac_ext_soc_regs_t;
@@ -236,9 +237,9 @@ void emac_hal_init(emac_hal_context_t *hal);
 
 #define emac_hal_clock_enable_rmii_input(hal) emac_ll_clock_enable_rmii_input((hal)->ext_regs)
 
-#ifdef CONFIG_IDF_TARGET_ESP32P4
+#if SOC_IS(ESP32P4)
 #define emac_hal_clock_rmii_rx_tx_div(hal, div) emac_ll_clock_rmii_rx_tx_div((hal)->ext_regs, div)
-#endif // CONFIG_IDF_TARGET_ESP32P4
+#endif // SOC_IS(ESP32P4)
 
 #define emac_hal_clock_enable_rmii_output(hal) emac_ll_clock_enable_rmii_output((hal)->ext_regs)
 
@@ -274,6 +275,8 @@ void emac_hal_set_phy_cmd(emac_hal_context_t *hal, uint32_t phy_addr, uint32_t p
 #define emac_hal_get_phy_data(hal) emac_ll_get_phy_data((hal)->mac_regs)
 
 void emac_hal_set_address(emac_hal_context_t *hal, uint8_t *mac_addr);
+
+#define emac_hal_get_address(hal, mac_addr) emac_ll_get_addr((hal)->mac_regs, mac_addr)
 
 esp_err_t emac_hal_add_addr_da_filter(emac_hal_context_t *hal, const uint8_t *mac_addr, uint8_t addr_num);
 

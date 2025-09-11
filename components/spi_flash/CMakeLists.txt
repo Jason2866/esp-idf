@@ -52,9 +52,11 @@ else()
         "spi_flash_os_func_noos.c")
 
     list(APPEND srcs ${cache_srcs})
-    set(priv_requires bootloader_support app_update soc esp_mm
-                      esp_driver_gpio
-    )
+    set(priv_requires bootloader_support soc esp_mm)
+
+    if(${target} STREQUAL "esp32s2")
+        list(APPEND priv_requires esp_security)
+    endif()
 endif()
 
 idf_component_register(SRCS "${srcs}"

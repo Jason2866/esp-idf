@@ -35,8 +35,9 @@ extern "C" {
 
 // Get GPIO hardware instance with giving gpio num
 #define GPIO_LL_GET_HW(num) (((num) == 0) ? (&GPIO) : NULL)
+
 #define GPIO_LL_PRO_CPU_INTR_ENA      (BIT(0))
-#define GPIO_LL_PRO_CPU_NMI_INTR_ENA  (BIT(1))
+#define GPIO_LL_PRO_CPU_2_INTR_ENA    (BIT(1))
 #define GPIO_LL_INTR_SOURCE0   ETS_GPIO_INTERRUPT_PRO_SOURCE
 
 /**
@@ -191,8 +192,8 @@ static inline void gpio_ll_clear_intr_status_high(gpio_dev_t *hw, uint32_t mask)
 __attribute__((always_inline))
 static inline void gpio_ll_intr_enable_on_core(gpio_dev_t *hw, uint32_t core_id, uint32_t gpio_num)
 {
-    HAL_ASSERT(core_id == 0 && "target SoC only has a single core");
-    GPIO.pinn[gpio_num].pinn_int_ena = GPIO_LL_PRO_CPU_INTR_ENA;     //enable pro cpu intr
+    (void)core_id;
+    GPIO.pinn[gpio_num].pinn_int_ena = GPIO_LL_PRO_CPU_INTR_ENA;     //enable intr
 }
 
 /**
@@ -316,7 +317,7 @@ static inline void gpio_ll_od_enable(gpio_dev_t *hw, uint32_t gpio_num)
 __attribute__((always_inline))
 static inline void gpio_ll_set_level(gpio_dev_t *hw, uint32_t gpio_num, uint32_t level)
 {
-#if HAL_CONFIG_GPIO_USE_ROM_API
+#if HAL_CONFIG(GPIO_USE_ROM_API)
     gpio_set_output_level(gpio_num, level);
 #else
     if (level) {
@@ -350,7 +351,7 @@ static inline void gpio_ll_set_level(gpio_dev_t *hw, uint32_t gpio_num, uint32_t
 __attribute__((always_inline))
 static inline int gpio_ll_get_level(gpio_dev_t *hw, uint32_t gpio_num)
 {
-#if HAL_CONFIG_GPIO_USE_ROM_API
+#if HAL_CONFIG(GPIO_USE_ROM_API)
     return gpio_get_input_level(gpio_num);
 #else
     if (gpio_num < 32) {
@@ -453,9 +454,9 @@ __attribute__((always_inline))
 static inline bool gpio_ll_is_digital_io_hold(gpio_dev_t *hw, uint32_t gpio_num)
 {
     if (gpio_num < 32) {
-        return !!(LP_AON.gpio_hold0.gpio_hold0 & GPIO_HOLD_MASK[gpio_num]);
+        return !!(LP_AON.gpio_hold0.gpio_hold0 & BIT(gpio_num));
     } else {
-        return !!(LP_AON.gpio_hold1.gpio_hold1 & GPIO_HOLD_MASK[gpio_num]);
+        return !!(LP_AON.gpio_hold1.gpio_hold1 & BIT(gpio_num - 32));
     }
 }
 

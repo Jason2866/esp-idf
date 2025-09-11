@@ -38,23 +38,21 @@ if(CONFIG_STDATOMIC_S32C1I_SPIRAM_WORKAROUND)
 endif()
 
 if(CONFIG_LIBC_OPTIMIZED_MISALIGNED_ACCESS)
-    if(CMAKE_C_COMPILER_ID MATCHES "Clang")
-        # TODO IDF-13089: remove this block and modify src/newlib.lf when clang was upgraded
-        list(APPEND srcs
-             "src/string/memcmp.c"
-             "src/string/memmove.c"
-             "src/string/strncmp.c"
-             "src/string/strncpy.c"
-             "src/port/riscv/memcpy.c"
-             "src/port/riscv/strcpy.c"
-             "src/port/riscv/strcmp.S")
-        list(APPEND EXTRA_LINK_FLAGS "-u esp_libc_include_memcmp_impl")
-        list(APPEND EXTRA_LINK_FLAGS "-u esp_libc_include_memmove_impl")
-        list(APPEND EXTRA_LINK_FLAGS "-u esp_libc_include_strncmp_impl")
-        list(APPEND EXTRA_LINK_FLAGS "-u esp_libc_include_strncpy_impl")
-        list(APPEND EXTRA_LINK_FLAGS "-u esp_libc_include_strcpy_impl")
-        list(APPEND EXTRA_LINK_FLAGS "-u esp_libc_include_strcmp_impl")
-    endif()
+    list(APPEND srcs
+         "src/port/riscv/memcpy.c"
+         "src/port/riscv/memmove.c"
+         "src/string/memcmp.c"
+         "src/port/riscv/strcpy.c"
+         "src/string/strncpy.c"
+         "src/string/strncmp.c"
+         "src/port/riscv/strcmp.S")
+    list(APPEND EXTRA_LINK_FLAGS "-u esp_libc_include_memcpy_impl")
+    list(APPEND EXTRA_LINK_FLAGS "-u esp_libc_include_memmove_impl")
+    list(APPEND EXTRA_LINK_FLAGS "-u esp_libc_include_memcmp_impl")
+    list(APPEND EXTRA_LINK_FLAGS "-u esp_libc_include_strcpy_impl")
+    list(APPEND EXTRA_LINK_FLAGS "-u esp_libc_include_strncpy_impl")
+    list(APPEND EXTRA_LINK_FLAGS "-u esp_libc_include_strncmp_impl")
+    list(APPEND EXTRA_LINK_FLAGS "-u esp_libc_include_strcmp_impl")
 endif()
 
 if(CONFIG_LIBC_NEWLIB)
@@ -74,6 +72,7 @@ list(APPEND ldfragments "src/newlib.lf" "src/system_libs.lf")
 
 if(CONFIG_LIBC_NEWLIB)
     list(APPEND ldfragments src/libc.lf)
+    list(APPEND ldfragments src/libm.lf)
 else()
     list(APPEND ldfragments src/picolibc/libc.lf)
 endif()
@@ -95,6 +94,17 @@ if(CONFIG_STDATOMIC_S32C1I_SPIRAM_WORKAROUND)
                                 PROPERTIES COMPILE_FLAGS "-mno-disable-hardware-atomics")
 endif()
 
+if(CONFIG_LIBC_OPTIMIZED_MISALIGNED_ACCESS)
+    # TODO GCC-419 and IDF-13089: cleanup files
+    set_source_files_properties("src/string/memcmp.c"
+                                "src/string/strncmp.c"
+                                "src/string/strncpy.c"
+                                "src/port/riscv/memcpy.c"
+                                "src/port/riscv/memmove.c"
+                                "src/port/riscv/strcpy.c"
+                                PROPERTIES COMPILE_FLAGS -O2)
+endif()
+
 # Forces the linker to include heap, syscall, pthread, assert, and retargetable locks from this component,
 # instead of the implementations provided by newlib.
 list(APPEND EXTRA_LINK_FLAGS "-u esp_libc_include_heap_impl")
@@ -107,7 +117,7 @@ list(APPEND EXTRA_LINK_FLAGS "-u esp_libc_include_init_funcs")
 list(APPEND EXTRA_LINK_FLAGS "-u esp_libc_init_funcs")
 target_link_libraries(${COMPONENT_LIB} INTERFACE "${EXTRA_LINK_FLAGS}")
 
-if(CONFIG_NEWLIB_NANO_FORMAT)
+if(CONFIG_LIBC_NEWLIB_NANO_FORMAT)
     if(CMAKE_C_COMPILER_ID MATCHES "Clang")
         set(libc_dir_cmd ${CMAKE_C_COMPILER})
         string(REPLACE " " ";" cflags_list ${CMAKE_C_FLAGS})

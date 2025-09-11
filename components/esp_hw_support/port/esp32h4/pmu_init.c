@@ -14,6 +14,9 @@
 #include "hal/pmu_hal.h"
 #include "pmu_param.h"
 #include "esp_private/esp_pmu.h"
+#include "soc/regi2c_dcdc.h"
+#include "regi2c_ctrl.h"
+#include "esp_rom_sys.h"
 
 static __attribute__((unused)) const char *TAG = "pmu_init";
 
@@ -53,6 +56,7 @@ void pmu_hp_system_init(pmu_context_t *ctx, pmu_hp_mode_t mode, const pmu_hp_sys
     pmu_ll_hp_set_dig_power(ctx->hal->dev, mode, power->dig_power.val);
     pmu_ll_hp_set_clk_power(ctx->hal->dev, mode, power->clk_power.val);
     pmu_ll_hp_set_xtal_xpd (ctx->hal->dev, mode, power->xtal.xpd_xtal);
+    pmu_ll_hp_set_xtalx2_xpd (ctx->hal->dev, mode, power->xtal.xpd_xtalx2);
 
     /* Default configuration of hp-system clock in active, modem and sleep modes */
     pmu_ll_hp_set_icg_func          (ctx->hal->dev, mode, clock->icg_func);
@@ -111,6 +115,9 @@ void pmu_hp_system_init(pmu_context_t *ctx, pmu_hp_mode_t mode, const pmu_hp_sys
     pmu_ll_imm_update_dig_icg_switch(ctx->hal->dev, true);
 
     pmu_ll_hp_set_sleep_protect_mode(ctx->hal->dev, PMU_SLEEP_PROTECT_HP_LP_SLEEP);
+
+    /* set dcdc ccm mode software enable */
+    pmu_ll_set_dcdc_ccm_sw_en(ctx->hal->dev, true);
 }
 
 void pmu_lp_system_init(pmu_context_t *ctx, pmu_lp_mode_t mode, const pmu_lp_system_param_t *param)
@@ -123,7 +130,7 @@ void pmu_lp_system_init(pmu_context_t *ctx, pmu_lp_mode_t mode, const pmu_lp_sys
     pmu_ll_lp_set_dig_power(ctx->hal->dev, mode, power->dig_power.val);
     pmu_ll_lp_set_clk_power(ctx->hal->dev, mode, power->clk_power.val);
     pmu_ll_lp_set_xtal_xpd (ctx->hal->dev, PMU_MODE_LP_SLEEP, power->xtal.xpd_xtal);
-
+    pmu_ll_lp_set_xtalx2_xpd (ctx->hal->dev, PMU_MODE_LP_SLEEP, power->xtal.xpd_xtalx2);
     /* Default configuration of lp-system analog sub-system in active and
      * sleep modes */
     if (mode == PMU_MODE_LP_SLEEP) {
@@ -166,6 +173,7 @@ static inline void pmu_power_domain_force_default(pmu_context_t *ctx)
     }
     /* Isolate all memory banks while sleeping, avoid memory leakage current */
     pmu_ll_hp_set_memory_no_isolate     (ctx->hal->dev, 0);
+    pmu_ll_hp_set_memory_power_up       (ctx->hal->dev, 0);
 
     pmu_ll_lp_set_power_force_power_up  (ctx->hal->dev, false);
     pmu_ll_lp_set_power_force_no_reset  (ctx->hal->dev, false);
@@ -227,21 +235,27 @@ static void pmu_lp_system_init_default(pmu_context_t *ctx)
 
 void pmu_init(void)
 {
-#if 0 // TODO: IDF-12313
-    /* Peripheral reg i2c power up */
-    SET_PERI_REG_MASK(PMU_RF_PWC_REG, PMU_XPD_PERIF_I2C);
-    SET_PERI_REG_MASK(PMU_RF_PWC_REG, PMU_XPD_RFTX_I2C);
-    SET_PERI_REG_MASK(PMU_RF_PWC_REG, PMU_XPD_RFRX_I2C);
-    SET_PERI_REG_MASK(PMU_RF_PWC_REG, PMU_XPD_RFPLL);
-
-    REGI2C_WRITE_MASK(I2C_DIG_REG, I2C_DIG_REG_ENIF_RTC_DREG, 1);
-    REGI2C_WRITE_MASK(I2C_DIG_REG, I2C_DIG_REG_ENIF_DIG_DREG, 1);
-    REGI2C_WRITE_MASK(I2C_DIG_REG, I2C_DIG_REG_XPD_RTC_REG, 0);
-    REGI2C_WRITE_MASK(I2C_DIG_REG, I2C_DIG_REG_XPD_DIG_REG, 0);
-#endif
-
     pmu_hp_system_init_default(PMU_instance());
     pmu_lp_system_init_default(PMU_instance());
 
     pmu_power_domain_force_default(PMU_instance());
+#if !CONFIG_IDF_ENV_FPGA
+    REGI2C_WRITE_MASK(I2C_DCDC, I2C_DCDC_CCM_DREG0, 24);
+    REGI2C_WRITE_MASK(I2C_DCDC, I2C_DCDC_CCM_PCUR_LIMIT0, 4);
+
+    REGI2C_WRITE_MASK(I2C_DCDC, I2C_DCDC_VCM_DREG0, 24);
+    REGI2C_WRITE_MASK(I2C_DCDC, I2C_DCDC_VCM_PCUR_LIMIT0, 2);
+    REGI2C_WRITE_MASK(I2C_DCDC, I2C_DCDC_XPD_TRX, 0);
+#endif
+
+    // close rfpll to decrease mslp_cur
+    REG_SET_FIELD(PMU_RF_PWC_REG, PMU_XPD_FORCE_RFPLL, 1);
+    REG_SET_FIELD(PMU_RF_PWC_REG, PMU_XPD_RFPLL, 0);
+
+#if !CONFIG_IDF_ENV_FPGA
+    // TODO: IDF-12313
+    // if (esp_rom_get_reset_reason(0) == RESET_REASON_CHIP_POWER_ON) {
+    //     esp_ocode_calib_init();
+    // }
+#endif
 }

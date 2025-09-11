@@ -427,6 +427,10 @@ config SOC_CPU_PMP_REGION_GRANULARITY
     int
     default 4
 
+config SOC_CPU_MISALIGNED_ACCESS_ON_PMP_MISMATCH_ISSUE
+    bool
+    default y
+
 config SOC_DS_SIGNATURE_MAX_BIT_LEN
     int
     default 3072
@@ -456,18 +460,6 @@ config SOC_GDMA_SUPPORT_ETM
     default y
 
 config SOC_GDMA_SUPPORT_SLEEP_RETENTION
-    bool
-    default y
-
-config SOC_ETM_GROUPS
-    int
-    default 1
-
-config SOC_ETM_CHANNELS_PER_GROUP
-    int
-    default 50
-
-config SOC_ETM_SUPPORT_SLEEP_RETENTION
     bool
     default y
 
@@ -576,6 +568,14 @@ config SOC_DEDIC_GPIO_IN_CHANNELS_NUM
     default 8
 
 config SOC_DEDIC_PERIPH_ALWAYS_ENABLE
+    bool
+    default y
+
+config SOC_SDM_SUPPORT_SLEEP_RETENTION
+    bool
+    default y
+
+config SOC_ETM_SUPPORT_SLEEP_RETENTION
     bool
     default y
 
@@ -803,10 +803,6 @@ config SOC_PCNT_SUPPORT_RUNTIME_THRES_UPDATE
     bool
     default y
 
-config SOC_PCNT_SUPPORT_SLEEP_RETENTION
-    bool
-    default y
-
 config SOC_RMT_GROUPS
     int
     default 1
@@ -835,7 +831,7 @@ config SOC_RMT_SUPPORT_RX_DEMODULATION
     bool
     default y
 
-config SOC_RMT_SUPPORT_TX_ASYNC_STOP
+config SOC_RMT_SUPPORT_ASYNC_STOP
     bool
     default y
 
@@ -988,22 +984,6 @@ config SOC_SHA_SUPPORT_SHA224
     default y
 
 config SOC_SHA_SUPPORT_SHA256
-    bool
-    default y
-
-config SOC_SDM_GROUPS
-    int
-    default 1
-
-config SOC_SDM_CHANNELS_PER_GROUP
-    int
-    default 4
-
-config SOC_SDM_CLK_SUPPORT_PLL_F80M
-    bool
-    default y
-
-config SOC_SDM_CLK_SUPPORT_XTAL
     bool
     default y
 
@@ -1163,30 +1143,6 @@ config SOC_LP_TIMER_BIT_WIDTH_HI
     int
     default 16
 
-config SOC_TIMER_GROUPS
-    int
-    default 2
-
-config SOC_TIMER_GROUP_TIMERS_PER_GROUP
-    int
-    default 1
-
-config SOC_TIMER_GROUP_COUNTER_BIT_WIDTH
-    int
-    default 54
-
-config SOC_TIMER_GROUP_SUPPORT_XTAL
-    bool
-    default y
-
-config SOC_TIMER_GROUP_SUPPORT_RC_FAST
-    bool
-    default y
-
-config SOC_TIMER_GROUP_TOTAL_TIMERS
-    int
-    default 2
-
 config SOC_TIMER_SUPPORT_ETM
     bool
     default y
@@ -1330,10 +1286,6 @@ config SOC_LP_UART_FIFO_LEN
 config SOC_UART_BITRATE_MAX
     int
     default 5000000
-
-config SOC_UART_SUPPORT_PLL_F80M_CLK
-    bool
-    default y
 
 config SOC_UART_SUPPORT_RTC_CLK
     bool

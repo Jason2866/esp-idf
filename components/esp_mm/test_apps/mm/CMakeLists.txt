@@ -1,5 +1,5 @@
 # This is the project CMakeLists.txt file for the test subproject
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.22)
 
 set(EXTRA_COMPONENT_DIRS "$ENV{IDF_PATH}/components/esp_mm/test_apps/components")
 
@@ -20,6 +20,7 @@ if(CONFIG_SOC_MMU_PER_EXT_MEM_TARGET AND CONFIG_SPIRAM_FLASH_LOAD_TO_PSRAM)
     list(APPEND ignore_refs esp_mmu_map_init/*)
 endif()
 
+idf_build_get_property(elf EXECUTABLE)
 if(CONFIG_COMPILER_DUMP_RTL_FILES)
     add_custom_target(check_test_app_sections ALL
                       COMMAND ${PYTHON} $ENV{IDF_PATH}/tools/ci/check_callgraph.py

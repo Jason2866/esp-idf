@@ -445,6 +445,7 @@ components/esp_rom/include/esp_rom_crc.h
 components/esp_rom/linux/esp_rom_crc.c
 components/esp_rom/linux/esp_rom_md5.c
 components/esp_rom/patches/esp_rom_crc.c
+components/esp_rom/patches/esp_rom_longjmp.S
 components/esp_system/ubsan.c
 components/esp_wifi/src/mesh_event.c
 components/fatfs/diskio/diskio.c
@@ -870,8 +871,6 @@ examples/protocols/http_server/advanced_tests/main/tests.c
 examples/protocols/http_server/async_handlers/main/main.c
 examples/protocols/http_server/captive_portal/main/main.c
 examples/protocols/http_server/persistent_sockets/main/main.c
-examples/protocols/http_server/restful_server/main/esp_rest_main.c
-examples/protocols/http_server/restful_server/main/rest_server.c
 examples/protocols/http_server/simple/main/main.c
 examples/protocols/http_server/ws_echo_server/main/ws_echo_server.c
 examples/protocols/https_server/simple/main/main.c

@@ -44,6 +44,21 @@ A secure element (ATECC608) can be also used for the underlying TLS connection i
         .use_secure_element = true,
     };
 
+Use ECDSA Peripheral for TLS
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ECDSA peripheral can be used for the underlying TLS connection in the HTTP client connection. Please refer to the **ECDSA Peripheral with ESP-TLS** section in the :doc:`ESP-TLS documentation </api-reference/protocols/esp_tls>` for more details. The HTTP client can be configured to use ECDSA peripheral as follows:
+
+.. code-block:: c
+
+    esp_http_client_config_t cfg = {
+        /* other configurations options */
+        .use_ecdsa_peripheral = true,
+        .ecdsa_key_efuse_blk = 4,    // Low eFuse block for ECDSA key
+        .ecdsa_key_efuse_blk_high = 5,   // High eFuse block for ECDSA key (SECP384R1 only)
+        .ecdsa_curve = ESP_TLS_ECDSA_CURVE_SECP384R1, // set this to ESP_TLS_ECDSA_CURVE_SECP256R1 for SECP256R1 curve
+    };
+
 
 HTTPS Request
 -------------
@@ -131,6 +146,7 @@ Expected data types for different HTTP Client events in the event loop are as fo
     - HTTP_EVENT_HEADERS_SENT       : ``esp_http_client_handle_t``
     - HTTP_EVENT_ON_HEADER          : ``esp_http_client_handle_t``
     - HTTP_EVENT_ON_HEADERS_COMPLETE: ``esp_http_client_handle_t``
+    - HTTP_EVENT_ON_STATUS_CODE     : ``esp_http_client_handle_t``
     - HTTP_EVENT_ON_DATA            : ``esp_http_client_on_data_t``
     - HTTP_EVENT_ON_FINISH          : ``esp_http_client_handle_t``
     - HTTP_EVENT_DISCONNECTED       : ``esp_http_client_handle_t``

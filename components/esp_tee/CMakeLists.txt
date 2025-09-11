@@ -6,8 +6,10 @@ idf_build_get_property(target IDF_TARGET)
 # headers & sources here are compiled into the app, not the esp_tee binary
 # (see subproject/ for the esp_tee binary build files)
 
-# ESP-TEE is currently supported only on the ESP32-C6 and ESP32-H2 SoCs
-if(NOT ${target} STREQUAL "esp32c6" AND NOT ${target} STREQUAL "esp32h2")
+# ESP-TEE is currently supported only on the ESP32-C6, H2 and C5 SoCs
+set(SUPPORTED_TARGETS "esp32c6" "esp32h2" "esp32c5")
+if(NOT target IN_LIST SUPPORTED_TARGETS)
+    message(STATUS "ESP-TEE is currently supported only on the ${SUPPORTED_TARGETS} SoCs")
     return()
 endif()
 
@@ -50,7 +52,9 @@ else()
             add_custom_target(blank_tee_ota_data ALL DEPENDS ${blank_tee_otadata_file})
 
             add_dependencies(flash blank_tee_ota_data)
-            add_dependencies(encrypted-flash blank_tee_ota_data)
+            if(CONFIG_SECURE_FLASH_ENCRYPTION_MODE_DEVELOPMENT)
+                add_dependencies(encrypted-flash blank_tee_ota_data)
+            endif()
 
             partition_table_get_partition_info(tee_otadata_part
                 "--partition-type data --partition-subtype tee_ota" "name")
@@ -73,7 +77,7 @@ else()
 
     idf_component_register(INCLUDE_DIRS include
                            SRCS ${srcs}
-                           PRIV_REQUIRES efuse esp_security esp_system spi_flash)
+                           PRIV_REQUIRES efuse esp_security esp_system spi_flash esptool_py)
 
     if(CONFIG_SECURE_ENABLE_TEE)
         set(EXTRA_LINK_FLAGS)

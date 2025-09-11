@@ -88,7 +88,7 @@ typedef struct {
 #define ESP_BT_EIR_TYPE_TX_POWER_LEVEL          0x0a      /*!< Tx power level, value is 1 octet ranging from  -127 to 127, unit is dBm*/
 #define ESP_BT_EIR_TYPE_URL                     0x24      /*!< Uniform resource identifier */
 #define ESP_BT_EIR_TYPE_MANU_SPECIFIC           0xff      /*!< Manufacturer specific data */
-#define  ESP_BT_EIR_TYPE_MAX_NUM                12        /*!< MAX number of EIR type */
+#define ESP_BT_EIR_TYPE_MAX_NUM                 12        /*!< MAX number of EIR type */
 
 typedef uint8_t esp_bt_eir_type_t;
 
@@ -953,7 +953,7 @@ esp_err_t esp_bt_gap_get_page_timeout(void);
 
 /**
  * @brief           Set ACL packet types
- *                  An ESP_BT_GAP_SET_ACL_PPKT_TYPES_EVT event will reported to
+ *                  An ESP_BT_GAP_ACL_PKT_TYPE_CHANGED_EVT event will be reported to
  *                  the APP layer.
  *
  * @return          - ESP_OK: success

@@ -76,7 +76,7 @@ else()
                                     # [refactor-todo] requirements due to init code,
                                     # should be removable once using component init functions
                                     # link-time registration is used.
-                                    bootloader_support esp_pm
+                                    bootloader_support esp_pm esp_usb_cdc_rom_console
                         LDFRAGMENTS "linker.lf" "app.lf")
     add_subdirectory(port)
 
@@ -151,7 +151,8 @@ if(NOT BOOTLOADER_BUILD)
     endif()
 endif()
 
-if(CONFIG_SOC_MEM_NON_CONTIGUOUS_SRAM)
+# For P4, since P4 REV2, the SRAM is contiguous
+if(CONFIG_ESP32P4_SELECTS_REV_LESS_V2)
     target_link_options(${COMPONENT_LIB} INTERFACE "-Wl,--enable-non-contiguous-regions")
 endif()
 

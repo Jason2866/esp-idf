@@ -90,6 +90,12 @@ Below are additional configuration fields of the :cpp:type:`twai_onchip_node_con
     - :cpp:member:`twai_onchip_node_config_t::flags::enable_listen_only`: Configures the node in listen-only mode. In this mode, the node only receives and does not transmit any dominant bits, including ACK and error frames.
     - :cpp:member:`twai_onchip_node_config_t::flags::no_receive_rtr`: When using filters, determines whether remote frames matching the ID pattern should be filtered out.
 
+.. only:: esp32c5
+
+    .. note::
+
+        Note: The listen-only mode on ESP32C5 can't work properly when there are multiple nodes on the bus that are sending ACKs to each other. An alternative is to use transceiver which supports listen-only mode itself (e.g. TJA1145), and combine it with self-test mode enabled.
+
 The :cpp:func:`twai_node_enable` function starts the TWAI controller. Once enabled, the controller is connected to the bus and can transmit messages. It also generates events upon receiving messages from other nodes on the bus or when bus errors are detected.
 
 The corresponding function, :cpp:func:`twai_node_disable`, immediately stops the node and disconnects it from the bus. Any ongoing transmissions will be aborted. When the node is re-enabled later, if there are pending transmissions in the queue, the driver will immediately initiate a new transmission attempt.
@@ -114,8 +120,9 @@ To reduce performance overhead caused by memory copying, the TWAI driver uses po
         .buffer_len = sizeof(send_buff),  // Length of data to transmit
     };
     ESP_ERROR_CHECK(twai_node_transmit(node_hdl, &tx_msg, 0));  // Timeout = 0: returns immediately if queue is full
+    ESP_ERROR_CHECK(twai_node_transmit_wait_all_done(node_hdl, -1));  // Wait for transmission to finish
 
-In this example, :cpp:member:`twai_frame_t::header::id` specifies the ID of the message as 0x01. Message IDs are typically used to indicate the type of message in an application and also play a role in bus arbitration during transmission—lower values indicate higher priority on the bus. :cpp:member:`twai_frame_t::buffer` points to the memory address where the data to be transmitted is stored, and :cpp:member:`twai_frame_t::buffer_len` specifies the length of that data.
+In this example, :cpp:member:`twai_frame_t::header::id` specifies the ID of the message as 0x01. Message IDs are typically used to indicate the type of message in an application and also play a role in bus arbitration during transmission—lower values indicate higher priority on the bus. :cpp:member:`twai_frame_t::buffer` points to the memory address where the data to be transmitted is stored, and :cpp:member:`twai_frame_t::buffer_len` specifies the length of that data. The :cpp:func:`twai_node_transmit` function is thread-safe and can also be called from an ISR. When called from an ISR, the ``timeout`` parameter is ignored, and the function will not block.
 
 Note that :cpp:member:`twai_frame_t::header::dlc` can also specify the length of the data in the frame. The DLC (Data Length Code) is mapped to the actual data length as defined in ISO 11898-1. You can use either :cpp:func:`twaifd_dlc2len` or :cpp:func:`twaifd_len2dlc` for conversion. If both dlc and buffer_len are non-zero, they must represent the same length.
 
@@ -174,6 +181,32 @@ After understanding the basic usage, you can further explore more advanced capab
 .. image:: ../../../_static/diagrams/twai/full_flow.drawio.svg
     :align: center
 
+Transmit from ISR
+^^^^^^^^^^^^^^^^^
+
+The TWAI driver supports transmitting messages from an Interrupt Service Routine (ISR). This is particularly useful for applications requiring low-latency responses or periodic transmissions triggered by hardware timers. For example, you can trigger a new transmission from within the ``on_tx_done`` callback, which is executed in an ISR context.
+
+.. code:: c
+
+    static bool twai_tx_done_cb(twai_node_handle_t handle, const twai_tx_done_event_data_t *edata, void *user_ctx)
+    {
+        // A frame has been successfully transmitted. Queue another one.
+        // The frame and its data buffer must be valid until transmission is complete.
+        static const uint8_t data_buffer[] = {1, 2, 3, 4};
+        static const twai_frame_t tx_frame = {
+            .header.id = 0x2,
+            .buffer = (uint8_t *)data_buffer,
+            .buffer_len = sizeof(data_buffer),
+        };
+
+        // The `twai_node_transmit` is safe to be called in an ISR context
+        twai_node_transmit(handle, &tx_frame, 0);
+        return false;
+    }
+
+.. note::
+    When calling :cpp:func:`twai_node_transmit` from an ISR, the ``timeout`` parameter is ignored, and the function will not block. If the transmit queue is full, the function will return immediately with an error. It is the application's responsibility to handle cases where the queue is full.
+
 Bit Timing Customization
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -202,7 +235,7 @@ The following code demonstrates how to configure a baud rate of 500 Kbit/s with 
 .. code:: c
 
     twai_timing_advanced_config_t timing_cfg = {
-        .brp = 8,       // Prescaler set to 8, time quantum = 80M / 8 = 10 MHz (1M Tq)
+        .brp = 8,       // Prescaler set to 8, time quantum = 80M / 8 = 10 MHz (10M Tq)
         .prop_seg = 10, // Propagation segment
         .tseg_1 = 4,    // Phase segment 1
         .tseg_2 = 5,    // Phase segment 2
@@ -254,7 +287,7 @@ The following code demonstrates how to calculate the MASK and configure a filter
     Dual Filter Mode
     """"""""""""""""
 
-    {IDF_TARGET_NAME} supports dual filter mode, which allows the hardware to be configured as two parallel independent 16-bit mask filters. By enabling this, more IDs can be received. Note that when filtering 29-bit extended IDs, each filter can only filter the upper 16 bits of the ID, while the remaining 13 bits are not filtered. The following code demonstrates how to configure dual filter mode using the function :cpp:func:`twai_make_dual_filter`:
+    {IDF_TARGET_NAME} supports dual filter mode, which allows the hardware to be configured as two parallel independent 16-bit mask filters. By enabling this, more IDs can be received. Note that using dual filter mode to filter 29-bit extended IDs, each filter can only filter the upper 16 bits of the ID, while the remaining 13 bits are not filtered. The following code demonstrates how to configure dual filter mode using the function :cpp:func:`twai_make_dual_filter`:
 
     .. code:: c
 
@@ -311,7 +344,9 @@ The driver guarantees thread safety for all public TWAI APIs. You can safely cal
 Performance
 ^^^^^^^^^^^
 
-To improve the real-time performance of interrupt handling, the driver provides the :ref:`CONFIG_TWAI_ISR_IN_IRAM` option. When enabled, the TWAI ISR (Interrupt Service Routine) is placed in internal RAM, reducing latency caused by instruction fetching from Flash.
+To improve the real-time performance of interrupt handling, the driver provides the :ref:`CONFIG_TWAI_ISR_IN_IRAM` option. When enabled, the TWAI ISR (Interrupt Service Routine) and receive operations are placed in internal RAM, reducing latency caused by instruction fetching from Flash.
+
+For applications that require high-performance transmit operations, the driver provides the :ref:`CONFIG_TWAI_IO_FUNC_IN_IRAM` option to place transmit functions in IRAM. This is particularly beneficial for time-critical applications that frequently call :cpp:func:`twai_node_transmit` from user tasks.
 
 .. note::
 
@@ -365,7 +400,10 @@ Application Examples
 
 .. list::
 
-    - Temporary no.
+    - :example:`peripherals/twai/twai_utils` demonstrates how to use the TWAI (Two-Wire Automotive Interface) APIs to create a command-line interface for TWAI bus communication, supporting frame transmission/reception, filtering, monitoring, and both classic and FD formats for testing and debugging TWAI networks.
+    - :example:`peripherals/twai/twai_error_recovery` demonstrates how to recover nodes from the bus-off state and resume communication, as well as bus error reporting, node state changes, and other event information.
+    - :example:`peripherals/twai/twai_network` using 2 nodes with different roles: transmitting and listening, demonstrates how to use the driver for single and bulk data transmission, as well as configure filters to receive these data.
+    - :example:`peripherals/twai/cybergear` demonstrates how to control XiaoMi CyberGear motors via TWAI interface.
 
 API Reference
 -------------

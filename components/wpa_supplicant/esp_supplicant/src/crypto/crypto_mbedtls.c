@@ -6,7 +6,7 @@
 #ifdef ESP_PLATFORM
 #include "esp_system.h"
 #endif
-
+#include "sdkconfig.h"
 #include <errno.h>
 #include "utils/includes.h"
 #include "utils/common.h"
@@ -469,6 +469,7 @@ void aes_decrypt_deinit(void *ctx)
     return aes_crypt_deinit(ctx);
 }
 
+#ifdef CONFIG_MBEDTLS_CIPHER_MODE_CBC
 int aes_128_cbc_encrypt(const u8 *key, const u8 *iv, u8 *data, size_t data_len)
 {
     int ret = 0;
@@ -513,6 +514,7 @@ int aes_128_cbc_decrypt(const u8 *key, const u8 *iv, u8 *data, size_t data_len)
     return ret;
 
 }
+#endif /* CONFIG_MBEDTLS_CIPHER_MODE_CBC */
 
 #ifdef CONFIG_TLS_INTERNAL_CLIENT
 struct crypto_cipher {
@@ -613,13 +615,14 @@ struct crypto_cipher *crypto_cipher_init(enum crypto_cipher_alg alg,
                                key_len, MBEDTLS_DECRYPT) < 0) {
         goto cleanup;
     }
-
+#if defined(CONFIG_MBEDTLS_CIPHER_MODE_WITH_PADDING)
     if (mbedtls_cipher_set_padding_mode(&ctx->ctx_enc, MBEDTLS_PADDING_NONE) < 0) {
         goto cleanup;
     }
     if (mbedtls_cipher_set_padding_mode(&ctx->ctx_dec, MBEDTLS_PADDING_NONE) < 0) {
         goto cleanup;
     }
+#endif /* CONFIG_MBEDTLS_CIPHER_MODE_WITH_PADDING */
     return ctx;
 
 cleanup:
@@ -673,6 +676,7 @@ void crypto_cipher_deinit(struct crypto_cipher *ctx)
 }
 #endif
 
+#ifdef CONFIG_MBEDTLS_CIPHER_MODE_CTR
 int aes_ctr_encrypt(const u8 *key, size_t key_len, const u8 *nonce,
                     u8 *data, size_t data_len)
 {
@@ -692,6 +696,7 @@ cleanup:
     mbedtls_aes_free(&ctx);
     return ret;
 }
+#endif /* CONFIG_MBEDTLS_CIPHER_MODE_CTR */
 
 int aes_128_ctr_encrypt(const u8 *key, const u8 *nonce,
                         u8 *data, size_t data_len)
@@ -783,7 +788,7 @@ int pbkdf2_sha1(const char *passphrase, const u8 *ssid, size_t ssid_len,
     /* For ESP32: Using pbkdf2_hmac_sha1() because esp_fast_psk() utilizes hardware,
      * but for ESP32, the SHA1 hardware implementation is slower than the software implementation.
      */
-#if CONFIG_IDF_TARGET_ESP32
+#if defined(CONFIG_IDF_TARGET_ESP32) || !defined(CONFIG_SOC_SHA_SUPPORTED)
     fastpbkdf2_hmac_sha1((const u8 *) passphrase, os_strlen(passphrase),
                          ssid, ssid_len, iterations, buf, buflen);
     return 0;
@@ -794,13 +799,7 @@ int pbkdf2_sha1(const char *passphrase, const u8 *ssid, size_t ssid_len,
     int ret = mbedtls_pkcs5_pbkdf2_hmac_ext(MBEDTLS_MD_SHA1, (const u8 *) passphrase,
                                             os_strlen(passphrase), ssid,
                                             ssid_len, iterations, buflen, buf);
-    if (ret != 0) {
-        ret = -1;
-        goto cleanup;
-    }
-
-cleanup:
-    return ret;
+    return ret == 0 ? 0 : -1;
 #endif
 }
 #endif /* defined(CONFIG_MBEDTLS_SHA1_C) || defined(CONFIG_MBEDTLS_HARDWARE_SHA) */

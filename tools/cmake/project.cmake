@@ -1,5 +1,5 @@
 # Designed to be included from an IDF app's CMakeLists.txt file
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.22)
 
 # Get the currently selected sdkconfig file early, so this doesn't
 # have to be done multiple times on different places.
@@ -607,7 +607,7 @@ macro(project project_name)
         # Set the variables that project() normally sets, documented in the
         # command's docs.
         #
-        # https://cmake.org/cmake/help/v3.16/command/project.html
+        # https://cmake.org/cmake/help/v3.22/command/project.html
         #
         # There is some nuance when it comes to setting version variables in terms of whether
         # CMP0048 is set to OLD or NEW. However, the proper behavior should have bee already handled by the original
@@ -948,9 +948,10 @@ macro(project project_name)
     # Add uf2 related targets
     idf_build_get_property(idf_path IDF_PATH)
     idf_build_get_property(python PYTHON)
+    idf_build_get_property(target IDF_TARGET)
 
     set(UF2_ARGS --json "${CMAKE_CURRENT_BINARY_DIR}/flasher_args.json")
-    set(UF2_CMD ${python} "${idf_path}/tools/mkuf2.py" write --chip ${chip_model})
+    set(UF2_CMD ${python} "${idf_path}/tools/mkuf2.py" write --chip ${target})
 
     add_custom_target(uf2
         COMMAND ${CMAKE_COMMAND}

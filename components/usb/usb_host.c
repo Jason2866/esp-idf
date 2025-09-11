@@ -17,7 +17,7 @@ Warning: The USB Host Library API is still a beta version and may be subject to 
 #include "freertos/queue.h"
 #include "freertos/semphr.h"
 #include "esp_private/critical_section.h"
-#include "soc/usb_dwc_periph.h"
+#include "soc/usb_periph.h"
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_heap_caps.h"
@@ -1235,7 +1235,7 @@ exit:
 esp_err_t usb_host_free_config_desc(const usb_config_desc_t *config_desc)
 {
     HOST_CHECK(config_desc != NULL, ESP_ERR_INVALID_ARG);
-    heap_caps_free((usb_config_desc_t*)config_desc);
+    heap_caps_free((usb_config_desc_t *)config_desc);
     return ESP_OK;
 }
 

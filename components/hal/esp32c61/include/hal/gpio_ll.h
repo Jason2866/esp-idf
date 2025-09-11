@@ -18,6 +18,7 @@
 #include <stdbool.h>
 #include "soc/soc.h"
 #include "soc/gpio_periph.h"
+#include "soc/gpio_ext_reg.h"
 #include "soc/gpio_struct.h"
 #include "soc/lp_aon_struct.h"
 #include "soc/pmu_struct.h"
@@ -336,7 +337,7 @@ static inline void gpio_ll_od_enable(gpio_dev_t *hw, uint32_t gpio_num)
 __attribute__((always_inline))
 static inline void gpio_ll_set_level(gpio_dev_t *hw, uint32_t gpio_num, uint32_t level)
 {
-#if HAL_CONFIG_GPIO_USE_ROM_API
+#if HAL_CONFIG(GPIO_USE_ROM_API)
     gpio_set_output_level(gpio_num, level);
 #else
     if (level) {
@@ -362,7 +363,7 @@ static inline void gpio_ll_set_level(gpio_dev_t *hw, uint32_t gpio_num, uint32_t
 __attribute__((always_inline))
 static inline int gpio_ll_get_level(gpio_dev_t *hw, uint32_t gpio_num)
 {
-#if HAL_CONFIG_GPIO_USE_ROM_API
+#if HAL_CONFIG(GPIO_USE_ROM_API)
     return gpio_get_input_level(gpio_num);
 #else
     return (hw->in.in_data_next >> gpio_num) & 0x1;
@@ -716,6 +717,18 @@ static inline void gpio_ll_sleep_output_enable(gpio_dev_t *hw, uint32_t gpio_num
     IO_MUX.gpion[gpio_num].gpion_mcu_oe = 1;
 }
 
+/**
+ * @brief  Control the pin in the IOMUX
+ *
+ * @param  bmap   write mask of control value
+ * @param  val    Control value
+ * @param  shift  write mask shift of control value
+ */
+__attribute__((always_inline))
+static inline void gpio_ll_set_pin_ctrl(uint32_t val, uint32_t bmap, uint32_t shift)
+{
+    SET_PERI_REG_BITS(GPIO_EXT_PIN_CTRL_REG, bmap, val, shift);
+}
 #ifdef __cplusplus
 }
 #endif

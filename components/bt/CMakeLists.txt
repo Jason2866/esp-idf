@@ -137,6 +137,7 @@ if(CONFIG_BT_ENABLED)
          "common/osi/semaphore.c"
          "porting/mem/bt_osi_mem.c"
          "common/ble_log/ble_log_spi_out.c"
+         "common/ble_log/ble_log_uhci_out.c"
          )
 
     # Host Bluedroid
@@ -158,9 +159,6 @@ if(CONFIG_BT_ENABLED)
             host/bluedroid/bta/sys/include
             host/bluedroid/device/include
             host/bluedroid/hci/include
-            host/bluedroid/external/sbc/decoder/include
-            host/bluedroid/external/sbc/encoder/include
-            host/bluedroid/external/sbc/plc/include
             host/bluedroid/btc/profile/esp/include
             host/bluedroid/btc/profile/std/a2dp/include
             host/bluedroid/btc/profile/std/include
@@ -318,29 +316,6 @@ if(CONFIG_BT_ENABLED)
                    "host/bluedroid/device/bdaddr.c"
                    "host/bluedroid/device/controller.c"
                    "host/bluedroid/device/interop.c"
-                   "host/bluedroid/external/sbc/decoder/srce/alloc.c"
-                   "host/bluedroid/external/sbc/decoder/srce/bitalloc-sbc.c"
-                   "host/bluedroid/external/sbc/decoder/srce/bitalloc.c"
-                   "host/bluedroid/external/sbc/decoder/srce/bitstream-decode.c"
-                   "host/bluedroid/external/sbc/decoder/srce/decoder-oina.c"
-                   "host/bluedroid/external/sbc/decoder/srce/decoder-private.c"
-                   "host/bluedroid/external/sbc/decoder/srce/decoder-sbc.c"
-                   "host/bluedroid/external/sbc/decoder/srce/dequant.c"
-                   "host/bluedroid/external/sbc/decoder/srce/framing-sbc.c"
-                   "host/bluedroid/external/sbc/decoder/srce/framing.c"
-                   "host/bluedroid/external/sbc/decoder/srce/oi_codec_version.c"
-                   "host/bluedroid/external/sbc/decoder/srce/synthesis-8-generated.c"
-                   "host/bluedroid/external/sbc/decoder/srce/synthesis-dct8.c"
-                   "host/bluedroid/external/sbc/decoder/srce/synthesis-sbc.c"
-                   "host/bluedroid/external/sbc/encoder/srce/sbc_analysis.c"
-                   "host/bluedroid/external/sbc/encoder/srce/sbc_dct.c"
-                   "host/bluedroid/external/sbc/encoder/srce/sbc_dct_coeffs.c"
-                   "host/bluedroid/external/sbc/encoder/srce/sbc_enc_bit_alloc_mono.c"
-                   "host/bluedroid/external/sbc/encoder/srce/sbc_enc_bit_alloc_ste.c"
-                   "host/bluedroid/external/sbc/encoder/srce/sbc_enc_coeffs.c"
-                   "host/bluedroid/external/sbc/encoder/srce/sbc_encoder.c"
-                   "host/bluedroid/external/sbc/encoder/srce/sbc_packing.c"
-                   "host/bluedroid/external/sbc/plc/sbc_plc.c"
                    "host/bluedroid/hci/hci_audio.c"
                    "host/bluedroid/hci/hci_hal_h4.c"
                    "host/bluedroid/hci/hci_layer.c"
@@ -475,6 +450,38 @@ if(CONFIG_BT_ENABLED)
             list(APPEND srcs "host/bluedroid/stack/btm/btm_ble_cte.c"
                             "host/bluedroid/btc/profile/std/cte/btc_ble_cte.c"
                             "host/bluedroid/api/esp_ble_cte_api.c")
+        endif()
+
+        if((CONFIG_BT_A2DP_ENABLE AND NOT CONFIG_BT_A2DP_USE_EXTERNAL_CODEC) OR
+           (CONFIG_BT_HFP_ENABLE AND CONFIG_BT_HFP_AUDIO_DATA_PATH_HCI AND NOT CONFIG_BT_HFP_USE_EXTERNAL_CODEC))
+            list(APPEND priv_include_dirs
+                host/bluedroid/external/sbc/decoder/include
+                host/bluedroid/external/sbc/encoder/include
+                host/bluedroid/external/sbc/plc/include)
+
+            list(APPEND srcs "host/bluedroid/external/sbc/decoder/srce/alloc.c"
+                "host/bluedroid/external/sbc/decoder/srce/bitalloc-sbc.c"
+                "host/bluedroid/external/sbc/decoder/srce/bitalloc.c"
+                "host/bluedroid/external/sbc/decoder/srce/bitstream-decode.c"
+                "host/bluedroid/external/sbc/decoder/srce/decoder-oina.c"
+                "host/bluedroid/external/sbc/decoder/srce/decoder-private.c"
+                "host/bluedroid/external/sbc/decoder/srce/decoder-sbc.c"
+                "host/bluedroid/external/sbc/decoder/srce/dequant.c"
+                "host/bluedroid/external/sbc/decoder/srce/framing-sbc.c"
+                "host/bluedroid/external/sbc/decoder/srce/framing.c"
+                "host/bluedroid/external/sbc/decoder/srce/oi_codec_version.c"
+                "host/bluedroid/external/sbc/decoder/srce/synthesis-8-generated.c"
+                "host/bluedroid/external/sbc/decoder/srce/synthesis-dct8.c"
+                "host/bluedroid/external/sbc/decoder/srce/synthesis-sbc.c"
+                "host/bluedroid/external/sbc/encoder/srce/sbc_analysis.c"
+                "host/bluedroid/external/sbc/encoder/srce/sbc_dct.c"
+                "host/bluedroid/external/sbc/encoder/srce/sbc_dct_coeffs.c"
+                "host/bluedroid/external/sbc/encoder/srce/sbc_enc_bit_alloc_mono.c"
+                "host/bluedroid/external/sbc/encoder/srce/sbc_enc_bit_alloc_ste.c"
+                "host/bluedroid/external/sbc/encoder/srce/sbc_enc_coeffs.c"
+                "host/bluedroid/external/sbc/encoder/srce/sbc_encoder.c"
+                "host/bluedroid/external/sbc/encoder/srce/sbc_packing.c"
+                "host/bluedroid/external/sbc/plc/sbc_plc.c")
         endif()
 
     endif()
@@ -784,6 +791,13 @@ if(CONFIG_BT_ENABLED)
                     "host/nimble/nimble/nimble/host/src/ble_eatt.c"
                 )
 
+            if(CONFIG_BT_NIMBLE_ISO)
+                list(APPEND srcs
+                            "host/nimble/nimble/nimble/host/src/ble_hs_iso_hci.c"
+                            "host/nimble/nimble/nimble/host/src/ble_hs_iso.c"
+                )
+            endif()
+
             if(CONFIG_BT_CONTROLLER_DISABLED AND CONFIG_BT_NIMBLE_TRANSPORT_UART)
                 list(APPEND srcs
                         "host/nimble/nimble/nimble/transport/uart_ll/src/hci_uart.c"
@@ -910,6 +924,7 @@ set(bt_priv_requires
     esp_driver_spi
     esp_driver_gpio
     esp_gdbstub
+    esp_security
 )
 
 idf_component_register(SRCS "${srcs}"
@@ -922,29 +937,35 @@ idf_component_register(SRCS "${srcs}"
 if(CONFIG_BT_ENABLED)
     target_compile_options(${COMPONENT_LIB} PRIVATE -Wno-implicit-fallthrough -Wno-unused-const-variable)
     if(CONFIG_IDF_TARGET_ESP32)
-        target_link_directories(${COMPONENT_LIB} INTERFACE "${CMAKE_CURRENT_LIST_DIR}/controller/lib_esp32/esp32")
-        target_link_libraries(${COMPONENT_LIB} PUBLIC btdm_app)
-
-        target_link_libraries(${COMPONENT_LIB} INTERFACE "-u ld_include_hli_vectors_bt")
+        add_prebuilt_library(bt_btdm_app "${CMAKE_CURRENT_LIST_DIR}/controller/lib_esp32/esp32/libbtdm_app.a")
+        target_link_libraries(${COMPONENT_LIB} PRIVATE bt_btdm_app)
+        target_link_options(${COMPONENT_LIB} INTERFACE "SHELL:-u ld_include_hli_vectors_bt")
     elseif(CONFIG_IDF_TARGET_ESP32C3)
-        target_link_directories(${COMPONENT_LIB} INTERFACE
-                "${CMAKE_CURRENT_LIST_DIR}/controller/lib_esp32c3_family/esp32c3")
         if(CONFIG_BT_CTRL_RUN_IN_FLASH_ONLY)
-            target_link_libraries(${COMPONENT_LIB} PUBLIC btdm_app_flash)
+            set(lib_name "btdm_app_flash")
         else()
-            target_link_libraries(${COMPONENT_LIB} PUBLIC btdm_app)
+            set(lib_name "btdm_app")
         endif()
+        add_prebuilt_library(bt_btdm_app
+                             "${CMAKE_CURRENT_LIST_DIR}/controller/lib_esp32c3_family/esp32c3/lib${lib_name}.a")
+        target_link_libraries(${COMPONENT_LIB} PRIVATE bt_btdm_app)
     elseif(CONFIG_IDF_TARGET_ESP32S3)
-        target_link_directories(${COMPONENT_LIB} INTERFACE
-                "${CMAKE_CURRENT_LIST_DIR}/controller/lib_esp32c3_family/esp32s3")
         if(CONFIG_BT_CTRL_RUN_IN_FLASH_ONLY)
-            target_link_libraries(${COMPONENT_LIB} PUBLIC btdm_app_flash)
+            set(lib_name "btdm_app_flash")
         else()
-            target_link_libraries(${COMPONENT_LIB} PUBLIC btdm_app)
+            set(lib_name "btdm_app")
         endif()
+        add_prebuilt_library(bt_btdm_app
+                             "${CMAKE_CURRENT_LIST_DIR}/controller/lib_esp32c3_family/esp32s3/lib${lib_name}.a")
+        target_link_libraries(${COMPONENT_LIB} PRIVATE bt_btdm_app)
     elseif(CONFIG_BT_CONTROLLER_ENABLED)
         if(CONFIG_BT_LE_CONTROLLER_LOG_WRAP_PANIC_HANDLER_ENABLE)
-            target_link_libraries(${COMPONENT_LIB} INTERFACE "-Wl,--wrap=esp_panic_handler")
+            target_link_options(${COMPONENT_LIB} INTERFACE "-Wl,--wrap=esp_panic_handler")
+        endif()
+        if(CONFIG_BT_BLE_LOG_UHCI_OUT_ENABLED)
+            target_link_libraries(${COMPONENT_LIB} INTERFACE "-Wl,--wrap=uart_tx_chars")
+            target_link_libraries(${COMPONENT_LIB} INTERFACE "-Wl,--wrap=uart_write_bytes")
+            target_link_libraries(${COMPONENT_LIB} INTERFACE "-Wl,--wrap=uart_write_bytes_with_break")
         endif()
         if(CONFIG_IDF_TARGET_ESP32C6)
             add_prebuilt_library(libble_app

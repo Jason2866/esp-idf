@@ -23,7 +23,7 @@
 #include "hal/brownout_hal.h"
 #include "hal/brownout_ll.h"
 #include "sdkconfig.h"
-#include "esp_rom_uart.h"
+#include "esp_rom_serial_output.h"
 #include "hal/uart_ll.h"
 #include "soc/power_supply_periph.h"
 #include "esp_brownout.h"
@@ -67,7 +67,7 @@ IRAM_ATTR static void rtc_brownout_isr_handler(void *arg)
     } else
 #endif // CONFIG_SPI_FLASH_BROWNOUT_RESET
     {
-        ESP_DRAM_LOGI(TAG, "Brownout detector was triggered\r\n\r\n");
+        ESP_DRAM_LOGE(TAG, "Brownout detector was triggered\r\n\r\n");
     }
 
     // Flush any data left in UART FIFOs

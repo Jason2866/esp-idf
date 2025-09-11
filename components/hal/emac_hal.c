@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 #include <string.h>
-#include "sdkconfig.h"
+#include "soc/soc_caps_full.h"
 #include "esp_attr.h"
 #include "hal/emac_hal.h"
 #include "hal/emac_ll.h"
@@ -29,7 +29,7 @@ void emac_hal_init(emac_hal_context_t *hal)
 {
     hal->dma_regs = &EMAC_DMA;
     hal->mac_regs = &EMAC_MAC;
-#if CONFIG_IDF_TARGET_ESP32
+#if SOC_IS(ESP32)
     hal->ext_regs = &EMAC_EXT;
 #else
     hal->ext_regs = NULL;
@@ -65,6 +65,10 @@ void emac_hal_set_rx_tx_desc_addr(emac_hal_context_t *hal, eth_dma_rx_descriptor
 
 void emac_hal_init_mac_default(emac_hal_context_t *hal)
 {
+    /* EMACINTMASK */
+    /* Disable (mask) all interrupts */
+    emac_ll_disable_corresponding_emac_intr(hal->mac_regs, 0xFFFFFFFF);
+
     /* MACCR Configuration */
     /* Enable the watchdog on the receiver, frame longer than 2048 Bytes is not allowed */
     emac_ll_watchdog_enable(hal->mac_regs, true);
@@ -137,7 +141,7 @@ void emac_hal_init_dma_default(emac_hal_context_t *hal, emac_hal_dma_config_t *h
     /* DMAOMR Configuration */
     /* Enable Dropping of TCP/IP Checksum Error Frames */
     emac_ll_drop_tcp_err_frame_enable(hal->dma_regs, true);
-#if CONFIG_IDF_TARGET_ESP32P4
+#if SOC_IS(ESP32P4)
     /* Disable Receive Store Forward (Rx FIFO is only 256B) */
     emac_ll_recv_store_forward_enable(hal->dma_regs, false);
 #else
