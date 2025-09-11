@@ -291,8 +291,9 @@ static bool s_light_sleep_wakeup = false;
 static portMUX_TYPE spinlock_rtc_deep_sleep = portMUX_INITIALIZER_UNLOCKED;
 
 static const char *TAG = "sleep";
-static RTC_FAST_ATTR int32_t s_sleep_sub_mode_ref_cnt[ESP_SLEEP_MODE_MAX] = { 0 };
-//in this mode, 2uA is saved, but RTC memory can't use at high temperature, and RTCIO can't be used as INPUT.
+
+/* APP core of esp32 can't access to RTC FAST MEMORY, do not define it with RTC_IRAM_ATTR */
+RTC_SLOW_ATTR static int32_t s_sleep_sub_mode_ref_cnt[ESP_SLEEP_MODE_MAX] = { 0 };
 
 void esp_sleep_overhead_out_time_refresh(void)
 {
@@ -385,12 +386,12 @@ esp_deep_sleep_wake_stub_fn_t esp_get_deep_sleep_wake_stub(void)
 }
 
 #if CONFIG_IDF_TARGET_ESP32
-/* APP core of esp32 can't access to RTC FAST MEMORY, do not define it with RTC_IRAM_ATTR */
-void
+/* APP core of esp32 can't access to RTC FAST MEMORY, link to RTC SLOW MEMORY instead*/
+RTC_SLOW_ATTR
 #else
-void RTC_IRAM_ATTR
+RTC_IRAM_ATTR
 #endif
-esp_set_deep_sleep_wake_stub(esp_deep_sleep_wake_stub_fn_t new_stub)
+void esp_set_deep_sleep_wake_stub(esp_deep_sleep_wake_stub_fn_t new_stub)
 {
 #if SOC_PM_SUPPORT_DEEPSLEEP_CHECK_STUB_ONLY
     wake_stub_fn_handler = new_stub;
@@ -399,7 +400,14 @@ esp_set_deep_sleep_wake_stub(esp_deep_sleep_wake_stub_fn_t new_stub)
 #endif
 }
 
-void RTC_IRAM_ATTR esp_default_wake_deep_sleep(void)
+
+#if CONFIG_IDF_TARGET_ESP32
+/* APP core of esp32 can't access to RTC FAST MEMORY, link to RTC SLOW MEMORY instead*/
+RTC_SLOW_ATTR
+#else
+RTC_IRAM_ATTR
+#endif
+void esp_default_wake_deep_sleep(void)
 {
     /* Clear MMU for CPU 0 */
 #if CONFIG_IDF_TARGET_ESP32
@@ -2255,6 +2263,16 @@ esp_err_t esp_sleep_pd_config(esp_sleep_pd_domain_t domain, esp_sleep_pd_option_
     return ESP_OK;
 }
 
+static const char* s_submode2str[] = {
+    [ESP_SLEEP_RTC_USE_RC_FAST_MODE]        = "ESP_SLEEP_RTC_USE_RC_FAST_MODE",
+    [ESP_SLEEP_DIG_USE_RC_FAST_MODE]        = "ESP_SLEEP_DIG_USE_RC_FAST_MODE",
+    [ESP_SLEEP_USE_ADC_TSEN_MONITOR_MODE]   = "ESP_SLEEP_USE_ADC_TSEN_MONITOR_MODE",
+    [ESP_SLEEP_ULTRA_LOW_MODE]              = "ESP_SLEEP_ULTRA_LOW_MODE",
+    [ESP_SLEEP_RTC_FAST_USE_XTAL_MODE]      = "ESP_SLEEP_RTC_FAST_USE_XTAL_MODE",
+    [ESP_SLEEP_DIG_USE_XTAL_MODE]           = "ESP_SLEEP_DIG_USE_XTAL_MODE",
+    [ESP_SLEEP_LP_USE_XTAL_MODE]            = "ESP_SLEEP_LP_USE_XTAL_MODE",
+};
+
 esp_err_t esp_sleep_sub_mode_config(esp_sleep_sub_mode_t mode, bool activate)
 {
     if (mode >= ESP_SLEEP_MODE_MAX) {
@@ -2267,7 +2285,10 @@ esp_err_t esp_sleep_sub_mode_config(esp_sleep_sub_mode_t mode, bool activate)
     } else {
         s_sleep_sub_mode_ref_cnt[mode]--;
     }
-    assert(s_sleep_sub_mode_ref_cnt[mode] >= 0);
+    if (s_sleep_sub_mode_ref_cnt[mode] < 0) {
+        ESP_EARLY_LOGW(TAG, "%s disabled multiple times!! (If this log appears only once after OTA upgrade, it can be ignored.)", s_submode2str[mode]);
+        s_sleep_sub_mode_ref_cnt[mode] = 0;
+    }
     portEXIT_CRITICAL_SAFE(&s_config.lock);
     return ESP_OK;
 }
@@ -2288,15 +2309,7 @@ int32_t* esp_sleep_sub_mode_dump_config(FILE *stream) {
     if (stream) {
         for (uint32_t mode = 0; mode < ESP_SLEEP_MODE_MAX; mode++) {
             fprintf(stream, LOG_COLOR_I "%s : %s (cnt = %" PRId32 ")\n" LOG_RESET_COLOR,
-                            (const char*[]){
-                                [ESP_SLEEP_RTC_USE_RC_FAST_MODE]        = "ESP_SLEEP_RTC_USE_RC_FAST_MODE",
-                                [ESP_SLEEP_DIG_USE_RC_FAST_MODE]        = "ESP_SLEEP_DIG_USE_RC_FAST_MODE",
-                                [ESP_SLEEP_USE_ADC_TSEN_MONITOR_MODE]   = "ESP_SLEEP_USE_ADC_TSEN_MONITOR_MODE",
-                                [ESP_SLEEP_ULTRA_LOW_MODE]              = "ESP_SLEEP_ULTRA_LOW_MODE",
-                                [ESP_SLEEP_RTC_FAST_USE_XTAL_MODE]      = "ESP_SLEEP_RTC_FAST_USE_XTAL_MODE",
-                                [ESP_SLEEP_DIG_USE_XTAL_MODE]           = "ESP_SLEEP_DIG_USE_XTAL_MODE",
-                                [ESP_SLEEP_LP_USE_XTAL_MODE]            = "ESP_SLEEP_LP_USE_XTAL_MODE",
-                            }[mode],
+                            s_submode2str[mode],
                             s_sleep_sub_mode_ref_cnt[mode] ? "ENABLED" : "DISABLED",
                             s_sleep_sub_mode_ref_cnt[mode]);
         }
@@ -2565,11 +2578,11 @@ static uint32_t get_sleep_flags(uint32_t sleep_flags, bool deepsleep)
 
 #if CONFIG_IDF_TARGET_ESP32
 /* APP core of esp32 can't access to RTC FAST MEMORY, do not define it with RTC_IRAM_ATTR */
-void
+RTC_SLOW_ATTR
 #else
-void RTC_IRAM_ATTR
+RTC_IRAM_ATTR
 #endif
-esp_deep_sleep_disable_rom_logging(void)
+void esp_deep_sleep_disable_rom_logging(void)
 {
     rtc_suppress_rom_log();
 }

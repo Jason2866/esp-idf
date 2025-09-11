@@ -22,6 +22,7 @@
 #define SOC_DEDICATED_GPIO_SUPPORTED    1
 #define SOC_UART_SUPPORTED              1
 #define SOC_GDMA_SUPPORTED              1
+#define SOC_UHCI_SUPPORTED              1
 #define SOC_AHB_GDMA_SUPPORTED          1
 #define SOC_AXI_GDMA_SUPPORTED          1
 #define SOC_DW_GDMA_SUPPORTED           1
@@ -426,7 +427,7 @@
 #define SOC_RMT_MEM_WORDS_PER_CHANNEL         48 /*!< Each channel owns 48 words memory (1 word = 4 Bytes) */
 #define SOC_RMT_SUPPORT_RX_PINGPONG           1  /*!< Support Ping-Pong mode on RX path */
 #define SOC_RMT_SUPPORT_RX_DEMODULATION       1  /*!< Support signal demodulation on RX path (i.e. remove carrier) */
-#define SOC_RMT_SUPPORT_TX_ASYNC_STOP         1  /*!< Support stop transmission asynchronously */
+#define SOC_RMT_SUPPORT_ASYNC_STOP            1  /*!< Support stop transmission asynchronously */
 #define SOC_RMT_SUPPORT_TX_LOOP_COUNT         1  /*!< Support transmit specified number of cycles in loop mode */
 #define SOC_RMT_SUPPORT_TX_LOOP_AUTO_STOP     1  /*!< Hardware support of auto-stop in loop mode */
 #define SOC_RMT_SUPPORT_TX_SYNCHRO            1  /*!< Support coordinate a group of TX channels to start simultaneously */
@@ -630,6 +631,8 @@
 /*-------------------------- TOUCH SENSOR CAPS -------------------------------*/
 #define SOC_TOUCH_SENSOR_VERSION                    (3)     /*!< Hardware version of touch sensor */
 #define SOC_TOUCH_SENSOR_NUM                        (14)    /*!< Touch available channel number. Actually there are 15 Touch channels, but channel 14 is not pinned out, limit to 14 channels */
+#define SOC_TOUCH_MIN_CHAN_ID                       (1U)    /*!< Touch minimum channel number */
+#define SOC_TOUCH_MAX_CHAN_ID                       (14)    /*!< Touch maximum channel number */
 
 /* Touch Sensor Features */
 #define SOC_TOUCH_SUPPORT_SLEEP_WAKEUP              (1)     /*!< Touch sensor supports sleep awake */
@@ -695,6 +698,9 @@
 
 /*-------------------------- LP_VAD CAPS -------------------------------------*/
 #define SOC_LP_I2S_SUPPORT_VAD           (1)
+
+/*--------------------------- UHCI CAPS -------------------------------------*/
+#define SOC_UHCI_NUM               (1UL)
 
 // TODO: IDF-5679 (Copy from esp32c3, need check)
 /*-------------------------- COEXISTENCE HARDWARE PTI CAPS -------------------------------*/

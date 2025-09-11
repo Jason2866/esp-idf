@@ -392,6 +392,12 @@
 #define BLE_FEAT_CONN_SUBRATING     FALSE
 #endif
 
+#if (UC_BT_BLE_VENDOR_HCI_EN == TRUE)
+#define BLE_VENDOR_HCI_EN TRUE
+#else
+#define BLE_VENDOR_HCI_EN FALSE
+#endif
+
 #if (UC_BT_BLE_HIGH_DUTY_ADV_INTERVAL == TRUE)
 #define BLE_HIGH_DUTY_ADV_INTERVAL TRUE
 #else
@@ -1087,7 +1093,11 @@
 
 /* The number of security records for peer devices. 15 AS Default*/
 #ifndef BTM_SEC_MAX_DEVICE_RECORDS
+#if (UC_BT_SMP_MAX_BONDS < UC_BT_ACL_CONNECTIONS)
+#define BTM_SEC_MAX_DEVICE_RECORDS  UC_BT_ACL_CONNECTIONS
+#else
 #define BTM_SEC_MAX_DEVICE_RECORDS  UC_BT_SMP_MAX_BONDS
+#endif
 #endif
 
 #if BTA_SDP_INCLUDED

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2019-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -29,9 +29,11 @@
 #define SOC_WIFI_SUPPORTED              1
 #define SOC_TWAI_SUPPORTED              1
 #define SOC_GDMA_SUPPORTED              1
+#define SOC_UHCI_SUPPORTED              1
 #define SOC_AHB_GDMA_SUPPORTED          1
 #define SOC_GPTIMER_SUPPORTED           1
 #define SOC_LCDCAM_SUPPORTED            1
+#define SOC_LCDCAM_CAM_SUPPORTED        1 // support the camera driver based on the LCD_CAM peripheral
 #define SOC_LCDCAM_I80_LCD_SUPPORTED    1
 #define SOC_LCDCAM_RGB_LCD_SUPPORTED    1
 #define SOC_MCPWM_SUPPORTED             1
@@ -146,7 +148,7 @@
 
 #define SOC_CPU_BREAKPOINTS_NUM             2
 #define SOC_CPU_WATCHPOINTS_NUM             2
-#define SOC_CPU_WATCHPOINT_MAX_REGION_SIZE  64 // bytes
+#define SOC_CPU_WATCHPOINT_MAX_REGION_SIZE  0x40 // bytes
 
 #define SOC_SIMD_PREFERRED_DATA_ALIGNMENT 16 // The preferred data alignment accepted by the SIMD instructions, in bytes
 
@@ -279,7 +281,7 @@
 #define SOC_RMT_MEM_WORDS_PER_CHANNEL         48 /*!< Each channel owns 48 words memory (1 word = 4 Bytes) */
 #define SOC_RMT_SUPPORT_RX_PINGPONG           1  /*!< Support Ping-Pong mode on RX path */
 #define SOC_RMT_SUPPORT_RX_DEMODULATION       1  /*!< Support signal demodulation on RX path (i.e. remove carrier) */
-#define SOC_RMT_SUPPORT_TX_ASYNC_STOP         1  /*!< Support stop transmission asynchronously */
+#define SOC_RMT_SUPPORT_ASYNC_STOP            1  /*!< Support stop transmission asynchronously */
 #define SOC_RMT_SUPPORT_TX_LOOP_COUNT         1  /*!< Support transmit specified number of cycles in loop mode */
 #define SOC_RMT_SUPPORT_TX_LOOP_AUTO_STOP     1  /*!< Hardware support of auto-stop in loop mode */
 #define SOC_RMT_SUPPORT_TX_SYNCHRO            1  /*!< Support coordinate a group of TX channels to start simultaneously */
@@ -327,7 +329,7 @@
 #define SOC_LP_IO_CLOCK_IS_INDEPENDENT 1
 
 /*-------------------------- Sigma Delta Modulator CAPS -----------------*/
-#define SOC_SDM_GROUPS             1
+#define SOC_SDM_GROUPS             (1U)
 #define SOC_SDM_CHANNELS_PER_GROUP 8
 #define SOC_SDM_CLK_SUPPORT_APB    1
 
@@ -419,6 +421,9 @@
 #define SOC_UART_SUPPORT_APB_CLK    (1)     /*!< Support APB as the clock source */
 #define SOC_UART_SUPPORT_RTC_CLK    (1)     /*!< Support RTC clock as the clock source */
 #define SOC_UART_SUPPORT_XTAL_CLK   (1)     /*!< Support XTAL clock as the clock source */
+
+/*--------------------------- UHCI CAPS -------------------------------------*/
+#define SOC_UHCI_NUM               (1UL)
 
 /*-------------------------- USB CAPS ----------------------------------------*/
 #define SOC_USB_OTG_PERIPH_NUM          (1U)
@@ -584,3 +589,8 @@
 
 /*------------------------------------- PHY CAPS -------------------------------------*/
 #define SOC_PHY_COMBO_MODULE                  (1) /*!< Support Wi-Fi and BLE*/
+
+/*--------------------------- CAM ---------------------------------*/
+#define SOC_LCDCAM_CAM_SUPPORT_RGB_YUV_CONV         (1)
+#define SOC_LCDCAM_CAM_PERIPH_NUM                   (1U)
+#define SOC_LCDCAM_CAM_DATA_WIDTH_MAX               (16U)

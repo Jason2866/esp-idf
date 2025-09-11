@@ -23,6 +23,10 @@ config SOC_UART_SUPPORTED
     bool
     default y
 
+config SOC_UHCI_SUPPORTED
+    bool
+    default y
+
 config SOC_GDMA_SUPPORTED
     bool
     default y
@@ -811,7 +815,7 @@ config SOC_RMT_SUPPORT_RX_DEMODULATION
     bool
     default y
 
-config SOC_RMT_SUPPORT_TX_ASYNC_STOP
+config SOC_RMT_SUPPORT_ASYNC_STOP
     bool
     default y
 
@@ -1303,6 +1307,18 @@ config SOC_ECDSA_USES_MPI
     bool
     default y
 
+config SOC_ECDSA_SUPPORT_DETERMINISTIC_MODE
+    bool
+    default y
+
+config SOC_ECDSA_SUPPORT_HW_DETERMINISTIC_LOOP
+    bool
+    default y
+
+config SOC_ECDSA_P192_CURVE_DEFAULT_DISABLED
+    bool
+    default y
+
 config SOC_UART_NUM
     int
     default 2
@@ -1338,6 +1354,10 @@ config SOC_UART_SUPPORT_FSM_TX_WAIT_SEND
 config SOC_UART_SUPPORT_SLEEP_RETENTION
     bool
     default y
+
+config SOC_UHCI_NUM
+    int
+    default 1
 
 config SOC_COEX_HW_PTI
     bool

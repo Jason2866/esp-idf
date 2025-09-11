@@ -709,7 +709,9 @@ static void blecent_power_control(uint16_t conn_handle)
 static int
 blecent_gap_event(struct ble_gap_event *event, void *arg)
 {
+#if NIMBLE_BLE_CONNECT
     struct ble_gap_conn_desc desc;
+#endif
     struct ble_hs_adv_fields fields;
 #if MYNEWT_VAL(BLE_HCI_VS)
 #if MYNEWT_VAL(BLE_POWER_CONTROL)
@@ -732,7 +734,7 @@ blecent_gap_event(struct ble_gap_event *event, void *arg)
         /* Try to connect to the advertiser if it looks interesting. */
         blecent_connect_if_interesting(&event->disc);
         return 0;
-
+#if NIMBLE_BLE_CONNECT
     case BLE_GAP_EVENT_CONNECT:
         /* A new connection was established or a connection attempt failed. */
         if (event->connect.status == 0) {
@@ -787,6 +789,13 @@ blecent_gap_event(struct ble_gap_event *event, void *arg)
             }
 #else
 #if MYNEWT_VAL(BLE_GATTC)
+#if MYNEWT_VAL(BLE_GATT_CACHING_ASSOC_ENABLE)
+            rc =  ble_gattc_cache_assoc(desc.peer_id_addr);
+            if (rc != 0) {
+                MODLOG_DFLT(ERROR, "Cache Association Failed; rc=%d\n", rc);
+                return 0;
+            }
+#else
             /* Perform service discovery */
             rc = peer_disc_all(event->connect.conn_handle,
                         blecent_on_disc_complete, NULL);
@@ -794,8 +803,9 @@ blecent_gap_event(struct ble_gap_event *event, void *arg)
                 MODLOG_DFLT(ERROR, "Failed to discover services; rc=%d\n", rc);
                 return 0;
             }
-#endif
-#endif
+#endif // BLE_GATT_CACHING_ASSOC_ENABLE
+#endif // BLE_GATTC
+#endif // EXAMPLE_ENCRYPTION
         } else {
             /* Connection attempt failed; resume scanning. */
             MODLOG_DFLT(ERROR, "Error: Connection failed; status=%d\n",
@@ -840,6 +850,13 @@ blecent_gap_event(struct ble_gap_event *event, void *arg)
         print_conn_desc(&desc);
 #if !MYNEWT_VAL(BLE_EATT_CHAN_NUM)
 #if CONFIG_EXAMPLE_ENCRYPTION && MYNEWT_VAL(BLE_GATTC)
+#if MYNEWT_VAL(BLE_GATT_CACHING_ASSOC_ENABLE)
+        rc =  ble_gattc_cache_assoc(desc.peer_id_addr);
+        if (rc != 0) {
+            MODLOG_DFLT(ERROR, "Cache Association Failed; rc=%d\n", rc);
+            return 0;
+        }
+#else
         /*** Go for service discovery after encryption has been successfully enabled ***/
         rc = peer_disc_all(event->enc_change.conn_handle,
                            blecent_on_disc_complete, NULL);
@@ -847,9 +864,27 @@ blecent_gap_event(struct ble_gap_event *event, void *arg)
             MODLOG_DFLT(ERROR, "Failed to discover services; rc=%d\n", rc);
             return 0;
         }
-#endif
+#endif // BLE_GATT_CACHING_ASSOC_ENABLE
+#endif // EXAMPLE_ENCRYPTION
 #endif
         return 0;
+
+    case BLE_GAP_EVENT_CACHE_ASSOC:
+#if MYNEWT_VAL(BLE_GATT_CACHING_ASSOC_ENABLE)
+          /* Cache association result for this connection */
+          MODLOG_DFLT(INFO, "cache association; conn_handle=%d status=%d cache_state=%s\n",
+                      event->cache_assoc.conn_handle,
+                      event->cache_assoc.status,
+                      (event->cache_assoc.cache_state == 0) ? "INVALID" : "LOADED");
+          /* Perform service discovery */
+          rc = peer_disc_all(event->connect.conn_handle,
+                             blecent_on_disc_complete, NULL);
+          if(rc != 0) {
+                MODLOG_DFLT(ERROR, "Failed to discover services; rc=%d\n", rc);
+                return 0;
+          }
+#endif
+          return 0;
 
     case BLE_GAP_EVENT_NOTIFY_RX:
         /* Peer sent us a notification or indication. */
@@ -966,6 +1001,8 @@ blecent_gap_event(struct ble_gap_event *event, void *arg)
 #endif
 #endif
         return 0;
+
+#endif
     default:
         return 0;
     }
@@ -1041,7 +1078,6 @@ static void stack_init_deinit(void)
 void
 app_main(void)
 {
-    int rc;
     /* Initialize NVS — it is used to store PHY calibration data */
     esp_err_t ret = nvs_flash_init();
     if  (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -1061,6 +1097,8 @@ app_main(void)
     ble_hs_cfg.sync_cb = blecent_on_sync;
     ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
 
+#if NIMBLE_BLE_CONNECT
+    int rc;
     /* Initialize data structures to track connected peers. */
 #if MYNEWT_VAL(BLE_INCL_SVC_DISCOVERY) || MYNEWT_VAL(BLE_GATT_CACHING_INCLUDE_SERVICES)
     rc = peer_init(MYNEWT_VAL(BLE_MAX_CONNECTIONS), 64, 64, 64, 64);
@@ -1069,11 +1107,13 @@ app_main(void)
     rc = peer_init(MYNEWT_VAL(BLE_MAX_CONNECTIONS), 64, 64, 64);
     assert(rc == 0);
 #endif
+#endif
 
 #if CONFIG_BT_NIMBLE_GAP_SERVICE
+    int m;
     /* Set the default device name. */
-    rc = ble_svc_gap_device_name_set("nimble-blecent");
-    assert(rc == 0);
+    m = ble_svc_gap_device_name_set("nimble-blecent");
+    assert(m == 0);
 #endif
 
     /* XXX Need to have template for store */
