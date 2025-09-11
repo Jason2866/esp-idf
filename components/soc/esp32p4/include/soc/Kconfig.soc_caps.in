@@ -223,6 +223,10 @@ config SOC_PMU_SUPPORTED
     bool
     default y
 
+config SOC_PMU_PVT_SUPPORTED
+    bool
+    default y
+
 config SOC_DCDC_SUPPORTED
     bool
     default y
@@ -999,7 +1003,7 @@ config SOC_RMT_SUPPORT_RX_DEMODULATION
     bool
     default y
 
-config SOC_RMT_SUPPORT_TX_ASYNC_STOP
+config SOC_RMT_SUPPORT_ASYNC_STOP
     bool
     default y
 

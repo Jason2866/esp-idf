@@ -18,6 +18,7 @@
 #include "esp_private/esp_sleep_internal.h"
 #include "esp_private/esp_timer_private.h"
 #include "esp_private/rtc_clk.h"
+#include "soc/rtc.h"
 #include "esp_private/sleep_event.h"
 #include "esp_private/system_internal.h"
 #include "esp_private/io_mux.h"
@@ -683,6 +684,9 @@ FORCE_INLINE_ATTR void misc_modules_sleep_prepare(bool deep_sleep, uint32_t pd_f
         regi2c_analog_cali_reg_read();
 #endif
     }
+#if CONFIG_ESP_ENABLE_PVT
+    pvt_func_enable(false);
+#endif
 
     if (!s_adc_tsen_enabled){
         // TODO: IDF-7370
@@ -695,6 +699,10 @@ FORCE_INLINE_ATTR void misc_modules_sleep_prepare(bool deep_sleep, uint32_t pd_f
  */
 FORCE_INLINE_ATTR void misc_modules_wake_prepare(uint32_t pd_flags)
 {
+#if CONFIG_ESP_ENABLE_PVT
+    pvt_func_enable(true);
+#endif
+
 #if CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP
     if (pd_flags & PMU_SLEEP_PD_TOP) {
         // There is no driver to manage the flashboot watchdog, and it is definitely be in off state when
@@ -2180,17 +2188,33 @@ esp_err_t esp_sleep_pd_config(esp_sleep_pd_domain_t domain, esp_sleep_pd_option_
     if (domain >= ESP_PD_DOMAIN_MAX || option > ESP_PD_OPTION_AUTO) {
         return ESP_ERR_INVALID_ARG;
     }
+    esp_err_t err = ESP_OK;
     portENTER_CRITICAL_SAFE(&s_config.lock);
-
-    int refs = (option == ESP_PD_OPTION_ON)  ? s_config.domain[domain].refs++ \
-             : (option == ESP_PD_OPTION_OFF) ? --s_config.domain[domain].refs \
-             : s_config.domain[domain].refs;
-    if (refs == 0) {
+    int refs = 0;
+    if (s_config.domain[domain].pd_option == ESP_PD_OPTION_AUTO) {
+        s_config.domain[domain].refs = (option == ESP_PD_OPTION_ON) ? 1 : 0;
         s_config.domain[domain].pd_option = option;
+    } else {
+        if (option == ESP_PD_OPTION_AUTO) {
+            s_config.domain[domain].refs = 0;
+            s_config.domain[domain].pd_option = option;
+        } else {
+            refs = (option == ESP_PD_OPTION_ON)  ? s_config.domain[domain].refs++ \
+                 : (option == ESP_PD_OPTION_OFF) ? --s_config.domain[domain].refs \
+                 : s_config.domain[domain].refs;
+            if (refs == 0) {
+                s_config.domain[domain].pd_option = option;
+            } else if (refs < 0) {
+                s_config.domain[domain].refs = 0;
+                err = ESP_ERR_INVALID_STATE;
+            }
+        }
     }
     portEXIT_CRITICAL_SAFE(&s_config.lock);
-    assert(refs >= 0);
-    return ESP_OK;
+    if (err == ESP_ERR_INVALID_STATE) {
+        ESP_LOGE(TAG, "Domain is already in ESP_PD_OPTION_OFF state, please check whether the domain pd_option is managed symmetrically.");
+    }
+    return err;
 }
 
 /**
