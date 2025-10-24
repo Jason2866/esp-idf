@@ -493,7 +493,7 @@ hal_mac_tx_get_blockack = 0x40001af4;
 /*hal_mac_tx_set_ppdu = 0x40001af8;*/
 ic_get_trc = 0x40001afc;
 /* ic_mac_deinit = 0x40001b00; */
-ic_mac_init = 0x40001b04;
+/* ic_mac_init = 0x40001b04; */
 ic_interface_enabled = 0x40001b08;
 is_lmac_idle = 0x40001b0c;
 /*lmacAdjustTimestamp = 0x40001b10;*/
@@ -949,7 +949,7 @@ ieee80211_getcapinfo = 0x40002130;
 /* sta_recv_sa_query_resp = 0x40002144; */
 ieee80211_set_max_rate = 0x4000214c;
 ic_set_sta = 0x40002150;
-ieee80211_parse_wpa = 0x40002158;
+//ieee80211_parse_wpa = 0x40002158;
 ieee80211_add_assoc_req_ies = 0x40002160;
 ieee80211_add_probe_req_ies = 0x40002164;
 /* Data (.data, .bss, .rodata) */
