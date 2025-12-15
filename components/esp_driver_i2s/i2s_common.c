@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2015-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2015-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -229,12 +229,6 @@ static inline bool i2s_take_available_channel(i2s_controller_t *i2s_obj, uint8_t
 {
     bool is_available = false;
 
-#if SOC_I2S_HW_VERSION_1
-    /* In ESP32 and ESP32-S2, tx channel and rx channel are not totally separated
-     * Take both two channels in case one channel can affect another
-     */
-    chan_search_mask = I2S_DIR_RX | I2S_DIR_TX;
-#endif
     portENTER_CRITICAL(&g_i2s.spinlock);
     if (!(chan_search_mask & i2s_obj->chan_occupancy)) {
         i2s_obj->chan_occupancy |= chan_search_mask;
@@ -308,6 +302,40 @@ err:
 
     return ret;
 }
+
+#if SOC_I2S_HW_VERSION_1
+esp_err_t i2s_channel_change_port(i2s_chan_handle_t handle, int id)
+{
+    I2S_NULL_POINTER_CHECK(TAG, handle);
+    ESP_RETURN_ON_FALSE(id >= 0 && id < SOC_I2S_NUM, ESP_ERR_INVALID_ARG, TAG, "invalid I2S port id");
+    if (id == handle->controller->id) {
+        return ESP_OK;
+    }
+    i2s_controller_t *i2s_obj = i2s_acquire_controller_obj(id);
+    if (!i2s_obj || !i2s_take_available_channel(i2s_obj, handle->dir)) {
+        return ESP_ERR_NOT_FOUND;
+    }
+    i2s_controller_t *old_i2s_obj = handle->controller;
+    portENTER_CRITICAL(&g_i2s.spinlock);
+    if (handle->dir == I2S_DIR_TX) {
+        i2s_obj->tx_chan = handle;
+        i2s_obj->chan_occupancy |= I2S_DIR_TX;
+        old_i2s_obj->tx_chan = NULL;
+        old_i2s_obj->full_duplex = false;
+        old_i2s_obj->chan_occupancy &= ~I2S_DIR_TX;
+    } else {
+        i2s_obj->rx_chan = handle;
+        i2s_obj->chan_occupancy |= I2S_DIR_RX;
+        old_i2s_obj->rx_chan = NULL;
+        old_i2s_obj->full_duplex = false;
+        old_i2s_obj->chan_occupancy &= ~I2S_DIR_RX;
+    }
+    handle->controller = i2s_obj;
+    portEXIT_CRITICAL(&g_i2s.spinlock);
+
+    return ESP_OK;
+}
+#endif
 
 #ifndef __cplusplus
 /* To make sure the i2s_event_callbacks_t is same size as i2s_event_callbacks_internal_t */
@@ -810,12 +838,12 @@ void i2s_gpio_check_and_set(i2s_chan_handle_t handle, int gpio, uint32_t signal_
     if (gpio != (int)I2S_GPIO_UNUSED) {
         gpio_hal_iomux_func_sel(GPIO_PIN_MUX_REG[gpio], PIN_FUNC_GPIO);
         if (is_input) {
-            /* Set direction, for some GPIOs, the input function are not enabled as default */
-            gpio_set_direction(gpio, GPIO_MODE_INPUT);
+            /* Enable the input, for some GPIOs, the input function are not enabled as default */
+            gpio_ll_input_enable(GPIO_HAL_GET_HW(GPIO_PORT_0), (gpio_num_t)gpio);
             esp_rom_gpio_connect_in_signal(gpio, signal_idx, is_invert);
         } else {
             i2s_output_gpio_reserve(handle, gpio);
-            gpio_set_direction(gpio, GPIO_MODE_OUTPUT);
+            /* output will be enabled in esp_rom_gpio_connect_out_signal */
             esp_rom_gpio_connect_out_signal(gpio, signal_idx, is_invert, 0);
         }
     }
@@ -826,7 +854,7 @@ void i2s_gpio_loopback_set(i2s_chan_handle_t handle, int gpio, uint32_t out_sig_
     if (gpio != (int)I2S_GPIO_UNUSED) {
         i2s_output_gpio_reserve(handle,  gpio);
         gpio_hal_iomux_func_sel(GPIO_PIN_MUX_REG[gpio], PIN_FUNC_GPIO);
-        gpio_set_direction(gpio, GPIO_MODE_INPUT_OUTPUT);
+        gpio_ll_input_enable(GPIO_HAL_GET_HW(GPIO_PORT_0), (gpio_num_t)gpio);
         esp_rom_gpio_connect_out_signal(gpio, out_sig_idx, 0, 0);
         esp_rom_gpio_connect_in_signal(gpio, in_sig_idx, 0);
     }
@@ -907,6 +935,7 @@ esp_err_t i2s_new_channel(const i2s_chan_config_t *chan_cfg, i2s_chan_handle_t *
         ESP_GOTO_ON_ERROR(i2s_register_channel(i2s_obj, I2S_DIR_TX, chan_cfg->dma_desc_num),
                           err, TAG, "register I2S tx channel failed");
         i2s_obj->tx_chan->role = chan_cfg->role;
+        i2s_obj->tx_chan->is_port_auto = id == I2S_NUM_AUTO;
         i2s_obj->tx_chan->intr_prio_flags = chan_cfg->intr_priority ? BIT(chan_cfg->intr_priority) : ESP_INTR_FLAG_LOWMED;
         i2s_obj->tx_chan->dma.auto_clear_after_cb = chan_cfg->auto_clear_after_cb;
         i2s_obj->tx_chan->dma.auto_clear_before_cb = chan_cfg->auto_clear_before_cb;
@@ -922,6 +951,7 @@ esp_err_t i2s_new_channel(const i2s_chan_config_t *chan_cfg, i2s_chan_handle_t *
         ESP_GOTO_ON_ERROR(i2s_register_channel(i2s_obj, I2S_DIR_RX, chan_cfg->dma_desc_num),
                           err, TAG, "register I2S rx channel failed");
         i2s_obj->rx_chan->role = chan_cfg->role;
+        i2s_obj->rx_chan->is_port_auto = id == I2S_NUM_AUTO;
         i2s_obj->rx_chan->intr_prio_flags = chan_cfg->intr_priority ? BIT(chan_cfg->intr_priority) : ESP_INTR_FLAG_LOWMED;
         i2s_obj->rx_chan->dma.desc_num = chan_cfg->dma_desc_num;
         i2s_obj->rx_chan->dma.frame_num = chan_cfg->dma_frame_num;
@@ -1220,7 +1250,12 @@ esp_err_t i2s_channel_write(i2s_chan_handle_t handle, const void *src, size_t si
     ESP_RETURN_ON_FALSE(xSemaphoreTake(handle->binary, pdMS_TO_TICKS(timeout_ms)) == pdTRUE, ESP_ERR_INVALID_STATE, TAG, "The channel is not enabled");
     src_byte = (char *)src;
     while (size > 0 && handle->state == I2S_CHAN_STATE_RUNNING) {
-        if (handle->dma.rw_pos == handle->dma.buf_size || handle->dma.curr_ptr == NULL) {
+        /* Acquire the new DMA buffer while:
+         * 1. The current buffer is fully filled
+         * 2. The current buffer is not set
+         * 3. The queue is almost full, i.e., the curr_ptr is nearly to be invalid
+         */
+        if (handle->dma.rw_pos == handle->dma.buf_size || handle->dma.curr_ptr == NULL || uxQueueSpacesAvailable(handle->msg_queue) <= (handle->dma.desc_num > 2 ? 1 : 0)) {
             if (xQueueReceive(handle->msg_queue, &(handle->dma.curr_ptr), pdMS_TO_TICKS(timeout_ms)) == pdFALSE) {
                 ret = ESP_ERR_TIMEOUT;
                 break;
@@ -1265,7 +1300,12 @@ esp_err_t i2s_channel_read(i2s_chan_handle_t handle, void *dest, size_t size, si
     /* The binary semaphore can only be taken when the channel has been enabled and no other reading operation in progress */
     ESP_RETURN_ON_FALSE(xSemaphoreTake(handle->binary, pdMS_TO_TICKS(timeout_ms)) == pdTRUE, ESP_ERR_INVALID_STATE, TAG, "The channel is not enabled");
     while (size > 0 && handle->state == I2S_CHAN_STATE_RUNNING) {
-        if (handle->dma.rw_pos == handle->dma.buf_size || handle->dma.curr_ptr == NULL) {
+        /* Acquire the new DMA buffer while:
+         * 1. The current buffer is fully filled
+         * 2. The current buffer is not set
+         * 3. The queue is almost full, i.e., the curr_ptr is nearly to be invalid
+         */
+        if (handle->dma.rw_pos == handle->dma.buf_size || handle->dma.curr_ptr == NULL || uxQueueSpacesAvailable(handle->msg_queue) <= (handle->dma.desc_num > 2 ? 1 : 0)) {
             if (xQueueReceive(handle->msg_queue, &(handle->dma.curr_ptr), pdMS_TO_TICKS(timeout_ms)) == pdFALSE) {
                 ret = ESP_ERR_TIMEOUT;
                 break;
