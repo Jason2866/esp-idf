@@ -18,6 +18,7 @@ from pytest_embedded_idf.utils import idf_parametrize
     indirect=True,
 )
 @idf_parametrize('target', ['supported_targets'], indirect=['target'])
+@pytest.mark.temp_skip_ci(targets=['esp32c61'], reason='not supported yet')  # TODO: [ESP32C61] IDF-9250 IDF-10985
 def test_esp_pm(dut: Dut) -> None:
     dut.run_all_single_board_cases()
 
