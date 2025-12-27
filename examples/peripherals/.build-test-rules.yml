@@ -79,6 +79,7 @@ examples/peripherals/dac/dac_cosine_wave:
 examples/peripherals/gpio:
   depends_components:
     - esp_driver_gpio
+    - esp_hal_gpio
 
 examples/peripherals/gpio/matrix_keyboard:
   enable:
@@ -272,18 +273,15 @@ examples/peripherals/ledc:
     - if: SOC_LEDC_SUPPORTED != 1
   depends_components:
     - esp_driver_ledc
+    - esp_hal_ledc
 
 examples/peripherals/ledc/ledc_dimmer:
   disable:
     - if: SOC_ETM_SUPPORTED != 1 or SOC_LEDC_SUPPORT_ETM != 1
-  depends_components:
-    - esp_driver_ledc
 
 examples/peripherals/ledc/ledc_gamma_curve_fade:
   disable:
     - if: SOC_LEDC_SUPPORTED != 1 or SOC_LEDC_GAMMA_CURVE_FADE_SUPPORTED != 1
-  depends_components:
-    - esp_driver_ledc
 
 examples/peripherals/mcpwm:
   disable:
@@ -380,6 +378,7 @@ examples/peripherals/ppa/ppa_dsi:
     - if: SOC_PPA_SUPPORTED != 1 or SOC_MIPI_DSI_SUPPORTED != 1
   depends_components:
     - esp_driver_ppa
+    - esp_hal_ppa
     - esp_lcd
 
 examples/peripherals/rmt:
@@ -444,6 +443,7 @@ examples/peripherals/sigma_delta:
     - if: SOC_SDM_SUPPORTED != 1
   depends_components:
     - esp_driver_sdm
+    - esp_hal_gpio
 
 examples/peripherals/spi_master/hd_eeprom:
   disable:
@@ -542,11 +542,21 @@ examples/peripherals/twai/twai_error_recovery:
   depends_components:
     - esp_driver_twai
 
-examples/peripherals/twai/twai_network:
+examples/peripherals/twai/twai_network/twai_listen_only:
   disable:
     - if: SOC_TWAI_SUPPORTED != 1
   disable_test:
-    - if: IDF_TARGET == "esp32p4"
+    - if: IDF_TARGET in ["esp32p4", "esp32h2"]
+      temporary: true
+      reason: p4 rev3 migration # TODO: IDF-14393
+  depends_components:
+    - esp_driver_twai
+
+examples/peripherals/twai/twai_network/twai_sender:
+  disable:
+    - if: SOC_TWAI_SUPPORTED != 1
+  disable_test:
+    - if: IDF_TARGET in ["esp32p4", "esp32c5"]
       temporary: true
       reason: p4 rev3 migration # TODO: IDF-14393
   depends_components:

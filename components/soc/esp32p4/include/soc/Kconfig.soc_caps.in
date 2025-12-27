@@ -213,7 +213,7 @@ config SOC_ECC_EXTENDED_MODES_SUPPORTED
 
 config SOC_ECDSA_SUPPORTED
     bool
-    default n
+    default y
 
 config SOC_KEY_MANAGER_SUPPORTED
     bool
@@ -368,6 +368,10 @@ config SOC_SIMD_INSTRUCTION_SUPPORTED
     default y
 
 config SOC_I3C_MASTER_SUPPORTED
+    bool
+    default y
+
+config SOC_SPI_EXTERNAL_NOR_FLASH_SUPPORTED
     bool
     default y
 
@@ -671,10 +675,6 @@ config SOC_GPIO_SUPPORT_ETM
     bool
     default y
 
-config SOC_GPIO_SUPPORT_RTC_INDEPENDENT
-    bool
-    default y
-
 config SOC_GPIO_SUPPORT_DEEPSLEEP_WAKEUP
     bool
     default y
@@ -752,10 +752,6 @@ config SOC_RTCIO_HOLD_SUPPORTED
     default y
 
 config SOC_RTCIO_WAKE_SUPPORTED
-    bool
-    default y
-
-config SOC_RTCIO_EDGE_WAKE_SUPPORTED
     bool
     default y
 
@@ -951,18 +947,6 @@ config SOC_ISP_SHARE_CSI_BRG
     bool
     default y
 
-config SOC_ISP_NUMS
-    int
-    default 1
-
-config SOC_ISP_DVP_CTLR_NUMS
-    int
-    default 1
-
-config SOC_ISP_AE_CTLR_NUMS
-    int
-    default 1
-
 config SOC_ISP_AE_BLOCK_X_NUMS
     int
     default 5
@@ -970,10 +954,6 @@ config SOC_ISP_AE_BLOCK_X_NUMS
 config SOC_ISP_AE_BLOCK_Y_NUMS
     int
     default 5
-
-config SOC_ISP_AF_CTLR_NUMS
-    int
-    default 1
 
 config SOC_ISP_AF_WINDOW_NUMS
     int
@@ -1011,10 +991,6 @@ config SOC_ISP_DEMOSAIC_GRAD_RATIO_RES_BITS
     int
     default 26
 
-config SOC_ISP_DVP_DATA_WIDTH_MAX
-    int
-    default 16
-
 config SOC_ISP_SHARPEN_TEMPLATE_X_NUMS
     int
     default 3
@@ -1046,10 +1022,6 @@ config SOC_ISP_SHARPEN_M_FREQ_COEF_DEC_BITS
 config SOC_ISP_SHARPEN_M_FREQ_COEF_RES_BITS
     int
     default 24
-
-config SOC_ISP_HIST_CTLR_NUMS
-    int
-    default 1
 
 config SOC_ISP_HIST_BLOCK_X_NUMS
     int
@@ -1359,17 +1331,25 @@ config SOC_ECDSA_SUPPORT_DETERMINISTIC_MODE
     bool
     default y
 
+config SOC_ECDSA_SUPPORT_HW_DETERMINISTIC_LOOP
+    bool
+    default y
+
 config SOC_ECDSA_USES_MPI
+    bool
+    default y
+
+config SOC_ECDSA_SUPPORT_CURVE_P384
+    bool
+    default y
+
+config SOC_ECDSA_SUPPORT_CURVE_SPECIFIC_KEY_PURPOSES
     bool
     default y
 
 config SOC_SPI_PERIPH_NUM
     int
     default 3
-
-config SOC_SPI_MAX_CS_NUM
-    int
-    default 6
 
 config SOC_SPI_MAXIMUM_BUFFER_SIZE
     int
@@ -1383,41 +1363,9 @@ config SOC_SPI_SUPPORT_SLAVE_HD_VER2
     bool
     default y
 
-config SOC_SPI_SLAVE_SUPPORT_SEG_TRANS
-    bool
-    default y
-
-config SOC_SPI_SUPPORT_DDRCLK
-    bool
-    default y
-
-config SOC_SPI_SUPPORT_CD_SIG
-    bool
-    default y
-
 config SOC_SPI_SUPPORT_OCT
     bool
     default y
-
-config SOC_SPI_SUPPORT_CLK_XTAL
-    bool
-    default y
-
-config SOC_SPI_SUPPORT_CLK_RC_FAST
-    bool
-    default y
-
-config SOC_MSPI_HAS_INDEPENT_IOMUX
-    bool
-    default y
-
-config SOC_MEMSPI_IS_INDEPENDENT
-    bool
-    default y
-
-config SOC_SPI_MAX_PRE_DIVIDER
-    int
-    default 16
 
 config SOC_LP_SPI_MAXIMUM_BUFFER_SIZE
     int
@@ -1467,11 +1415,23 @@ config SOC_SPI_MEM_SUPPORT_CACHE_32BIT_ADDR_MAP
     bool
     default y
 
+config SOC_SPI_MEM_PSRAM_FREQ_AXI_CONSTRAINED
+    bool
+    default y
+
 config SOC_SPI_MEM_SUPPORT_TSUS_TRES_SEPERATE_CTR
     bool
     default y
 
-config SOC_SPI_PERIPH_SUPPORT_CONTROL_DUMMY_OUT
+config SOC_MSPI_HAS_INDEPENT_IOMUX
+    bool
+    default y
+
+config SOC_MEMSPI_IS_INDEPENDENT
+    bool
+    default y
+
+config SOC_MEMSPI_SUPPORT_CONTROL_DUMMY_OUT
     bool
     default y
 
@@ -1595,22 +1555,6 @@ config SOC_TWAI_MASK_FILTER_NUM
     int
     default 1
 
-config SOC_TWAI_CLK_SUPPORT_XTAL
-    bool
-    default y
-
-config SOC_TWAI_BRP_MIN
-    int
-    default 2
-
-config SOC_TWAI_BRP_MAX
-    int
-    default 32768
-
-config SOC_TWAI_SUPPORTS_RX_STATUS
-    bool
-    default y
-
 config SOC_TWAI_SUPPORT_SLEEP_RETENTION
     bool
     default y
@@ -1647,13 +1591,21 @@ config SOC_EFUSE_XTS_AES_KEY_256
     bool
     default y
 
+config SOC_EFUSE_ECDSA_KEY_P192
+    bool
+    default y
+
+config SOC_EFUSE_ECDSA_KEY_P384
+    bool
+    default y
+
 config SOC_KEY_MANAGER_SUPPORT_KEY_DEPLOYMENT
     bool
     default y
 
 config SOC_KEY_MANAGER_ECDSA_KEY_DEPLOY
     bool
-    default n
+    default y
 
 config SOC_KEY_MANAGER_FE_KEY_DEPLOY
     bool
@@ -1756,10 +1708,6 @@ config SOC_UART_HAS_LP_UART
     default y
 
 config SOC_UART_SUPPORT_SLEEP_RETENTION
-    bool
-    default y
-
-config SOC_UART_SUPPORT_FSM_TX_WAIT_SEND
     bool
     default y
 

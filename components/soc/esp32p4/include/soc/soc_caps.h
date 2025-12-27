@@ -1,7 +1,7 @@
 /*
  * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
  *
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
  */
 
 /*
@@ -75,7 +75,7 @@
 #define SOC_DIG_SIGN_SUPPORTED          1
 #define SOC_ECC_SUPPORTED               1
 #define SOC_ECC_EXTENDED_MODES_SUPPORTED   1
-#define SOC_ECDSA_SUPPORTED             0   // TODO: IDF-13523
+#define SOC_ECDSA_SUPPORTED             1
 #define SOC_KEY_MANAGER_SUPPORTED       1
 #define SOC_HUK_SUPPORTED               1
 #define SOC_FLASH_ENC_SUPPORTED         1
@@ -115,6 +115,7 @@
 #define SOC_BITSCRAMBLER_SUPPORTED      1
 #define SOC_SIMD_INSTRUCTION_SUPPORTED  1
 #define SOC_I3C_MASTER_SUPPORTED        1
+#define SOC_SPI_EXTERNAL_NOR_FLASH_SUPPORTED    1
 
 /*-------------------------- XTAL CAPS ---------------------------------------*/
 #define SOC_XTAL_SUPPORT_40M            1
@@ -250,8 +251,7 @@
 #define SOC_GPIO_SUPPORT_ETM          1
 
 // Target has the full LP IO subsystem
-// On ESP32-P4, Digital IOs have their own registers to control pullup/down capability, independent of LP registers.
-#define SOC_GPIO_SUPPORT_RTC_INDEPENDENT    (1)
+
 // GPIO0~15 on ESP32P4 can support chip deep sleep wakeup
 #define SOC_GPIO_SUPPORT_DEEPSLEEP_WAKEUP   (1)
 #define SOC_LP_IO_HAS_INDEPENDENT_WAKEUP_SOURCE   (1)
@@ -292,7 +292,6 @@
                                                  */
 #define SOC_RTCIO_HOLD_SUPPORTED            1
 #define SOC_RTCIO_WAKE_SUPPORTED            1
-#define SOC_RTCIO_EDGE_WAKE_SUPPORTED       1
 
 /*-------------------------- Sigma Delta Modulator CAPS -----------------*/
 #define SOC_SDM_SUPPORT_SLEEP_RETENTION 1
@@ -364,13 +363,8 @@
 #define SOC_ISP_SHARPEN_SUPPORTED                1
 #define SOC_ISP_WBG_SUPPORTED                    1
 #define SOC_ISP_SHARE_CSI_BRG                    1
-
-#define SOC_ISP_NUMS                             1U
-#define SOC_ISP_DVP_CTLR_NUMS                    1U
-#define SOC_ISP_AE_CTLR_NUMS                     1U
 #define SOC_ISP_AE_BLOCK_X_NUMS                  5
 #define SOC_ISP_AE_BLOCK_Y_NUMS                  5
-#define SOC_ISP_AF_CTLR_NUMS                     1U
 #define SOC_ISP_AF_WINDOW_NUMS                   3
 #define SOC_ISP_AWB_WINDOW_X_NUMS                5
 #define SOC_ISP_AWB_WINDOW_Y_NUMS                5
@@ -380,7 +374,6 @@
 #define SOC_ISP_DEMOSAIC_GRAD_RATIO_INT_BITS     2
 #define SOC_ISP_DEMOSAIC_GRAD_RATIO_DEC_BITS     4
 #define SOC_ISP_DEMOSAIC_GRAD_RATIO_RES_BITS     26
-#define SOC_ISP_DVP_DATA_WIDTH_MAX               16
 #define SOC_ISP_SHARPEN_TEMPLATE_X_NUMS          3
 #define SOC_ISP_SHARPEN_TEMPLATE_Y_NUMS          3
 #define SOC_ISP_SHARPEN_H_FREQ_COEF_INT_BITS     3
@@ -389,7 +382,6 @@
 #define SOC_ISP_SHARPEN_M_FREQ_COEF_INT_BITS     3
 #define SOC_ISP_SHARPEN_M_FREQ_COEF_DEC_BITS     5
 #define SOC_ISP_SHARPEN_M_FREQ_COEF_RES_BITS     24
-#define SOC_ISP_HIST_CTLR_NUMS                   1U
 #define SOC_ISP_HIST_BLOCK_X_NUMS                5
 #define SOC_ISP_HIST_BLOCK_Y_NUMS                5
 #define SOC_ISP_HIST_SEGMENT_NUMS                16
@@ -487,7 +479,6 @@
 #define SOC_SDMMC_PSRAM_DMA_CAPABLE  1    ///< SDMMC peripheral can do DMA transfer to/from PSRAM
 #define SOC_SDMMC_UHS_I_SUPPORTED    1
 
-// TODO: IDF-5353 (Copy from esp32c3, need check)
 /*--------------------------- SHA CAPS ---------------------------------------*/
 
 /* Max amount of bytes in a single DMA operation is 4095,
@@ -520,30 +511,19 @@
 /*--------------------------- ECDSA CAPS ---------------------------------------*/
 #define SOC_ECDSA_SUPPORT_EXPORT_PUBKEY     (1)
 #define SOC_ECDSA_SUPPORT_DETERMINISTIC_MODE   (1)
+#define SOC_ECDSA_SUPPORT_HW_DETERMINISTIC_LOOP (1)
 #define SOC_ECDSA_USES_MPI                  (1)
+#define SOC_ECDSA_SUPPORT_CURVE_P384 (1)
+#define SOC_ECDSA_SUPPORT_CURVE_SPECIFIC_KEY_PURPOSES (1)  /*!< Support individual key purposes for different ECDSA curves (P192, P256, P384) */
 
 /*-------------------------- SPI CAPS ----------------------------------------*/
-#define SOC_SPI_PERIPH_NUM              3
-#define SOC_SPI_PERIPH_CS_NUM(i)        (((i)==0)? 2: (((i)==1)? 6: 3))
-#define SOC_SPI_MAX_CS_NUM              6
-#define SOC_SPI_MAXIMUM_BUFFER_SIZE     64
-
+#define SOC_SPI_PERIPH_NUM                  3
+#define SOC_SPI_PERIPH_CS_NUM(i)            6
+#define SOC_SPI_MAXIMUM_BUFFER_SIZE         64
 #define SOC_SPI_SUPPORT_SLEEP_RETENTION     1
 #define SOC_SPI_SUPPORT_SLAVE_HD_VER2       1
-#define SOC_SPI_SLAVE_SUPPORT_SEG_TRANS     1
-#define SOC_SPI_SUPPORT_DDRCLK              1
-#define SOC_SPI_SUPPORT_CD_SIG              1
 #define SOC_SPI_SUPPORT_OCT                 1
-#define SOC_SPI_SUPPORT_CLK_XTAL            1
-#define SOC_SPI_SUPPORT_CLK_RC_FAST         1
-
-// Peripheral supports DIO, DOUT, QIO, or QOUT
-// host_id = 0 -> SPI0/SPI1, host_id = 1 -> SPI2,
-#define SOC_SPI_PERIPH_SUPPORT_MULTILINE_MODE(host_id)  ({(void)host_id; 1;})
-
-#define SOC_MSPI_HAS_INDEPENT_IOMUX 1
-#define SOC_MEMSPI_IS_INDEPENDENT   1
-#define SOC_SPI_MAX_PRE_DIVIDER     16
+#define SOC_SPI_MAX_BITWIDTH(host_id)       ((host_id == 2) ? 4 : 8) // Supported line mode: SPI3: 1, 2, 4, SPI1/2: 1, 2, 4, 8
 
 /*-------------------------- LP SPI CAPS ----------------------------------------*/
 #define SOC_LP_SPI_MAXIMUM_BUFFER_SIZE     64
@@ -563,9 +543,12 @@
 #define SOC_MEMSPI_TIMING_TUNING_BY_DQS                   (1)
 #define SOC_MEMSPI_TIMING_TUNING_BY_FLASH_DELAY           (1)
 #define SOC_SPI_MEM_SUPPORT_CACHE_32BIT_ADDR_MAP          (1)
+#define SOC_SPI_MEM_PSRAM_FREQ_AXI_CONSTRAINED            (1)
 #define SOC_SPI_MEM_SUPPORT_TSUS_TRES_SEPERATE_CTR        (1)
 
-#define SOC_SPI_PERIPH_SUPPORT_CONTROL_DUMMY_OUT (1)
+#define SOC_MSPI_HAS_INDEPENT_IOMUX               1
+#define SOC_MEMSPI_IS_INDEPENDENT                 1
+#define SOC_MEMSPI_SUPPORT_CONTROL_DUMMY_OUT      1
 
 #define SOC_MEMSPI_SRC_FREQ_80M_SUPPORTED         1
 #define SOC_MEMSPI_SRC_FREQ_40M_SUPPORTED         1
@@ -611,10 +594,6 @@
 /*-------------------------- TWAI CAPS ---------------------------------------*/
 #define SOC_TWAI_CONTROLLER_NUM             3
 #define SOC_TWAI_MASK_FILTER_NUM            1U
-#define SOC_TWAI_CLK_SUPPORT_XTAL           1
-#define SOC_TWAI_BRP_MIN                    2
-#define SOC_TWAI_BRP_MAX                    32768
-#define SOC_TWAI_SUPPORTS_RX_STATUS         1
 #define SOC_TWAI_SUPPORT_SLEEP_RETENTION    1
 
 /*-------------------------- eFuse CAPS----------------------------*/
@@ -624,13 +603,16 @@
 #define SOC_EFUSE_SOFT_DIS_JTAG 1
 /* Capability to disable the MSPI access in download mode */
 #define SOC_EFUSE_DIS_DOWNLOAD_MSPI 1
+// ECDSA_P256_KEY
 #define SOC_EFUSE_ECDSA_KEY 1
 #define SOC_EFUSE_XTS_AES_KEY_128 1
 #define SOC_EFUSE_XTS_AES_KEY_256 1
+#define SOC_EFUSE_ECDSA_KEY_P192 1
+#define SOC_EFUSE_ECDSA_KEY_P384 1
 
 /*-------------------------- Key Manager CAPS----------------------------*/
 #define SOC_KEY_MANAGER_SUPPORT_KEY_DEPLOYMENT  1 /*!< Key manager supports key deployment */
-#define SOC_KEY_MANAGER_ECDSA_KEY_DEPLOY        0 /*!< Key manager responsible to deploy ECDSA key */ // TODO: IDF-13523
+#define SOC_KEY_MANAGER_ECDSA_KEY_DEPLOY        1 /*!< Key manager responsible to deploy ECDSA key */
 #define SOC_KEY_MANAGER_FE_KEY_DEPLOY           1 /*!< Key manager responsible to deploy Flash Encryption key */
 #define SOC_KEY_MANAGER_FE_KEY_DEPLOY_XTS_AES_128   1 /*!< Key manager responsible to deploy the XTS-AES-128 key */
 #define SOC_KEY_MANAGER_FE_KEY_DEPLOY_XTS_AES_256   1 /*!< Key manager responsible to deploy the XTS-AES-256 key */
@@ -667,9 +649,6 @@
 #define SOC_UART_HAS_LP_UART            (1)         /*!< Support LP UART */
 #define SOC_UART_SUPPORT_SLEEP_RETENTION   (1)      /*!< Support back up registers before sleep */
 
-// UART has an extra TX_WAIT_SEND state when the FIFO is not empty and XOFF is enabled
-#define SOC_UART_SUPPORT_FSM_TX_WAIT_SEND   (1)
-
 #define SOC_UART_WAKEUP_CHARS_SEQ_MAX_LEN 5
 #define SOC_UART_WAKEUP_SUPPORT_ACTIVE_THRESH_MODE (1)
 #define SOC_UART_WAKEUP_SUPPORT_FIFO_THRESH_MODE   (1)
@@ -682,18 +661,15 @@
 /*--------------------------- UHCI CAPS -------------------------------------*/
 #define SOC_UHCI_NUM               (1UL)
 
-// TODO: IDF-5679 (Copy from esp32c3, need check)
 /*-------------------------- COEXISTENCE HARDWARE PTI CAPS -------------------------------*/
 #define SOC_COEX_HW_PTI                 (1)
 
 /*--------------- PHY REGISTER AND MEMORY SIZE CAPS --------------------------*/
 #define SOC_PHY_DIG_REGS_MEM_SIZE       (21*4)
 
-// TODO: IDF-5679 (Copy from esp32c3, need check)
 /*--------------- WIFI LIGHT SLEEP CLOCK WIDTH CAPS --------------------------*/
 #define SOC_WIFI_LIGHT_SLEEP_CLK_WIDTH  (12)
 
-// TODO: IDF-5351 (Copy from esp32c3, need check)
 /*-------------------------- Power Management CAPS ----------------------------*/
 #define SOC_PM_SUPPORT_EXT1_WAKEUP      (1)
 #define SOC_PM_SUPPORT_EXT1_WAKEUP_MODE_PER_PIN   (1) /*!<Supports one bit per pin to configure the EXT1 trigger level */

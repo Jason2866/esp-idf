@@ -28,6 +28,12 @@ except ImportError:
 NO_BANDWIDTH_LIMIT = -1  # iperf send bandwidth is not limited
 
 
+def get_ip_and_wait_prompt(dut: Dut) -> Any:
+    dut_ip = dut.expect(r'esp_netif_handlers: .+ ip: (\d+\.\d+\.\d+\.\d+),').group(1)
+    dut.expect('iperf>')
+    return dut_ip
+
+
 class IperfTestUtilityEth(IperfUtility.IperfTestUtility):
     """iperf test implementation"""
 
@@ -50,9 +56,7 @@ class IperfTestUtilityEth(IperfUtility.IperfTestUtility):
         except subprocess.CalledProcessError:
             pass
         self.dut.write('restart')
-        self.dut.expect("Type 'help' to get the list of commands.")
-        self.dut.expect('iperf>')
-        dut_ip = self.dut.expect(r'esp_netif_handlers: .+ ip: (\d+\.\d+\.\d+\.\d+),').group(1)
+        dut_ip = get_ip_and_wait_prompt(self.dut)
         rssi = 0
         return dut_ip, rssi
 
@@ -71,12 +75,11 @@ def test_esp_eth_iperf(
       2. compare with the pre-defined pass standard
     """
 
-    # 1. wait for DUT
-    dut.expect_exact('iperf>')
+    # 1. wait for DUT to be ready
+    dut_ip = get_ip_and_wait_prompt(dut)
 
     # 2. preparing
     pc_iperf_log_file = os.path.join(dut.logdir, 'pc_iperf_log.md')
-    dut_ip = dut.expect(r'esp_netif_handlers: .+ ip: (\d+\.\d+\.\d+\.\d+),').group(1)
     pc_nic_ip = get_host_ip4_by_dest_ip(dut_ip)
     test_result = {
         'tcp_tx': IperfUtility.TestResult('tcp', 'tx', 'ethernet'),
@@ -132,15 +135,14 @@ def test_esp_eth_iperf_ip101(
     test_esp_eth_iperf(dut, log_performance, check_performance, udp_tx_bw_lim=90)
 
 
-@pytest.mark.eth_ip101
 @pytest.mark.parametrize(
-    'config',
+    'config, target',
     [
-        'default_ip101_esp32p4',
+        pytest.param('default_ip101_esp32p4', 'esp32p4', marks=[pytest.mark.eth_ip101]),
+        pytest.param('default_ip101_esp32p4v1', 'esp32p4', marks=[pytest.mark.eth_ip101, pytest.mark.esp32p4_eco4]),
     ],
-    indirect=True,
+    indirect=['target'],
 )
-@idf_parametrize('target', ['esp32p4'], indirect=['target'])
 def test_esp_eth_iperf_ip101_esp32p4(
     dut: Dut,
     log_performance: Callable[[str, object], None],

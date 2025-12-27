@@ -25,12 +25,13 @@
 #include "hal/wdt_hal.h"
 #include "hal/uart_types.h"
 #include "hal/uart_ll.h"
+#include "freertos/FreeRTOS.h"
 
 #if CONFIG_SW_COEXIST_ENABLE || CONFIG_EXTERNAL_COEX_ENABLE
 #include "private/esp_coexist_internal.h"
 #endif
 
-#if CONFIG_PM_ENABLE
+#if CONFIG_PM_ENABLE || CONFIG_PM_WORKAROUND_FREQ_LIMIT_ENABLED
 #include "esp_pm.h"
 #include "esp_private/pm_impl.h"
 #endif
@@ -119,6 +120,9 @@ ESP_SYSTEM_INIT_FN(init_flash, CORE, BIT(0), 130)
 #endif // CONFIG_SPI_FLASH_BROWNOUT_RESET
     // The log library will call the registered callback function to check if the cache is disabled.
     esp_log_util_set_cache_enabled_cb(spi_flash_cache_enabled);
+#if CONFIG_PM_WORKAROUND_FREQ_LIMIT_ENABLED
+    esp_pm_flash_freq_limit_init();
+#endif // CONFIG_PM_WORKAROUND_FREQ_LIMIT_ENABLED
     return ESP_OK;
 }
 #endif // !CONFIG_APP_BUILD_TYPE_PURE_RAM_APP

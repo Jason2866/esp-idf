@@ -247,8 +247,7 @@ menu "GAP / GATT / Device Settings"
     config BT_NIMBLE_MAX_CONNECTIONS
         int "Maximum number of concurrent connections"
         range 1 2 if IDF_TARGET_ESP32C2
-        range 1 70 if IDF_TARGET_ESP32C6 || IDF_TARGET_ESP32C5 || IDF_TARGET_ESP32C61
-        range 1 35 if IDF_TARGET_ESP32H2
+        range 1 70 if SOC_ESP_NIMBLE_CONTROLLER
         range 1 9
         default 2 if IDF_TARGET_ESP32C2
         default 3
@@ -593,7 +592,7 @@ menu "BLE 5.x Features"
 
             config BT_NIMBLE_PERIODIC_ADV_WITH_RESPONSES
                 bool "Enable Periodic Advertisement with Response (EXPERIMENTAL)"
-                depends on BT_NIMBLE_ENABLE_PERIODIC_ADV
+                depends on BT_NIMBLE_ENABLE_PERIODIC_ADV && SOC_BLE_PERIODIC_ADV_WITH_RESPONSE
                 default n
                 help
                     This enables controller PAwR (Periodic Advertisement with Response).
@@ -1251,7 +1250,12 @@ menu "Extra Features"
         help
             Enable connection subrate change feature
 
-
+    config BT_NIMBLE_STATIC_PASSKEY
+        bool "Enable support for Static Passkey"
+        default y
+        depends on BT_NIMBLE_ENABLED && BT_NIMBLE_SECURITY_ENABLE
+        help
+            Enable support for user defined static passkey for SMP
 endmenu
 
 menu "NimBLE Mesh"

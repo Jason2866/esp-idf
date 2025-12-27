@@ -13,7 +13,7 @@
 #pragma once
 
 #include <stdlib.h>
-#include "soc/spi_periph.h"
+#include "soc/spi_reg.h"
 #include "soc/spi_struct.h"
 #include "soc/pcr_struct.h"
 #include "hal/spi_types.h"
@@ -23,7 +23,7 @@
 #include <string.h>
 #include "hal/misc.h"
 
-//TODO: [ESP32H4] IDF-12388 inherited from verification branch, need check
+//TODO: [ESP32H4] IDF-12389 inherited from verification branch, need check
 
 #ifdef __cplusplus
 extern "C" {

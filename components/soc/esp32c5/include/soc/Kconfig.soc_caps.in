@@ -47,6 +47,10 @@ config SOC_TWAI_SUPPORTED
     bool
     default y
 
+config SOC_TWAI_FD_SUPPORTED
+    bool
+    default y
+
 config SOC_ETM_SUPPORTED
     bool
     default y
@@ -287,6 +291,10 @@ config SOC_BITSCRAMBLER_SUPPORTED
     bool
     default y
 
+config SOC_SPI_EXTERNAL_NOR_FLASH_SUPPORTED
+    bool
+    default y
+
 config SOC_XTAL_SUPPORT_40M
     bool
     default y
@@ -457,11 +465,11 @@ config SOC_BRANCH_PREDICTOR_SUPPORTED
 
 config SOC_CPU_BREAKPOINTS_NUM
     int
-    default 4
+    default 3
 
 config SOC_CPU_WATCHPOINTS_NUM
     int
-    default 4
+    default 3
 
 config SOC_CPU_WATCHPOINT_MAX_REGION_SIZE
     hex
@@ -555,10 +563,6 @@ config SOC_GPIO_SUPPORT_ETM
     bool
     default y
 
-config SOC_GPIO_SUPPORT_RTC_INDEPENDENT
-    bool
-    default y
-
 config SOC_GPIO_SUPPORT_DEEPSLEEP_WAKEUP
     bool
     default y
@@ -620,10 +624,6 @@ config SOC_RTCIO_HOLD_SUPPORTED
     default y
 
 config SOC_RTCIO_WAKE_SUPPORTED
-    bool
-    default y
-
-config SOC_RTCIO_EDGE_WAKE_SUPPORTED
     bool
     default y
 
@@ -983,29 +983,9 @@ config SOC_SPI_PERIPH_NUM
     int
     default 2
 
-config SOC_SPI_MAX_CS_NUM
-    int
-    default 6
-
 config SOC_SPI_MAXIMUM_BUFFER_SIZE
     int
     default 64
-
-config SOC_SPI_SUPPORT_DDRCLK
-    bool
-    default y
-
-config SOC_SPI_SLAVE_SUPPORT_SEG_TRANS
-    bool
-    default y
-
-config SOC_SPI_SUPPORT_CD_SIG
-    bool
-    default y
-
-config SOC_SPI_SUPPORT_CONTINUOUS_TRANS
-    bool
-    default y
 
 config SOC_SPI_SUPPORT_SLAVE_HD_VER2
     bool
@@ -1014,26 +994,6 @@ config SOC_SPI_SUPPORT_SLAVE_HD_VER2
 config SOC_SPI_SUPPORT_SLEEP_RETENTION
     bool
     default y
-
-config SOC_SPI_SUPPORT_CLK_XTAL
-    bool
-    default y
-
-config SOC_SPI_SUPPORT_CLK_PLL_F160M
-    bool
-    default y
-
-config SOC_SPI_SUPPORT_CLK_RC_FAST
-    bool
-    default y
-
-config SOC_MEMSPI_IS_INDEPENDENT
-    bool
-    default y
-
-config SOC_SPI_MAX_PRE_DIVIDER
-    int
-    default 16
 
 config SOC_SPIRAM_XIP_SUPPORTED
     bool
@@ -1087,7 +1047,15 @@ config SOC_SPI_MEM_SUPPORT_TSUS_TRES_SEPERATE_CTR
     bool
     default y
 
+config SOC_SPI_MEM_PSRAM_FREQ_AXI_CONSTRAINED
+    bool
+    default y
+
 config SOC_MEMSPI_TIMING_TUNING_BY_MSPI_DELAY
+    bool
+    default y
+
+config SOC_MEMSPI_IS_INDEPENDENT
     bool
     default y
 
@@ -1174,30 +1142,6 @@ config SOC_TWAI_MASK_FILTER_NUM
 config SOC_TWAI_RANGE_FILTER_NUM
     int
     default 1
-
-config SOC_TWAI_BRP_MIN
-    int
-    default 1
-
-config SOC_TWAI_BRP_MAX
-    int
-    default 255
-
-config SOC_TWAI_CLK_SUPPORT_XTAL
-    bool
-    default y
-
-config SOC_TWAI_SUPPORTS_RX_STATUS
-    bool
-    default y
-
-config SOC_TWAI_SUPPORT_FD
-    bool
-    default y
-
-config SOC_TWAI_SUPPORT_TIMESTAMP
-    bool
-    default y
 
 config SOC_EFUSE_DIS_PAD_JTAG
     bool
@@ -1403,10 +1347,6 @@ config SOC_UART_SUPPORT_SLEEP_RETENTION
     bool
     default y
 
-config SOC_UART_SUPPORT_FSM_TX_WAIT_SEND
-    bool
-    default y
-
 config SOC_UART_WAKEUP_CHARS_SEQ_MAX_LEN
     int
     default 5
@@ -1551,6 +1491,10 @@ config SOC_PM_PAU_REGDMA_LINK_IDX_WIFIMAC
     int
     default 4
 
+config SOC_PM_PAU_REGDMA_COMMON_PHY_LINK_ENTRY
+    bool
+    default y
+
 config SOC_PM_PMU_MIN_SLP_SLOW_CLK_CYCLE_FIXED
     bool
     default y
@@ -1688,6 +1632,10 @@ config SOC_BLE_PERIODIC_ADV_ENH_SUPPORTED
     default y
 
 config SOC_BLE_CTE_SUPPORTED
+    bool
+    default y
+
+config SOC_BLE_PERIODIC_ADV_WITH_RESPONSE
     bool
     default y
 

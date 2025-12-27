@@ -4,6 +4,7 @@ Sleep Modes
 :link_to_translation:`zh_CN:[中文]`
 
 {IDF_TARGET_SPI_POWER_DOMAIN:default="VDD_SPI", esp32="VDD_SDIO"}
+{IDF_TARGET_RTC_POWER_DOMAIN:default="VDD3P3_RTC", esp32c5="VDDPST1", esp32c6="VDDPST1", esp32c61="VDDPST1", esp32p4="VDD_LP"}
 
 Overview
 --------
@@ -283,7 +284,7 @@ RTC peripherals or RTC memories do not need to be powered on during sleep in thi
 
 .. only:: SOC_RTCIO_WAKE_SUPPORTED
 
-    GPIO Wakeup (Light-sleep Only)
+    GPIO Wakeup from Light-sleep
     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
     .. only:: (SOC_PM_SUPPORT_EXT0_WAKEUP or SOC_PM_SUPPORT_EXT1_WAKEUP)
@@ -317,6 +318,19 @@ RTC peripherals or RTC memories do not need to be powered on during sleep in thi
             .. only::  not SOC_GPIO_SUPPORT_DEEPSLEEP_WAKEUP
 
                 In Light-sleep mode, if you set Kconfig option :ref:`CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP`， to continue using :cpp:func:`gpio_wakeup_enable` for GPIO wakeup, you need to first call :cpp:func:`rtc_gpio_init` and :cpp:func:`rtc_gpio_set_direction`, setting the RTCIO to input mode.
+
+    .. only:: SOC_GPIO_SUPPORT_DEEPSLEEP_WAKEUP
+
+        .. _deep_sleep_gpio_wakeup:
+
+        GPIO Wakeup from Deep-sleep
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+        In addition to the GPIO wakeup mechanism available in Light-sleep mode, {IDF_TARGET_NAME} also supports waking up from Deep-sleep using GPIOs.
+
+        This wakeup source is implemented by :cpp:func:`esp_deep_sleep_enable_gpio_wakeup`, which allows selecting one or more GPIOs and the wakeup level (high or low). Only GPIOs powered by the {IDF_TARGET_RTC_POWER_DOMAIN} power domain can be used as Deep-sleep GPIO wakeup sources. The exact set of supported pins can be checked in the `datasheet <{IDF_TARGET_DATASHEET_EN_URL}>`__ > Section IO Pins.
+
+        For a complete example of using GPIO to wake up from Deep-sleep, see :example:`system/deep_sleep`.
 
 .. only:: not SOC_RTCIO_WAKE_SUPPORTED and not esp32h2
 
@@ -420,6 +434,17 @@ However, for those who have fully understood the risk and are still willing to p
         - ESP-IDF does not provide any mechanism that can power down the flash in all conditions when Light-sleep.
         - :cpp:func:`esp_deep_sleep_start` function forces power down flash regardless of user configuration.
 
+Flash Entering Deep Power-Down Mode
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In addition to reducing power consumption by completely powering off the flash, you can further lower flash power usage during sleep by enabling the Kconfig option :ref:`CONFIG_ESP_SLEEP_SET_FLASH_DPD`. Compared with fully cutting off the flash power, this feature avoids the extra delay caused by re-powering the flash when the chip wakes up from sleep, while still achieving extremely low power consumption. Most flashes draw less than 1 µA when entering Deep Power-Down (DPD) mode.
+
+In almost all use cases, using DPD mode provides better overall benefits than fully powering off the flash, offering both improved safety and lower power consumption.
+
+.. warning::
+
+    Before using this feature, check the datasheet of the flash device used on your chip to ensure it supports the Deep Power-Down mode.
+
 Configuring IOs (Deep-sleep Only)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -451,6 +476,10 @@ Entering Sleep
 :cpp:func:`esp_light_sleep_start` or :cpp:func:`esp_deep_sleep_start` functions can be used to enter Light-sleep or Deep-sleep modes correspondingly. After that, the system configures the parameters of RTC controller according to the requested wakeup sources and power-down options.
 
 It is also possible to enter sleep modes with no wakeup sources configured. In this case, the chip will be in sleep modes indefinitely until external reset is applied.
+
+.. note::
+
+    The sleep process will disable the cache, so the task stack of the task requesting sleep must be located in internal memory (DRAM or RTC fast memory). If a task with its stack in PSRAM requests Light-sleep or Deep-sleep, it will be rejected and an error will be returned.
 
 UART Output Handling
 ^^^^^^^^^^^^^^^^^^^^

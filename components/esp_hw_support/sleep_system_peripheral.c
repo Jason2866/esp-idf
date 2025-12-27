@@ -8,9 +8,9 @@
 #include <string.h>
 
 #include "sdkconfig.h"
-#include "soc/soc_caps_full.h"
+#include "soc/soc_caps.h"
 #include "soc/system_periph_retention.h"
-#include "soc/uart_periph.h"
+#include "hal/uart_periph.h"
 #include "hal/timer_ll.h"
 #if SOC_HAS(I2S)
 #include "hal/i2s_ll.h"

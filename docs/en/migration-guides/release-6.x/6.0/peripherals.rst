@@ -52,6 +52,11 @@ RTC Subsystem Control
 
 Low power modules usually share some common resources like interrupt number. To avoid conflicts, some private APIs are created in the ``esp_private/rtc_ctrl.h`` header file to manage these shared resources with ease. There used to be another header file ``driver/rtc_cntl.h`` for the same purpose, which is now removed.
 
+Removal of FreeRTOS Dependencies from Driver Header Files
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Starting from v6.0, to improve the portability of IDF drivers, all public driver header files no longer include operating-system–specific (FreeRTOS) headers. Therefore, application code that previously relied on this implicit inclusion must explicitly include the corresponding FreeRTOS headers when using v6.0 or later.
+
 ADC
 ---
 
@@ -139,7 +144,9 @@ LEDC
 UART
 ----
 
-``UART_FIFO_LEN`` macro has been removed. Please use ``UART_HW_FIFO_LEN`` instead.
+- ``UART_FIFO_LEN`` macro has been removed. Please use ``UART_HW_FIFO_LEN`` instead.
+
+- ``soc/uart_channel.h`` header file has been removed. All UART GPIO lookup macros can be found in ``soc/uart_pins.h``. For example, ``UART_NUM_0_TXD_DIRECT_GPIO_NUM`` is equivalent to ``U0TXD_GPIO_NUM``.
 
 I2C
 ---
@@ -266,6 +273,7 @@ LCD
 - ``esp_lcd_dpi_panel_set_color_conversion`` function is replaced by :cpp:func:`esp_lcd_dpi_panel_set_yuv_conversion` to set YUV to RGB color conversion profile.
 - :cpp:func:`esp_lcd_rgb_panel_set_yuv_conversion` function has a different signature. The ``esp_lcd_yuv_conv_config_t`` configuration type is now replaced by :cpp:type:`esp_lcd_color_conv_yuv_config_t`.
 - The NT35510 LCD device driver has been moved out of ESP-IDF and is now hosted in the `ESP Component Registry <https://components.espressif.com/components/espressif/esp_lcd_nt35510/versions/1.0.0/readme>`__. If your project uses the NT35510 driver, you can add it to your project by running ``idf.py add-dependency "espressif/esp_lcd_nt35510"``.
+- The ``use_dma2d`` member in the :cpp:type:`esp_lcd_dpi_panel_config_t` has been removed. Please use the :func:`esp_lcd_dpi_panel_enable_dma2d` function to enable DMA2D for the DPI panel. When not using DMA2D, the binary file size can be reduced by around 10KB.
 
 SPI
 ---
@@ -297,6 +305,7 @@ SPI Flash Driver
 - Deprecated API ``spi_flash_dump_counters`` has been removed. Please use :cpp:func:`esp_flash_dump_counters` instead.
 - Deprecated API ``spi_flash_get_counters`` has been removed. Please use :cpp:func:`esp_flash_get_counters` instead.
 - Deprecated API ``spi_flash_reset_counters`` has been removed. Please use :cpp:func:`esp_flash_reset_counters` instead.
+- New argument ``flags`` is added to ``esp_flash_os_functions_t::start``. Caller and implementer should handle this argument properly.
 - Kconfig option ``CONFIG_SPI_FLASH_ROM_DRIVER_PATCH`` has been removed. Considering that this option is unlikely to be widely used by users and may cause serious issues if misused, it has been decided to remove it.
 
 .. note::

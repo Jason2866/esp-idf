@@ -1,7 +1,7 @@
 /*
  * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
  *
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
  */
 #pragma once
 
@@ -359,11 +359,7 @@ typedef enum {
 /**
  * @brief Array initializer for all supported clock sources of SPI
  */
-#if SOC_CLK_TREE_SUPPORTED
 #define SOC_SPI_CLKS {SOC_MOD_CLK_RC_FAST, SOC_MOD_CLK_PLL_F48M, SOC_MOD_CLK_XTAL}
-#else
-#define SOC_SPI_CLKS {SOC_MOD_CLK_XTAL}
-#endif
 
 /**
  * @brief Type of SPI clock source.

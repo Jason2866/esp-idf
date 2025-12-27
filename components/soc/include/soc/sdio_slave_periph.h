@@ -1,14 +1,13 @@
 /*
- * SPDX-FileCopyrightText: 2015-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2015-2025 Espressif Systems (Shanghai) CO LTD
  *
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
  */
 
 #pragma once
 #include <stdint.h>
 //include soc related (generated) definitions
 #include "soc/soc_caps.h"
-#include "soc/soc_pins.h"
 #if SOC_SDIO_SLAVE_SUPPORTED
 #include "soc/sdio_slc_reg.h"
 #include "soc/sdio_slc_struct.h"

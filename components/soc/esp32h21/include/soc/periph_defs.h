@@ -1,7 +1,7 @@
 /*
  * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
  *
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
  */
 
 #pragma once
@@ -12,7 +12,6 @@
 extern "C" {
 #endif
 
-// TODO: IDF-11855
 typedef enum {
     PERIPH_TIMG0_MODULE,
     PERIPH_TIMG1_MODULE,

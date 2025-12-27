@@ -102,8 +102,6 @@ def action_extensions(base_actions: dict, project_path: str) -> Any:
 
         env: dict[str, Any] = {}
 
-        # Enforce NG mode for esp-idf-size v 1.x. After v 2.x is fully incorporated, 'ESP_IDF_SIZE_NG' can be removed.
-        env['ESP_IDF_SIZE_NG'] = '1'
         env['ESP_IDF_SIZE_FORCE_TERMINAL'] = '1'
         env['SIZE_OUTPUT_FORMAT'] = output_format
         if output_file:
@@ -168,6 +166,10 @@ def action_extensions(base_actions: dict, project_path: str) -> Any:
             # unset variable
             os.environ.pop('ESP_IDF_KCONFIG_MIN_LABELS', None)
         build_target(target_name, ctx, args)
+
+    def refresh_config(action: str, ctx: click.core.Context, args: PropertyDict, policy: str) -> None:
+        ensure_build_directory(args, ctx.info_name)
+        run_target('refresh-config', args=args, env={'KCONFIG_DEFAULTS_POLICY': policy}, interactive=True)
 
     def fallback_target(target_name: str, ctx: Context, args: PropertyDict) -> None:
         """
@@ -728,6 +730,21 @@ def action_extensions(base_actions: dict, project_path: str) -> Any:
                         'is_flag': True,
                         'help': 'Add menu labels to minimal config.',
                     }
+                ],
+            },
+            'refresh-config': {
+                'callback': refresh_config,
+                'help': 'Resolve conflicts in default values of config options in the configuration',
+                'options': [
+                    {
+                        'names': ['--policy'],
+                        'help': (
+                            'Policy for handling defaults in the configuration. '
+                            'If no policy specified, sdkconfig default values will be used.'
+                        ),
+                        'type': click.Choice(['kconfig', 'interactive', 'sdkconfig']),
+                        'default': 'sdkconfig',
+                    },
                 ],
             },
         }

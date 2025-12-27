@@ -2,7 +2,7 @@
 /*
  * SPDX-FileCopyrightText: 2020-2025 Espressif Systems (Shanghai) CO LTD
  *
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
  */
 
 /*
@@ -112,6 +112,7 @@
 #define SOC_DEEP_SLEEP_SUPPORTED    1
 #define SOC_LP_PERIPH_SHARE_INTERRUPT   1   // LP peripherals sharing the same interrupt source
 #define SOC_PM_SUPPORTED            1
+#define SOC_SPI_EXTERNAL_NOR_FLASH_SUPPORTED    1
 
 #if SOC_CAPS_ECO_VER < 200
 #define SOC_DPORT_WORKAROUND                   1  // [gen_soc_caps:ignore]
@@ -179,10 +180,6 @@
 // ESP32 has 1 GPIO peripheral
 #define SOC_GPIO_PORT                   (1U)
 #define SOC_GPIO_PIN_COUNT              40
-
-// SOC_GPIO_SUPPORT_RTC_INDEPENDENT not defined. On ESP32 those PADs which have RTC functions must
-// set pullup/down/capability via RTC register. On ESP32-S2, Digital IOs have their own registers to
-// control pullup/down/capability, independent with RTC registers.
 
 // 0~39 valid except 24, 28~31
 #define SOC_GPIO_VALID_GPIO_MASK        (0xFFFFFFFFFFULL & ~(0ULL | BIT24 | BIT28 | BIT29 | BIT30 | BIT31))
@@ -257,27 +254,18 @@
 #define SOC_RTCIO_WAKE_SUPPORTED 1
 
 /*-------------------------- SPI CAPS ----------------------------------------*/
-#define SOC_SPI_HD_BOTH_INOUT_SUPPORTED 1  //Support enabling MOSI and MISO phases together under Halfduplex mode
-#define SOC_SPI_AS_CS_SUPPORTED         1  //Support to toggle the CS while the clock toggles
 #define SOC_SPI_PERIPH_NUM              3
-#define SOC_SPI_DMA_CHAN_NUM            2
-
 #define SOC_SPI_PERIPH_CS_NUM(i)        3
-#define SOC_SPI_MAX_CS_NUM              3
 
-#define SOC_SPI_SUPPORT_CLK_APB         1
-
+#define SOC_SPI_HD_BOTH_INOUT_SUPPORTED 1  //Support enabling MOSI and MISO phases together under Halfduplex mode
 #define SOC_SPI_MAXIMUM_BUFFER_SIZE     64
-#define SOC_SPI_MAX_PRE_DIVIDER         8192
+#define SOC_SPI_MAX_BITWIDTH(host_id)   (4) // Supported line mode: DIO, DOUT, QIO, or QOUT
 
 // Although ESP32 doesn't has memspi, but keep consistent with following chips.(This means SPI0/1)
 #define SOC_MEMSPI_SRC_FREQ_80M_SUPPORTED         1
 #define SOC_MEMSPI_SRC_FREQ_40M_SUPPORTED         1
 #define SOC_MEMSPI_SRC_FREQ_26M_SUPPORTED         1
 #define SOC_MEMSPI_SRC_FREQ_20M_SUPPORTED         1
-
-// Peripheral supports DIO, DOUT, QIO, or QOUT
-#define SOC_SPI_PERIPH_SUPPORT_MULTILINE_MODE(spi_host)         ({(void)spi_host; 1;})
 
 /*-------------------------- LP_TIMER CAPS ----------------------------------*/
 #define SOC_LP_TIMER_BIT_WIDTH_LO           32 // Bit width of lp_timer low part
@@ -293,14 +281,6 @@
 /*-------------------------- TWAI CAPS ---------------------------------------*/
 #define SOC_TWAI_CONTROLLER_NUM         1U
 #define SOC_TWAI_MASK_FILTER_NUM        1U
-#define SOC_TWAI_BRP_MIN                2
-#if SOC_CAPS_ECO_VER >= 200
-#  define SOC_TWAI_BRP_MAX              256
-#else
-#  define SOC_TWAI_BRP_MAX              128
-#endif
-#define SOC_TWAI_CLK_SUPPORT_APB        1
-#define SOC_TWAI_SUPPORT_MULTI_ADDRESS_LAYOUT   1
 
 /*-------------------------- UART CAPS ---------------------------------------*/
 // ESP32 have 3 UART.

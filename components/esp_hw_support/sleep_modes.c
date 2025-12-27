@@ -26,6 +26,7 @@
 #include "esp_private/sleep_retention.h"
 #include "esp_private/io_mux.h"
 #include "esp_private/critical_section.h"
+#include "esp_private/spi_flash_os.h"
 #include "esp_log.h"
 #include "esp_newlib.h"
 #include "esp_timer.h"
@@ -77,6 +78,7 @@
 #include "esp_private/cache_utils.h"
 #include "esp_private/brownout.h"
 #include "esp_private/sleep_console.h"
+#include "esp_private/sleep_uart.h"
 #include "esp_private/sleep_cpu.h"
 #include "esp_private/sleep_modem.h"
 #include "esp_private/sleep_flash.h"
@@ -210,17 +212,6 @@
 
 // Actually costs 80us, using the fastest slow clock 150K calculation takes about 16 ticks
 #define SLEEP_TIMER_ALARM_TO_SLEEP_TICKS    (16)
-
-#define SLEEP_UART_FLUSH_DONE_TO_SLEEP_US   (450)
-
-#if SOC_PM_SUPPORT_TOP_PD
-// IDF console uses 8 bits data mode without parity, so each char occupy 8(data)+1(start)+1(stop)=10bits
-#define UART_FLUSH_US_PER_CHAR              (10*1000*1000 / CONFIG_ESP_CONSOLE_UART_BAUDRATE)
-#define CONCATENATE_HELPER(x, y)            (x##y)
-#define CONCATENATE(x, y)                   CONCATENATE_HELPER(x, y)
-#define CONSOLE_UART_DEV                    (&CONCATENATE(UART, CONFIG_ESP_CONSOLE_UART_NUM))
-#endif
-
 #define LIGHT_SLEEP_TIME_OVERHEAD_US        DEFAULT_HARDWARE_OUT_OVERHEAD_US
 #ifdef CONFIG_ESP_SYSTEM_RTC_EXT_XTAL
 #define DEEP_SLEEP_TIME_OVERHEAD_US         (650 + 100 * 240 / CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ)
@@ -238,9 +229,9 @@
                                             (source == value))
 
 #if CONFIG_PM_SLP_IRAM_OPT
-# define SLEEP_FN_ATTR      FORCE_IRAM_ATTR
+#define SLEEP_FN_ATTR      FORCE_IRAM_ATTR
 #else
-# define SLEEP_FN_ATTR
+#define SLEEP_FN_ATTR
 #endif
 
 #define MAX_DSLP_HOOKS      3
@@ -622,99 +613,6 @@ static SLEEP_FN_ATTR void resume_timers(uint32_t sleep_flags) {
     }
 }
 
-// [refactor-todo] provide target logic for body of uart functions below
-static SLEEP_FN_ATTR void flush_uarts(void)
-{
-    for (int i = 0; i < SOC_UART_HP_NUM; ++i) {
-        if (uart_ll_is_enabled(i)) {
-            esp_rom_output_tx_wait_idle(i);
-        }
-    }
-}
-
-static uint32_t s_suspended_uarts_bmap = 0;
-
-/**
- * Suspend enabled uarts and return suspended uarts bit map.
- * Must be called from critical sections.
- */
-static SLEEP_FN_ATTR void suspend_uarts(void)
-{
-    s_suspended_uarts_bmap = 0;
-    for (int i = 0; i < SOC_UART_HP_NUM; ++i) {
-        if (!uart_ll_is_enabled(i)) {
-            continue;
-        }
-        uart_ll_force_xoff(i);
-        s_suspended_uarts_bmap |= BIT(i);
-#if SOC_UART_SUPPORT_FSM_TX_WAIT_SEND
-        uint32_t uart_fsm = 0;
-        do {
-            uart_fsm = uart_ll_get_tx_fsm_status(i);
-        } while (!(uart_fsm == UART_LL_FSM_IDLE || uart_fsm == UART_LL_FSM_TX_WAIT_SEND));
-#else
-        while (uart_ll_get_tx_fsm_status(i) != 0) {}
-#endif
-    }
-}
-
-// Must be called from critical sections
-static SLEEP_FN_ATTR void resume_uarts(void)
-{
-    for (int i = 0; i < SOC_UART_HP_NUM; ++i) {
-        if (s_suspended_uarts_bmap & 0x1) {
-            uart_ll_force_xon(i);
-        }
-        s_suspended_uarts_bmap >>= 1;
-    }
-}
-
-/*
-  UART prepare strategy in sleep:
-    Deepsleep : flush the fifo before enter sleep to avoid data loss
-
-    Lightsleep:
-      Chips not support PD_TOP: Suspend uart before cpu freq switch
-
-      Chips support PD_TOP:
-        For sleep which will not power down the TOP domain (uart belongs it), we can just suspend the UART.
-
-        For sleep which will power down the TOP domain, we need to consider whether the uart flushing will
-        block the sleep process and cause the rtos target tick to be missed upon waking up. It's need to
-        estimate the flush time based on the number of bytes in the uart FIFO,  if the predicted flush
-        completion time has exceeded the wakeup time, we should abandon the flush, skip the sleep and
-        return ESP_ERR_SLEEP_REJECT.
- */
-static SLEEP_FN_ATTR bool light_sleep_uart_prepare(uint32_t sleep_flags, int64_t sleep_duration)
-{
-    bool should_skip_sleep = false;
-#if !SOC_PM_SUPPORT_TOP_PD || !CONFIG_ESP_CONSOLE_UART
-    suspend_uarts();
-#else
-#ifdef CONFIG_ESP_SLEEP_CACHE_SAFE_ASSERTION
-#define FORCE_FLUSH_CONSOLE_UART 1
-#else
-#define FORCE_FLUSH_CONSOLE_UART 0
-#endif
-    if (FORCE_FLUSH_CONSOLE_UART || (sleep_flags & PMU_SLEEP_PD_TOP)) {
-        if ((s_config.wakeup_triggers & RTC_TIMER_TRIG_EN) &&
-            // +1 is for cover the last character flush time
-            (sleep_duration < (int64_t)((UART_LL_FIFO_DEF_LEN - uart_ll_get_txfifo_len(CONSOLE_UART_DEV) + 1) * UART_FLUSH_US_PER_CHAR) + SLEEP_UART_FLUSH_DONE_TO_SLEEP_US)) {
-            should_skip_sleep = true;
-        } else {
-            /* Only flush the uart_num configured to console, the transmission integrity of
-               other uarts is guaranteed by the UART driver */
-            if (CONFIG_ESP_CONSOLE_ROM_SERIAL_PORT_NUM != -1) {
-                esp_rom_output_tx_wait_idle(CONFIG_ESP_CONSOLE_ROM_SERIAL_PORT_NUM);
-            }
-        }
-    } else {
-        suspend_uarts();
-    }
-#endif
-    return should_skip_sleep;
-}
-
 /**
  * LP peripherals prepare XTAL, FOSC or other clocks as the clock source for sleep.
  */
@@ -911,6 +809,14 @@ static esp_err_t FORCE_IRAM_ATTR esp_sleep_start_safe(uint32_t sleep_flags, uint
         esp_sleep_isolate_digital_gpio();
 #endif
 
+#if CONFIG_IDF_TARGET_ESP32P4 && CONFIG_ESP_SLEEP_SET_FLASH_DPD
+    if ((sleep_flags & RTC_SLEEP_FLASH_DPD) && (!ESP_CHIP_REV_ABOVE(efuse_hal_chip_revision(), 300))) {
+        /* Switch Flash from standby mode to deep powerdown mode */
+        /* During bootloader phase following wakeup from deepsleep, flash will exit dpd mode */
+        spi_flash_enable_deep_power_down_mode(true);
+    }
+#endif
+
 #if ESP_ROM_SUPPORT_DEEP_SLEEP_WAKEUP_STUB && SOC_DEEP_SLEEP_SUPPORTED
 #if SOC_PM_SUPPORT_DEEPSLEEP_CHECK_STUB_ONLY
         esp_set_deep_sleep_wake_stub_default_entry();
@@ -943,21 +849,28 @@ static esp_err_t FORCE_IRAM_ATTR esp_sleep_start_safe(uint32_t sleep_flags, uint
         suspend_timers(sleep_flags);
         /* Cache Suspend 1: will wait cache idle in cache suspend */
         suspend_cache();
-        /* On esp32c6, only the lp_aon pad hold function can only hold the GPIO state in the active mode.
-           In order to avoid the leakage of the SPI cs pin, hold it here */
-
+        if (!(sleep_flags & RTC_SLEEP_PD_VDDSDIO)) {
+#if CONFIG_ESP_SLEEP_SET_FLASH_DPD
+            if (sleep_flags & RTC_SLEEP_FLASH_DPD) {
+                /* Switch Flash from standby mode to deep powerdown mode */
+                spi_flash_enable_deep_power_down_mode(true);
+            }
+#endif
 #if CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP
-        if(!(sleep_flags & RTC_SLEEP_PD_VDDSDIO) && (sleep_flags & PMU_SLEEP_PD_TOP)) {
+            /* On esp32c6, only the lp_aon pad hold function can only hold the GPIO state in the active mode.
+            In order to avoid the leakage of the SPI cs pin, hold it here */
+            if(sleep_flags & PMU_SLEEP_PD_TOP) {
 #if CONFIG_ESP_SLEEP_FLASH_LEAKAGE_WORKAROUND
-            /* Cache suspend also means SPI bus IDLE, then we can hold SPI CS pin safely */
-            gpio_ll_hold_en(&GPIO, MSPI_IOMUX_PIN_NUM_CS0);
+                /* Cache suspend also means SPI bus IDLE, then we can hold SPI CS pin safely */
+                gpio_ll_hold_en(&GPIO, MSPI_IOMUX_PIN_NUM_CS0);
 #endif
 #if CONFIG_ESP_SLEEP_PSRAM_LEAKAGE_WORKAROUND && CONFIG_SPIRAM
-            /* Cache suspend also means SPI bus IDLE, then we can hold SPI CS pin safely */
-            gpio_ll_hold_en(&GPIO, MSPI_IOMUX_PIN_NUM_CS1);
+                /* Cache suspend also means SPI bus IDLE, then we can hold SPI CS pin safely */
+                gpio_ll_hold_en(&GPIO, MSPI_IOMUX_PIN_NUM_CS1);
+#endif
+            }
 #endif
         }
-#endif
 
 #if CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP
         if (sleep_flags & PMU_SLEEP_PD_TOP) {
@@ -1030,11 +943,7 @@ static esp_err_t SLEEP_FN_ATTR esp_sleep_start(uint32_t sleep_flags, uint32_t cl
     int64_t sleep_duration = (int64_t) s_config.sleep_duration - (int64_t) s_config.sleep_time_adjustment;
 
     // Sleep UART prepare
-    if (deep_sleep) {
-        flush_uarts();
-    } else {
-        should_skip_sleep = light_sleep_uart_prepare(sleep_flags, sleep_duration);
-    }
+    sleep_uart_prepare(sleep_flags, deep_sleep);
 
 #if CONFIG_ESP_PHY_ENABLED && SOC_DEEP_SLEEP_SUPPORTED
     // Do deep-sleep PHY related callback, which need to be executed when the PLL clock is exists.
@@ -1236,7 +1145,7 @@ static esp_err_t SLEEP_FN_ATTR esp_sleep_start(uint32_t sleep_flags, uint32_t cl
     esp_clk_utils_mspi_speed_mode_sync_after_cpu_freq_switching(cpu_freq_config.source_freq_mhz, cpu_freq_config.freq_mhz);
 #endif
     // re-enable UART output
-    resume_uarts();
+    sleep_uart_resume();
     return result ? ESP_ERR_SLEEP_REJECT : ESP_OK;
 }
 
@@ -1266,7 +1175,14 @@ static esp_err_t FORCE_IRAM_ATTR deep_sleep_start(bool allow_sleep_rejection)
         }
     }
 #endif
-
+#if CONFIG_SPIRAM && CONFIG_FREERTOS_TASK_CREATE_ALLOW_EXT_MEM
+    if (!esp_task_stack_is_sane_cache_disabled()) {
+        ESP_LOGE(TAG, "Deep sleep requests are not allowed from tasks with stacks in PSRAM");
+        if (allow_sleep_rejection) {
+            return ESP_ERR_NOT_ALLOWED;
+        }
+    }
+#endif
 #if CONFIG_IDF_TARGET_ESP32S2
     /* Due to hardware limitations, on S2 the brownout detector sometimes trigger during deep sleep
        to circumvent this we disable the brownout detector before sleeping  */
@@ -1408,6 +1324,13 @@ static SLEEP_FN_ATTR esp_err_t esp_light_sleep_inner(uint32_t sleep_flags, uint3
 #endif
         // Wait for the flash chip to start up
         esp_rom_delay_us(flash_enable_time_us);
+    } else {
+#if CONFIG_ESP_SLEEP_SET_FLASH_DPD
+        if (sleep_flags & RTC_SLEEP_FLASH_DPD) {
+            //Release Flash out from deep powerdown mode
+            spi_flash_enable_deep_power_down_mode(false);
+        }
+#endif
     }
 
 #if CONFIG_ESP_SLEEP_CACHE_SAFE_ASSERTION
@@ -1592,6 +1515,23 @@ esp_err_t esp_light_sleep_start(void)
                 s_config.sleep_time_adjustment -= flash_enable_time_us;
             }
         }
+    } else if (!(sleep_flags & RTC_SLEEP_PD_VDDSDIO)) {
+#if CONFIG_ESP_SLEEP_SET_FLASH_DPD
+        const uint32_t flash_enable_dpd_us = spi_flash_dpd_get_enter_duration() + spi_flash_dpd_get_exit_duration();
+        if (s_config.sleep_duration > flash_enable_dpd_us) {
+            if (s_config.sleep_time_overhead_out < flash_enable_dpd_us) {
+                s_config.sleep_time_adjustment += flash_enable_dpd_us;
+            }
+        } else {
+            /**
+             * Minimum sleep time is not enough, then reject flash enter deep power-down mode
+             */
+            sleep_flags &= ~RTC_SLEEP_FLASH_DPD;
+            if (s_config.sleep_time_overhead_out > flash_enable_dpd_us) {
+                s_config.sleep_time_adjustment -= flash_enable_dpd_us;
+            }
+        }
+#endif
     }
 
     periph_inform_out_light_sleep_overhead(s_config.sleep_time_adjustment - sleep_time_overhead_in);
@@ -1625,7 +1565,13 @@ esp_err_t esp_light_sleep_start(void)
     // if rtc timer wakeup source is enabled, need to compare final sleep duration and min sleep duration to avoid late wakeup
     if ((s_config.wakeup_triggers & RTC_TIMER_TRIG_EN) && (final_sleep_duration_us <= min_sleep_duration_us)) {
         err = ESP_ERR_SLEEP_TOO_SHORT_SLEEP_DURATION;
-    } else {
+    }
+#if CONFIG_SPIRAM && CONFIG_FREERTOS_TASK_CREATE_ALLOW_EXT_MEM
+    else if (!esp_task_stack_is_sane_cache_disabled()) {
+        err = ESP_ERR_NOT_ALLOWED;
+    }
+#endif
+    else {
         // Enter sleep, then wait for flash to be ready on wakeup
         err = esp_light_sleep_inner(sleep_flags, clk_flags, flash_enable_time_us);
     }
@@ -2758,11 +2704,6 @@ static SLEEP_FN_ATTR uint32_t get_power_down_flags(void)
 #ifndef CONFIG_ESP_SLEEP_POWER_DOWN_FLASH
         s_config.domain[ESP_PD_DOMAIN_VDDSDIO].pd_option = ESP_PD_OPTION_ON;
 #endif
-#if CONFIG_IDF_TARGET_ESP32P4
-        if (!ESP_CHIP_REV_ABOVE(efuse_hal_chip_revision(), 100)) {
-            s_config.domain[ESP_PD_DOMAIN_VDDSDIO].pd_option = ESP_PD_OPTION_ON;
-        }
-#endif
     }
 #endif
 
@@ -2832,7 +2773,8 @@ static SLEEP_FN_ATTR uint32_t get_power_down_flags(void)
 #endif
 
 #if SOC_PM_SUPPORT_CNNT_PD
-    if (s_config.domain[ESP_PD_DOMAIN_CNNT].pd_option != ESP_PD_OPTION_ON && top_domain_pd_allowed()) {
+    // The TOP domain depends on the CNNT domain, only after the TOP power domain has been powered off is the CNNT power domain allowed to power down.
+    if (s_config.domain[ESP_PD_DOMAIN_CNNT].pd_option != ESP_PD_OPTION_ON && (pd_flags & PMU_SLEEP_PD_TOP)) {
         pd_flags |= PMU_SLEEP_PD_CNNT;
     }
 #endif
@@ -2850,8 +2792,15 @@ static SLEEP_FN_ATTR uint32_t get_power_down_flags(void)
     }
 #endif
 
+#if CONFIG_ESP_SLEEP_SET_FLASH_DPD
+    if (!(pd_flags & RTC_SLEEP_PD_VDDSDIO)) {
+        // Flash power domain will disable DPD mode.
+        pd_flags |= RTC_SLEEP_FLASH_DPD;
+    }
+#endif
+
 #if CONFIG_IDF_TARGET_ESP32P4
-    if (!ESP_CHIP_REV_ABOVE(efuse_hal_chip_revision(), 100)) {
+    if (!ESP_CHIP_REV_ABOVE(efuse_hal_chip_revision(), 300)) {
         if (pd_flags & RTC_SLEEP_PD_VDDSDIO) {
             ESP_LOGE(TAG, "ESP32P4 chips lower than v1.0 are not allowed to power down the Flash");
         }
@@ -2933,6 +2882,11 @@ static SLEEP_FN_ATTR uint32_t get_sleep_flags(uint32_t sleep_flags, bool deepsle
        triggering the EFUSE_CRC reset, so disable the power-down of this power domain on lightsleep for ECO0 version. */
     if (!ESP_CHIP_REV_ABOVE(efuse_hal_chip_revision(), 1)) {
         sleep_flags &= ~RTC_SLEEP_PD_RTC_PERIPH;
+    }
+    /* The LDO VO1 channel that powers the Flash on esp32p4(<v3) has leakage voltage during deepsleep,
+    which may cause the Flash to enter an abnormal state, so disable Flash power-down feature on esp32p4(<v3). */
+    if (!ESP_CHIP_REV_ABOVE(efuse_hal_chip_revision(), 300)) {
+        sleep_flags &= ~RTC_SLEEP_PD_VDDSDIO;
     }
 #endif
 

@@ -55,7 +55,8 @@ endif()
 
 idf_component_register(SRCS "${srcs}"
                     INCLUDE_DIRS "include" "${idf_target}/include"
-                    PRIV_REQUIRES nvs_flash esp_driver_gpio efuse esp_timer esp_wifi esptool_py
+                    # 'esp_hal_ana_conv' is required by 'phy_common.c' for the temperature sensor hal
+                    PRIV_REQUIRES nvs_flash esp_driver_gpio esp_hal_ana_conv efuse esp_timer esp_wifi esptool_py
                     LDFRAGMENTS "${ldfragments}"
                     EMBED_FILES  ${embed_files}
                     )
@@ -162,7 +163,7 @@ if(CONFIG_ESP_PHY_ENABLED)
             add_custom_command(
                 OUTPUT ${phy_init_data_bin}
                 DEPENDS ${CMAKE_CURRENT_LIST_DIR}/${idf_target}/phy_init_data.c
-                COMMAND ${CMAKE_C_COMPILER} -c ${CMAKE_CURRENT_LIST_DIR}/${idf_target}/phy_init_data.c
+                COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAGS} -c ${CMAKE_CURRENT_LIST_DIR}/${idf_target}/phy_init_data.c
                 -I ${esp_common_dir}/include -I ${CMAKE_CURRENT_LIST_DIR}/include
                 -I ${CMAKE_CURRENT_LIST_DIR}/${idf_target}/include -I ${esp_rom_dir}/include
                 -I ${soc_dir}/${idf_target}/include -I ${esp_libc_dir}/platform_include

@@ -19,7 +19,7 @@
 #include "hal/hal_utils.h"
 #include "hal/color_hal.h"
 #include "soc/mipi_csi_bridge_struct.h"
-#include "soc/isp_periph.h"
+#include "hal/isp_periph.h"
 #include "soc/soc_caps.h"
 #include "esp_private/esp_clk_tree_common.h"
 #include "esp_private/isp_private.h"
@@ -28,7 +28,7 @@
 
 typedef struct isp_platform_t {
     _lock_t         mutex;
-    isp_processor_t *processors[SOC_ISP_NUMS];
+    isp_processor_t *processors[ISP_LL_PERIPH_NUMS];
 } isp_platform_t;
 
 static const char *TAG = "ISP";
@@ -40,7 +40,7 @@ static esp_err_t s_isp_claim_processor(isp_processor_t *proc)
 
     _lock_acquire(&s_platform.mutex);
     bool found = false;
-    for (int i = 0; i < SOC_ISP_NUMS; i ++) {
+    for (int i = 0; i < ISP_LL_PERIPH_NUMS; i ++) {
         found = !s_platform.processors[i];
         if (found) {
             s_platform.processors[i] = proc;
@@ -129,16 +129,13 @@ esp_err_t esp_isp_new_processor(const esp_isp_processor_cfg_t *proc_config, isp_
     atomic_init(&proc->lsc_fsm, ISP_FSM_INIT);
     atomic_init(&proc->sharpen_fsm, ISP_FSM_INIT);
     atomic_init(&proc->wbg_fsm, ISP_FSM_INIT);
-    proc->spinlock = (portMUX_TYPE)portMUX_INITIALIZER_UNLOCKED;
+    INIT_CRIT_SECTION_LOCK_RUNTIME(&proc->spinlock);
 
     //Input & Output color format
-    color_space_pixel_format_t in_color_format = {
-        .color_type_id = proc_config->input_data_color_type,
-    };
-    color_space_pixel_format_t out_color_format = {
-        .color_type_id = proc_config->output_data_color_type,
-    };
-    int in_bits_per_pixel = color_hal_pixel_format_get_bit_depth(in_color_format);
+    isp_color_t in_color_format = proc_config->input_data_color_type;
+    isp_color_t out_color_format = proc_config->output_data_color_type;
+
+    int in_bits_per_pixel = color_hal_pixel_format_fourcc_get_bit_depth(in_color_format);
 
     if (!proc_config->flags.bypass_isp) {
         bool valid_format = false;
@@ -167,11 +164,11 @@ esp_err_t esp_isp_new_processor(const esp_isp_processor_cfg_t *proc_config, isp_
     isp_ll_set_intput_data_v_row_num(proc->hal.hw, proc_config->v_res);
     isp_ll_set_bayer_mode(proc->hal.hw, proc_config->bayer_order);
     isp_ll_yuv_set_std(proc->hal.hw, proc_config->yuv_std);
-    if (out_color_format.color_space == COLOR_SPACE_YUV) {
+    if (out_color_format == ISP_COLOR_YUV422 || out_color_format == ISP_COLOR_YUV420) {
         isp_ll_yuv_set_range(proc->hal.hw, proc_config->yuv_range);
     }
 
-    if (out_color_format.color_space == COLOR_SPACE_RGB && proc_config->input_data_source == ISP_INPUT_DATA_SOURCE_DVP) {
+    if ((out_color_format == ISP_COLOR_RGB888 || out_color_format == ISP_COLOR_RGB565) && proc_config->input_data_source == ISP_INPUT_DATA_SOURCE_DVP) {
         isp_ll_color_enable(proc->hal.hw, true); // workaround for DIG-474
     }
     if (proc_config->flags.byte_swap_en) {
@@ -279,9 +276,9 @@ static void IRAM_ATTR s_isp_isr_dispatcher(void *arg)
     bool do_dispatch = false;
     //Deal with hw events
     if (af_events) {
-        portENTER_CRITICAL_ISR(&proc->spinlock);
+        esp_os_enter_critical_isr(&proc->spinlock);
         do_dispatch = proc->isr_users.af_isr_added;
-        portEXIT_CRITICAL_ISR(&proc->spinlock);
+        esp_os_exit_critical_isr(&proc->spinlock);
 
         if (do_dispatch) {
             need_yield |= esp_isp_af_isr(proc, af_events);
@@ -289,9 +286,9 @@ static void IRAM_ATTR s_isp_isr_dispatcher(void *arg)
         do_dispatch = false;
     }
     if (awb_events) {
-        portENTER_CRITICAL_ISR(&proc->spinlock);
+        esp_os_enter_critical_isr(&proc->spinlock);
         do_dispatch = proc->isr_users.awb_isr_added;
-        portEXIT_CRITICAL_ISR(&proc->spinlock);
+        esp_os_exit_critical_isr(&proc->spinlock);
 
         if (do_dispatch) {
             need_yield |= esp_isp_awb_isr(proc, awb_events);
@@ -299,9 +296,9 @@ static void IRAM_ATTR s_isp_isr_dispatcher(void *arg)
         do_dispatch = false;
     }
     if (ae_events) {
-        portENTER_CRITICAL_ISR(&proc->spinlock);
+        esp_os_enter_critical_isr(&proc->spinlock);
         do_dispatch = proc->isr_users.ae_isr_added;
-        portEXIT_CRITICAL_ISR(&proc->spinlock);
+        esp_os_exit_critical_isr(&proc->spinlock);
 
         if (do_dispatch) {
             need_yield |= esp_isp_ae_isr(proc, ae_events);
@@ -309,9 +306,9 @@ static void IRAM_ATTR s_isp_isr_dispatcher(void *arg)
         do_dispatch = false;
     }
     if (sharp_events) {
-        portENTER_CRITICAL_ISR(&proc->spinlock);
+        esp_os_enter_critical_isr(&proc->spinlock);
         do_dispatch = proc->isr_users.sharp_isr_added;
-        portEXIT_CRITICAL_ISR(&proc->spinlock);
+        esp_os_exit_critical_isr(&proc->spinlock);
 
         if (do_dispatch) {
             need_yield |= esp_isp_sharpen_isr(proc, sharp_events);
@@ -319,9 +316,9 @@ static void IRAM_ATTR s_isp_isr_dispatcher(void *arg)
         do_dispatch = false;
     }
     if (hist_events) {
-        portENTER_CRITICAL_ISR(&proc->spinlock);
+        esp_os_enter_critical_isr(&proc->spinlock);
         do_dispatch = proc->isr_users.hist_isr_added;
-        portEXIT_CRITICAL_ISR(&proc->spinlock);
+        esp_os_exit_critical_isr(&proc->spinlock);
 
         if (do_dispatch) {
             need_yield |= esp_isp_hist_isr(proc, hist_events);
@@ -339,7 +336,7 @@ esp_err_t esp_isp_register_isr(isp_proc_handle_t proc, isp_submodule_t submodule
     ESP_RETURN_ON_FALSE(proc, ESP_ERR_INVALID_ARG, TAG, "invalid argument: null pointer");
 
     bool do_alloc = false;
-    portENTER_CRITICAL(&proc->spinlock);
+    esp_os_enter_critical(&proc->spinlock);
     proc->isr_ref_counts++;
     if (proc->isr_ref_counts == 1) {
         assert(!proc->intr_hdl);
@@ -365,7 +362,7 @@ esp_err_t esp_isp_register_isr(isp_proc_handle_t proc, isp_submodule_t submodule
     default:
         assert(false);
     }
-    portEXIT_CRITICAL(&proc->spinlock);
+    esp_os_exit_critical(&proc->spinlock);
 
     if (do_alloc) {
 
@@ -389,7 +386,7 @@ esp_err_t esp_isp_deregister_isr(isp_proc_handle_t proc, isp_submodule_t submodu
     ESP_RETURN_ON_FALSE(proc, ESP_ERR_INVALID_ARG, TAG, "invalid argument: null pointer");
 
     bool do_free = false;
-    portENTER_CRITICAL(&proc->spinlock);
+    esp_os_enter_critical(&proc->spinlock);
     proc->isr_ref_counts--;
     assert(proc->isr_ref_counts >= 0);
     if (proc->isr_ref_counts == 0) {
@@ -416,7 +413,7 @@ esp_err_t esp_isp_deregister_isr(isp_proc_handle_t proc, isp_submodule_t submodu
     default:
         assert(false);
     }
-    portEXIT_CRITICAL(&proc->spinlock);
+    esp_os_exit_critical(&proc->spinlock);
 
     if (do_free) {
         esp_intr_disable(proc->intr_hdl);

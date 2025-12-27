@@ -1,7 +1,7 @@
 /*
- * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
  *
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
  */
 
 
@@ -126,3 +126,4 @@ PROVIDE ( EMAC_DMA           = 0x50099000 );
 PROVIDE ( CACHE              = 0x3FF10000);
 PROVIDE ( TRACE0             = 0x3FF04000);
 PROVIDE ( TRACE1             = 0x3FF05000);
+PROVIDE ( ASSIST_DEBUG       = 0x3FF06000);

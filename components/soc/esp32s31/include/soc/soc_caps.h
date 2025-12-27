@@ -1,7 +1,7 @@
 /*
  * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
  *
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
  */
 
 /*
@@ -19,6 +19,9 @@
 #if __has_include("soc/soc_caps_eval.h")
 #include "soc/soc_caps_eval.h"
 #endif
+
+#define _SOC_CAPS_TARGET_IS_ESP32S31       1 // [gen_soc_caps:ignore]
+
 /*-------------------------- COMMON CAPS ---------------------------------------*/
 // #define SOC_ADC_SUPPORTED               1      // TODO: [ESP32S31] IDF-14741
 // #define SOC_ANA_CMPR_SUPPORTED          1      // TODO: [ESP32S31] IDF-14787
@@ -95,6 +98,11 @@
 
 /*-------------------------- XTAL CAPS ---------------------------------------*/
 #define SOC_XTAL_SUPPORT_40M            1
+
+/*-------------------------- ADC CAPS ----------------------------------------*/
+/*!< SAR ADC Module*/
+#define SOC_ADC_MAX_CHANNEL_NUM                 (10)
+#define SOC_ADC_PERIPH_NUM                      (2)
 
 /*-------------------------- CACHE CAPS --------------------------------------*/
 // TODO: [ESP32S31] IDF-14651
@@ -176,21 +184,17 @@
 // TODO: [ESP32S31] IDF-14734
 #define SOC_SPI_PERIPH_NUM              3
 #define SOC_SPI_PERIPH_CS_NUM(i)        (((i)==0)? 2: (((i)==1)? 6: 3))
-#define SOC_SPI_MAX_CS_NUM              6
 #define SOC_SPI_MAXIMUM_BUFFER_SIZE     64
+#define SOC_SPI_MAX_BITWIDTH(host_id)   ((host_id == 2) ? 4 : 8) // Supported line mode: SPI3: 1, 2, 4, SPI1/2: 1, 2, 4, 8
 
-// Peripheral supports DIO, DOUT, QIO, or QOUT
-// host_id = 0 -> SPI0/SPI1, host_id = 1 -> SPI2,
-#define SOC_SPI_PERIPH_SUPPORT_MULTILINE_MODE(host_id)  ({(void)host_id; 1;})
-
-#define SOC_MSPI_HAS_INDEPENT_IOMUX 1
-#define SOC_MEMSPI_IS_INDEPENDENT   1
 /*-------------------------- SPI MEM CAPS ---------------------------------------*/
-
-#define SOC_SPI_PERIPH_SUPPORT_CONTROL_DUMMY_OUT (1)
+#define SOC_MSPI_HAS_INDEPENT_IOMUX               1
+#define SOC_MEMSPI_IS_INDEPENDENT                 1
+#define SOC_MEMSPI_SUPPORT_CONTROL_DUMMY_OUT      1
 
 #define SOC_MEMSPI_SRC_FREQ_80M_SUPPORTED         1
 #define SOC_MEMSPI_SRC_FREQ_40M_SUPPORTED         1
+#define SOC_SPI_MEM_PSRAM_FREQ_AXI_CONSTRAINED       1
 
 #define SOC_MEMSPI_FLASH_PSRAM_INDEPENDENT        1
 
@@ -239,27 +243,21 @@
 #define SOC_UART_FIFO_LEN               (128)       /*!< The UART hardware FIFO length */
 #define SOC_LP_UART_FIFO_LEN            (16)        /*!< The LP UART hardware FIFO length */
 #define SOC_UART_BITRATE_MAX            (5000000)   /*!< Max bit rate supported by UART */
-#define SOC_UART_SUPPORT_PLL_F80M_CLK   (1)         /*!< Support PLL_F80M as the clock source */
 #define SOC_UART_SUPPORT_RTC_CLK        (1)         /*!< Support RTC clock as the clock source */
 #define SOC_UART_SUPPORT_XTAL_CLK       (1)         /*!< Support XTAL clock as the clock source */
 #define SOC_UART_SUPPORT_WAKEUP_INT     (1)         /*!< Support UART wakeup interrupt */
 // #define SOC_UART_HAS_LP_UART            (1)         /*!< Support LP UART */
 // #define SOC_UART_SUPPORT_SLEEP_RETENTION   (1)      /*!< Support back up registers before sleep */
 
-// UART has an extra TX_WAIT_SEND state when the FIFO is not empty and XOFF is enabled
-#define SOC_UART_SUPPORT_FSM_TX_WAIT_SEND   (1)
-
 #define SOC_UART_WAKEUP_CHARS_SEQ_MAX_LEN 5
 #define SOC_UART_WAKEUP_SUPPORT_ACTIVE_THRESH_MODE (1)
 
 // /*-------------------------- CLOCK SUBSYSTEM CAPS ----------------------------------------*/
 // TODO: [ESP32S31] IDF-14733
-#define SOC_CLK_RC_FAST_SUPPORT_CALIBRATION       (1)
 #define SOC_MODEM_CLOCK_IS_INDEPENDENT            (1)
 
 #define SOC_CLK_APLL_SUPPORTED                    (1)     /*!< Support Audio PLL */
 #define SOC_CLK_SDIO_PLL_SUPPORTED                (1)     /*!< Support SDIO PLL */
-#define SOC_CLK_XTAL32K_SUPPORTED                 (1)     /*!< Support to connect an external low frequency crystal */
 #define SOC_CLK_RC32K_SUPPORTED                   (1)     /*!< Support an internal 32kHz RC oscillator */
 
 #define SOC_CLK_LP_FAST_SUPPORT_LP_PLL            (1)      /*!< Support LP_PLL clock as the LP_FAST clock source */

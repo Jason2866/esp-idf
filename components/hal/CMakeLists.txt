@@ -5,11 +5,6 @@ set(srcs "hal_utils.c")
 set(includes "platform_port/include")
 set(requires)
 
-if(${target} STREQUAL "esp32")
-    # TODO: IDF-14079 remove this dependency when ADC hal is graduated from the common hal component
-    list(APPEND requires esp_hal_i2s)
-endif()
-
 # target specific include must be added before the generic one
 # because of the "include_next" directive used by the efuse_hal.h
 list(APPEND includes "${target}/include")
@@ -52,8 +47,7 @@ else()
 endif()
 
 if(esp_tee_build)
-    list(APPEND srcs "apm_hal.c"
-                     "brownout_hal.c")
+    list(APPEND srcs "apm_hal.c")
 
     if(CONFIG_SOC_AES_SUPPORTED)
         list(APPEND srcs "aes_hal.c")
@@ -85,44 +79,8 @@ elseif(NOT BOOTLOADER_BUILD)
         list(APPEND srcs "systimer_hal.c")
     endif()
 
-    if(CONFIG_SOC_UART_SUPPORTED)
-        list(APPEND srcs "uart_hal.c" "uart_hal_iram.c")
-    endif()
-
-    if(CONFIG_SOC_GPIO_PORT)
-        list(APPEND srcs "gpio_hal.c")
-    endif()
-
-    if(CONFIG_SOC_RTCIO_PIN_COUNT)
-        list(APPEND srcs "rtc_io_hal.c")
-    endif()
-
-    if(CONFIG_SOC_LEDC_SUPPORTED)
-        list(APPEND srcs "ledc_hal.c" "ledc_hal_iram.c")
-    endif()
-
     if(CONFIG_SOC_I3C_MASTER_SUPPORTED)
         list(APPEND srcs "i3c_master_hal.c")
-    endif()
-
-    if(CONFIG_SOC_ISP_SUPPORTED)
-        list(APPEND srcs "isp_hal.c")
-    endif()
-
-    if(CONFIG_SOC_UHCI_SUPPORTED)
-        list(APPEND srcs "uhci_hal.c")
-    endif()
-
-    if(CONFIG_SOC_TWAI_SUPPORTED)
-        if(CONFIG_SOC_TWAI_SUPPORT_FD)
-            list(APPEND srcs "twai_hal_v2.c")
-        else()
-            list(APPEND srcs "twai_hal_v1.c")
-        endif()
-    endif()
-
-    if(CONFIG_SOC_SDM_SUPPORTED)
-        list(APPEND srcs "sdm_hal.c")
     endif()
 
     if(CONFIG_SOC_SDMMC_HOST_SUPPORTED)
@@ -131,14 +89,6 @@ elseif(NOT BOOTLOADER_BUILD)
 
     if(CONFIG_SOC_ETM_SUPPORTED)
         list(APPEND srcs "etm_hal.c" "${target}/etm_periph.c")
-    endif()
-
-    if(CONFIG_SOC_ADC_SUPPORTED)
-        list(APPEND srcs "adc_hal_common.c" "adc_oneshot_hal.c")
-
-        if(CONFIG_SOC_ADC_DMA_SUPPORTED)
-            list(APPEND srcs "adc_hal.c")
-        endif()
     endif()
 
     if(CONFIG_SOC_ECC_SUPPORTED)
@@ -165,41 +115,8 @@ elseif(NOT BOOTLOADER_BUILD)
         list(APPEND srcs "${target}/modem_clock_hal.c")
     endif()
 
-    if(CONFIG_SOC_PAU_SUPPORTED)
-        list(APPEND srcs "${target}/pau_hal.c")
-    endif()
-
-    if(CONFIG_SOC_BOD_SUPPORTED)
-        list(APPEND srcs "brownout_hal.c")
-    endif()
-
-    if(CONFIG_SOC_VBAT_SUPPORTED)
-        list(APPEND srcs "vbat_hal.c")
-    endif()
-
-    if(CONFIG_SOC_PPA_SUPPORTED)
-        list(APPEND srcs "ppa_hal.c")
-    endif()
-
-    if(CONFIG_SOC_GPSPI_SUPPORTED)
-        list(APPEND srcs
-            "spi_hal.c"
-            "spi_hal_iram.c"
-            "spi_slave_hal.c"
-            "spi_slave_hal_iram.c"
-        )
-
-        if(CONFIG_SOC_SPI_SUPPORT_SLAVE_HD_VER2)
-            list(APPEND srcs "spi_slave_hd_hal.c")
-        endif()
-    endif()
-
     if(CONFIG_SOC_SDIO_SLAVE_SUPPORTED)
         list(APPEND srcs "sdio_slave_hal.c")
-    endif()
-
-    if(CONFIG_SOC_PMU_SUPPORTED)
-        list(APPEND srcs "${target}/pmu_hal.c")
     endif()
 
     if(CONFIG_SOC_APM_SUPPORTED)
@@ -215,25 +132,6 @@ elseif(NOT BOOTLOADER_BUILD)
         # For ESP32-S2 we do not have DS HAL layer implementation yet
         list(APPEND srcs "ds_hal.c")
     endif()
-
-    if(CONFIG_SOC_TOUCH_SENSOR_SUPPORTED)
-        # Source files for the legacy touch hal driver
-        if(CONFIG_SOC_TOUCH_SENSOR_VERSION LESS 3)
-            list(APPEND srcs "${target}/touch_sensor_hal.c")
-            list(APPEND srcs "touch_sensor_hal.c")
-        endif()
-        # Source files for the new touch hal driver
-        list(APPEND srcs "touch_sens_hal.c")
-    endif()
-
-    if(CONFIG_SOC_TEMP_SENSOR_SUPPORTED)
-        list(APPEND srcs "temperature_sensor_hal.c")
-    endif()
-
-    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/${target}/rtc_cntl_hal.c")
-        list(APPEND srcs "${target}/rtc_cntl_hal.c")
-    endif()
-
 endif()
 
 idf_component_register(SRCS ${srcs}

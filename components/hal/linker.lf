@@ -9,7 +9,3 @@ entries:
             cache_hal (noflash)
     if SOC_SYSTIMER_SUPPORTED = y && HAL_SYSTIMER_USE_ROM_IMPL = n:
         systimer_hal (noflash)
-    if SOC_PMU_SUPPORTED = y:
-        pmu_hal (noflash)
-    if SOC_GPIO_PORT != 0:
-        gpio_hal: gpio_hal_isolate_in_sleep (noflash)
