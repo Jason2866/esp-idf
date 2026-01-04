@@ -110,6 +110,10 @@ int fcntl(int fd, int cmd, ...)
     return _fcntl_r(__getreent(), fd, cmd, arg);
 }
 
+int getpid()
+{
+    return _getpid_r(__getreent());
+}
 #endif // CONFIG_LIBC_PICOLIBC
 
 void _exit(int __status)
@@ -122,6 +126,7 @@ int fstat(int fd, struct stat *st)
     return _fstat_r(__getreent(), fd, st);
 }
 
+#ifndef CONFIG_LIBC_PICOLIBC
 #if CONFIG_SPIRAM_CACHE_LIBMISC_IN_IRAM
 IRAM_ATTR
 #endif
@@ -129,6 +134,7 @@ int raise(int sig)
 {
     return _raise_r(__getreent(), sig);
 }
+#endif // !CONFIG_LIBC_PICOLIBC
 
 #if CONFIG_SPIRAM_CACHE_LIBMISC_IN_IRAM
 IRAM_ATTR

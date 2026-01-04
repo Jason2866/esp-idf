@@ -43,7 +43,11 @@ if(CONFIG_OPENTHREAD_ENABLED)
     set(exclude_srcs
         "openthread/examples/platforms/utils/logging_rtt.c"
         "openthread/examples/platforms/utils/soft_source_match_table.c"
-        "openthread/src/core/instance/extension_example.cpp")
+        "openthread/src/core/instance/extension_example.cpp"
+        "openthread/src/core/crypto/crypto_platform_mbedtls.cpp"
+        "openthread/src/core/api/random_crypto_api.cpp"
+        )
+
 
     if(CONFIG_OPENTHREAD_FTD OR CONFIG_OPENTHREAD_MTD)
         list(APPEND src_dirs
@@ -194,6 +198,11 @@ if(CONFIG_OPENTHREAD_ENABLED)
     if(NOT CONFIG_OPENTHREAD_PLATFORM_MSGPOOL_MANAGEMENT)
         list(APPEND exclude_srcs
             "src/port/esp_openthread_messagepool.c")
+    endif()
+
+    if(NOT CONFIG_OPENTHREAD_RCP_SPINEL_CONSOLE)
+        list(APPEND exclude_srcs
+            "src/ncp/esp_openthread_ncp_console.cpp")
     endif()
 
     if(CONFIG_OPENTHREAD_FTD)

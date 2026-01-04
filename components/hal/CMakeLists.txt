@@ -3,6 +3,7 @@ idf_build_get_property(esp_tee_build ESP_TEE_BUILD)
 
 set(srcs "hal_utils.c")
 set(includes "platform_port/include")
+set(requires)
 
 # target specific include must be added before the generic one
 # because of the "include_next" directive used by the efuse_hal.h
@@ -83,14 +84,6 @@ elseif(NOT BOOTLOADER_BUILD)
         list(APPEND srcs "uart_hal.c" "uart_hal_iram.c")
     endif()
 
-    if(CONFIG_SOC_GPIO_PORT)
-        list(APPEND srcs "gpio_hal.c")
-    endif()
-
-    if(CONFIG_SOC_RTCIO_PIN_COUNT)
-        list(APPEND srcs "rtc_io_hal.c")
-    endif()
-
     if(CONFIG_SOC_LEDC_SUPPORTED)
         list(APPEND srcs "ledc_hal.c" "ledc_hal_iram.c")
     endif()
@@ -99,36 +92,8 @@ elseif(NOT BOOTLOADER_BUILD)
         list(APPEND srcs "i3c_master_hal.c")
     endif()
 
-    if(CONFIG_SOC_ISP_SUPPORTED)
-        list(APPEND srcs "isp_hal.c")
-    endif()
-
-    if(CONFIG_SOC_LP_I2S_SUPPORTED)
-        list(APPEND srcs "lp_i2s_hal.c")
-    endif()
-
-    if(CONFIG_SOC_RMT_SUPPORTED)
-        list(APPEND srcs "rmt_hal.c")
-    endif()
-
     if(CONFIG_SOC_UHCI_SUPPORTED)
         list(APPEND srcs "uhci_hal.c")
-    endif()
-
-    if(CONFIG_SOC_TWAI_SUPPORTED)
-        if(CONFIG_SOC_TWAI_SUPPORT_FD)
-            list(APPEND srcs "twai_hal_v2.c")
-        else()
-            list(APPEND srcs "twai_hal_v1.c")
-        endif()
-    endif()
-
-    if(CONFIG_SOC_I2S_SUPPORTED)
-        list(APPEND srcs "i2s_hal.c")
-    endif()
-
-    if(CONFIG_SOC_SDM_SUPPORTED)
-        list(APPEND srcs "sdm_hal.c")
     endif()
 
     if(CONFIG_SOC_SDMMC_HOST_SUPPORTED)
@@ -141,22 +106,6 @@ elseif(NOT BOOTLOADER_BUILD)
 
     if(CONFIG_SOC_ETM_SUPPORTED)
         list(APPEND srcs "etm_hal.c" "${target}/etm_periph.c")
-    endif()
-
-    if(CONFIG_SOC_PARLIO_SUPPORTED)
-        list(APPEND srcs "parlio_hal.c")
-    endif()
-
-    if(CONFIG_SOC_ADC_SUPPORTED)
-        list(APPEND srcs "adc_hal_common.c" "adc_oneshot_hal.c")
-
-        if(CONFIG_SOC_ADC_DMA_SUPPORTED)
-            list(APPEND srcs "adc_hal.c")
-        endif()
-    endif()
-
-    if(CONFIG_SOC_MIPI_CSI_SUPPORTED)
-        list(APPEND srcs "mipi_csi_hal.c")
     endif()
 
     if(CONFIG_SOC_ECC_SUPPORTED)
@@ -199,23 +148,6 @@ elseif(NOT BOOTLOADER_BUILD)
         list(APPEND srcs "jpeg_hal.c")
     endif()
 
-    if(CONFIG_SOC_PPA_SUPPORTED)
-        list(APPEND srcs "ppa_hal.c")
-    endif()
-
-    if(CONFIG_SOC_GPSPI_SUPPORTED)
-        list(APPEND srcs
-            "spi_hal.c"
-            "spi_hal_iram.c"
-            "spi_slave_hal.c"
-            "spi_slave_hal_iram.c"
-        )
-
-        if(CONFIG_SOC_SPI_SUPPORT_SLAVE_HD_VER2)
-            list(APPEND srcs "spi_slave_hd_hal.c")
-        endif()
-    endif()
-
     if(CONFIG_SOC_SDIO_SLAVE_SUPPORTED)
         list(APPEND srcs "sdio_slave_hal.c")
     endif()
@@ -238,24 +170,6 @@ elseif(NOT BOOTLOADER_BUILD)
         list(APPEND srcs "ds_hal.c")
     endif()
 
-    if(CONFIG_SOC_LCDCAM_CAM_SUPPORTED)
-        list(APPEND srcs "cam_hal.c")
-    endif()
-
-    if(CONFIG_SOC_USB_SERIAL_JTAG_SUPPORTED)
-        list(APPEND srcs "usb_serial_jtag_hal.c")
-    endif()
-
-    if(CONFIG_SOC_TOUCH_SENSOR_SUPPORTED)
-        # Source files for the legacy touch hal driver
-        if(CONFIG_SOC_TOUCH_SENSOR_VERSION LESS 3)
-            list(APPEND srcs "${target}/touch_sensor_hal.c")
-            list(APPEND srcs "touch_sensor_hal.c")
-        endif()
-        # Source files for the new touch hal driver
-        list(APPEND srcs "touch_sens_hal.c")
-    endif()
-
     if(CONFIG_SOC_TEMP_SENSOR_SUPPORTED)
         list(APPEND srcs "temperature_sensor_hal.c")
     endif()
@@ -269,7 +183,8 @@ endif()
 idf_component_register(SRCS ${srcs}
                        INCLUDE_DIRS ${includes}
                        PRIV_INCLUDE_DIRS ${priv_include}
-                       REQUIRES soc esp_rom
+                       REQUIRES ${requires}
+                       PRIV_REQUIRES esp_hal_gpio
                        LDFRAGMENTS linker.lf)
 
 if(CONFIG_HAL_DEFAULT_ASSERTION_LEVEL EQUAL 1)

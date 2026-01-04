@@ -9,7 +9,7 @@ if(${target} STREQUAL "linux")
     return()
 endif()
 
-set(requires esp_hal_dma esp_hal_usb)
+set(requires esp_hal_dma esp_hal_gpio esp_hal_usb)
 # only esp_hw_support/adc_share_hw_ctrl.c requires efuse component
 set(priv_requires efuse spi_flash bootloader_support esp_hal_wdt)
 
@@ -77,9 +77,13 @@ if(NOT non_os_build)
     # [refactor-todo]
     list(APPEND priv_requires esp_driver_gpio   # for GPIO and RTC (by sleep_gpio and sleep_modes)
                               esp_timer
+                              esp_hal_touch_sens # for touch sensor wakeup (introduced in sleep_modes.c)
                               esp_pm)
 
-    list(APPEND priv_requires esp_mm esp_hal_mspi)
+    list(APPEND priv_requires esp_mm
+                              esp_hal_mspi
+                              esp_hal_i2s  # required by `sleep_system_peripheral.c`
+    )
 
     if(CONFIG_IDF_TARGET_ESP32 OR CONFIG_IDF_TARGET_ESP32S2)
         list(APPEND srcs "rtc_wdt.c")
@@ -211,6 +215,11 @@ if(NOT CONFIG_ESP32P4_SELECTS_REV_LESS_V3 AND CONFIG_IDF_TARGET_ESP32P4)
     endif()
 endif()
 
+if(${target} STREQUAL "esp32p4")
+    # for mipi_csi_share_hw_ctrl.c
+    list(APPEND priv_requires esp_hal_cam)
+endif()
+
 idf_component_register(SRCS ${srcs}
                        INCLUDE_DIRS ${public_include_dirs}
                        PRIV_INCLUDE_DIRS port/include include/esp_private
@@ -234,3 +243,11 @@ if(NOT non_os_build)
         idf_component_optional_requires(PRIVATE esp_psram)
     endif()
 endif()
+
+if(${target} STREQUAL "esp32p4")
+    # for mipi_csi_share_hw_ctrl.c
+    idf_component_optional_requires(PRIVATE esp_hal_cam)
+endif()
+
+# Required in `adc_share_hw_ctrl.h`
+idf_component_optional_requires(PUBLIC esp_hal_ana_conv)

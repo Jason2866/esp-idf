@@ -15,6 +15,7 @@
 #include "esp_timer.h"
 #include "esp_memory_utils.h"
 #include "soc/chip_revision.h"
+#include "soc/sdmmc_pins.h"
 #include "soc/sdmmc_periph.h"
 #include "soc/soc_caps.h"
 #include "hal/efuse_hal.h"
@@ -29,6 +30,7 @@
 #include "esp_private/esp_cache_private.h"
 #include "esp_private/gpio.h"
 #include "esp_private/sd_host_private.h"
+#include "freertos/FreeRTOS.h"
 
 typedef struct sd_platform_t {
     _lock_t              mutex;

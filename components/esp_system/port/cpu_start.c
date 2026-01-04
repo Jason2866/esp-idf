@@ -197,6 +197,21 @@ static void core_intr_matrix_clear(void)
 #endif // SOC_INT_CLIC_SUPPORTED
 }
 
+#if CONFIG_LIBC_PICOLIBC
+FORCE_INLINE_ATTR IRAM_ATTR void init_pre_rtos_tls_area(int cpu_num)
+{
+    /**
+     * Initialize the TLS area before RTOS starts, in case any code tries to access
+     * TLS variables.
+     *
+     * TODO IDF-14914: Currently, we only initialize errno, which is the first TLS
+     * variable as guaranteed by the linker script.
+     */
+    static int s_errno_array[SOC_CPU_CORES_NUM];
+    esp_cpu_set_threadptr(&s_errno_array[cpu_num]);
+}
+#endif
+
 #if !CONFIG_ESP_SYSTEM_SINGLE_CORE_MODE
 void startup_resume_other_cores(void)
 {
@@ -216,6 +231,10 @@ void ESP_SYSTEM_IRAM_ATTR call_start_cpu1(void)
         ".option pop"
     );
 #endif  //#ifdef __riscv
+
+#if CONFIG_LIBC_PICOLIBC
+    init_pre_rtos_tls_area(1);
+#endif
 
 #if SOC_BRANCH_PREDICTOR_SUPPORTED
     esp_cpu_branch_prediction_enable();
@@ -667,6 +686,10 @@ NOINLINE_ATTR static void system_early_init(const soc_reset_reason_t *rst_reas)
 
 #if SOC_CPU_CORES_NUM > 1 // there is no 'single-core mode' for natively single-core processors
 #if !CONFIG_ESP_SYSTEM_SINGLE_CORE_MODE
+#if CONFIG_IDF_TARGET_ESP32P4 && CONFIG_ESP32P4_REV_MIN_FULL >= 300
+    // Ensure autoclock gating mode for core1 is enabled, it gets disabled in single-core mode.
+    REG_SET_BIT(HP_SYS_CLKRST_CPU_WAITI_CTRL0_REG, HP_SYS_CLKRST_REG_CORE1_WAITI_ICG_EN);
+#endif
     start_other_core();
 #else
     ESP_EARLY_LOGI(TAG, "Single core mode");
@@ -942,6 +965,10 @@ void IRAM_ATTR call_start_cpu0(void)
     get_reset_reason(rst_reas);
     // Clear BSS. Please do not attempt to do any complex stuff (like early logging) before this.
     init_bss(rst_reas);
+
+#if CONFIG_LIBC_PICOLIBC
+    init_pre_rtos_tls_area(0);
+#endif
 
     // When the APP is loaded into ram for execution, some hardware initialization steps used to be executed in the
     // bootloader are done here.

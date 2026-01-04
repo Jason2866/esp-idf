@@ -45,9 +45,9 @@ menu "OpenThread"
     endmenu
 
     menu "Thread Console"
+        depends on OPENTHREAD_ENABLED
         config OPENTHREAD_CONSOLE_ENABLE
             bool "Enable OpenThread console"
-            depends on OPENTHREAD_ENABLED
             default y
             help
                 Enable the OpenThread-specific console provided by the SDK. This only controls whether
@@ -239,6 +239,12 @@ menu "OpenThread"
                 default y
                 help
                     Select this to enable OpenThread NCP vendor commands.
+
+            config OPENTHREAD_RCP_SPINEL_CONSOLE
+                bool "Enable RCP console via Spinel"
+                default n
+                help
+                    Select this to enable sending console commands to OpenThread RCP via Spinel.
         endmenu
 
         config OPENTHREAD_BORDER_ROUTER
@@ -430,7 +436,7 @@ menu "OpenThread"
 
             config OPENTHREAD_PLATFORM_MSGPOOL_MANAGEMENT
                 bool 'Allocate message pool buffer from PSRAM'
-                default n
+                default y
                 help
                     If enabled, the message pool is managed by platform defined logic.
         endmenu
@@ -464,7 +470,8 @@ menu "OpenThread"
 
             config OPENTHREAD_NUM_MESSAGE_BUFFERS
                 int "The number of openthread message buffers"
-                default 65
+                default 65 if !OPENTHREAD_PLATFORM_MSGPOOL_MANAGEMENT
+                default 1024 if OPENTHREAD_PLATFORM_MSGPOOL_MANAGEMENT
 
             config OPENTHREAD_XTAL_ACCURACY
                 int "The accuracy of the XTAL"

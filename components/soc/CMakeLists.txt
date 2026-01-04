@@ -64,18 +64,6 @@ if(target STREQUAL "esp32")
     list(APPEND srcs "${target_folder}/dport_access.c")
 endif()
 
-if(CONFIG_SOC_ADC_SUPPORTED)
-    list(APPEND srcs "${target_folder}/adc_periph.c")
-endif()
-
-if(CONFIG_SOC_ANA_CMPR_SUPPORTED)
-    list(APPEND srcs "${target_folder}/ana_cmpr_periph.c")
-endif()
-
-if(CONFIG_SOC_DEDICATED_GPIO_SUPPORTED)
-    list(APPEND srcs "${target_folder}/dedic_gpio_periph.c")
-endif()
-
 if(CONFIG_SOC_DEBUG_PROBE_SUPPORTED)
     list(APPEND srcs "${target_folder}/debug_probe_periph.c")
 endif()
@@ -84,28 +72,8 @@ if(CONFIG_SOC_EMAC_SUPPORTED)
     list(APPEND srcs "${target_folder}/emac_periph.c")
 endif()
 
-if(CONFIG_SOC_GPSPI_SUPPORTED)
-    list(APPEND srcs "${target_folder}/spi_periph.c")
-endif()
-
 if(CONFIG_SOC_LEDC_SUPPORTED)
     list(APPEND srcs "${target_folder}/ledc_periph.c")
-endif()
-
-if(CONFIG_SOC_RMT_SUPPORTED)
-    list(APPEND srcs "${target_folder}/rmt_periph.c")
-endif()
-
-if(CONFIG_SOC_SDM_SUPPORTED)
-    list(APPEND srcs "${target_folder}/sdm_periph.c")
-endif()
-
-if(CONFIG_SOC_ISP_SUPPORTED)
-    list(APPEND srcs "${target}/isp_periph.c")
-endif()
-
-if(CONFIG_SOC_I2S_SUPPORTED)
-    list(APPEND srcs "${target_folder}/i2s_periph.c")
 endif()
 
 if(CONFIG_SOC_I3C_MASTER_SUPPORTED)
@@ -116,14 +84,6 @@ if(CONFIG_SOC_TEMP_SENSOR_SUPPORTED)
     list(APPEND srcs "${target_folder}/temperature_sensor_periph.c")
 endif()
 
-if(CONFIG_SOC_MIPI_CSI_SUPPORTED)
-    list(APPEND srcs "${target_folder}/mipi_csi_periph.c")
-endif()
-
-if(CONFIG_SOC_PARLIO_SUPPORTED)
-    list(APPEND srcs "${target_folder}/parlio_periph.c")
-endif()
-
 if(CONFIG_SOC_MPI_SUPPORTED)
     list(APPEND srcs "${target_folder}/mpi_periph.c")
 endif()
@@ -132,26 +92,10 @@ if(CONFIG_SOC_SDMMC_HOST_SUPPORTED)
     list(APPEND srcs "${target_folder}/sdmmc_periph.c")
 endif()
 
-if(CONFIG_SOC_TOUCH_SENSOR_SUPPORTED)
-    list(APPEND srcs "${target_folder}/touch_sensor_periph.c")
-endif()
-
-if(CONFIG_SOC_TWAI_SUPPORTED)
-    list(APPEND srcs "${target_folder}/twai_periph.c")
-endif()
-
 if(CONFIG_SOC_IEEE802154_SUPPORTED)
     if(NOT target STREQUAL "esp32h4")
         list(APPEND srcs "${target_folder}/ieee802154_periph.c")
     endif()
-endif()
-
-if(CONFIG_SOC_DAC_SUPPORTED)
-    list(APPEND srcs "${target_folder}/dac_periph.c")
-endif()
-
-if(CONFIG_SOC_RTCIO_PIN_COUNT GREATER 0)
-    list(APPEND srcs "${target_folder}/rtc_io_periph.c")
 endif()
 
 if(CONFIG_SOC_SDIO_SLAVE_SUPPORTED)
@@ -160,10 +104,6 @@ endif()
 
 if(CONFIG_SOC_PAU_SUPPORTED AND CONFIG_SOC_LIGHT_SLEEP_SUPPORTED AND CONFIG_SOC_PM_SUPPORT_TOP_PD)
     list(APPEND srcs "${target_folder}/system_retention_periph.c")
-endif()
-
-if(CONFIG_SOC_LCDCAM_CAM_SUPPORTED)
-    list(APPEND srcs "${target_folder}/cam_periph.c")
 endif()
 
 if(CONFIG_SOC_BOD_SUPPORTED)

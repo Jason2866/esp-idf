@@ -44,6 +44,7 @@ static bool s_rf_closed = true;
 #define CCA_DETECTION_TIME 8
 
 extern void ieee802154_txon_delay_set(void);
+extern uint32_t bt_bb_get_cur_rx_info(void);
 
 IEEE802154_STATIC volatile ieee802154_state_t s_ieee802154_state;
 static uint8_t *s_tx_frame = NULL;
@@ -167,7 +168,7 @@ static IEEE802154_NOINLINE void ieee802154_rx_frame_info_update(void)
 
 int8_t ieee802154_get_recent_rssi(void)
 {
-    return s_rx_frame_info[s_recent_rx_frame_info_index].rssi;
+    return (int8_t)(bt_bb_get_cur_rx_info() & 0xff);
 }
 
 uint8_t ieee802154_get_recent_lqi(void)
@@ -651,7 +652,7 @@ static IRAM_ATTR void isr_handle_ed_done(void)
     if (s_ieee802154_state == IEEE802154_STATE_CCA) {
         esp_ieee802154_cca_done(ieee802154_ll_is_cca_busy());
     } else if (s_ieee802154_state == IEEE802154_STATE_ED) {
-        ieee802154_inner_energy_detect_done(ieee802154_ll_get_ed_rss());
+        ieee802154_inner_energy_detect_done(ieee802154_ll_get_ed_rss() + IEEE802154_RSSI_COMPENSATION_VALUE);
     }
 
     NEEDS_NEXT_OPT(true);

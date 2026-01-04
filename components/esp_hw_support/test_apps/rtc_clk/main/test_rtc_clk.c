@@ -10,8 +10,6 @@
 #include "esp_attr.h"
 #include "soc/soc_caps.h"
 #include "soc/rtc.h"
-#include "soc/rtc_periph.h"
-#include "soc/gpio_periph.h"
 #include "hal/gpio_ll.h"
 #include "soc/io_mux_reg.h"
 #include "driver/rtc_io.h"
@@ -263,6 +261,7 @@ static void start_freq(soc_rtc_slow_clk_src_t required_src, uint32_t start_delay
             printf("PASS");
         }
         printf(" [calibration val = %"PRIu32"] \n", esp_clk_slowclk_cal_get());
+        rtc_clk_slow_src_set(SOC_RTC_SLOW_CLK_SRC_DEFAULT);
         stop_rtc_external_quartz();
         esp_rom_delay_us(500000);
     }
@@ -304,6 +303,7 @@ TEST_CASE("Test starting external RTC quartz", "[rtc_clk][test_env=xtal32k]")
         } else {
             printf("PASS\n");
         }
+        rtc_clk_slow_src_set(SOC_RTC_SLOW_CLK_SRC_DEFAULT);
         stop_rtc_external_quartz();
         esp_rom_delay_us(100000);
     }
@@ -446,7 +446,7 @@ TEST_CASE_MULTIPLE_STAGES("Test rtc clk calibration compensation across deep sle
  * output either 150k, 32k, 8M clock to GPIO25.
  */
 #if CONFIG_IDF_TARGET_ESP32
-
+#include "soc/rtc_io_reg.h"
 #include "soc/sens_reg.h"
 
 static void pull_out_clk(int sel)

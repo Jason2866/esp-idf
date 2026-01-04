@@ -357,7 +357,7 @@ int hci_adv_credits_prep_to_release(uint16_t num)
     hci_hal_env.adv_credits_to_release = credits_to_release;
     osi_mutex_unlock(&hci_hal_env.adv_flow_lock);
 
-    if (credits_to_release == num && num != 0) {
+    if (credits_to_release == num) {
         osi_alarm_cancel(hci_hal_env.adv_flow_monitor);
         osi_alarm_set(hci_hal_env.adv_flow_monitor, HCI_ADV_FLOW_MONITOR_PERIOD_MS);
     }
@@ -508,9 +508,10 @@ static void hci_hal_h4_hdl_rx_packet(BT_HDR *packet)
         STREAM_TO_UINT8(length, stream);
     }
 
-    if ((length + hdr_size) != packet->len) {
-        HCI_TRACE_ERROR("Wrong packet length type=%d hdr_len=%d pd_len=%d "
-                  "pkt_len=%d", type, hdr_size, length, packet->len);
+    // Prevents integer wrap-around when calculating (length + hdr_size).
+    if (length != (packet->len - hdr_size)) {
+        HCI_TRACE_ERROR("%s: SECURITY: parameter length (%d) exceeds packet bounds (%d)",
+                        __func__, length, packet->len - hdr_size);
         osi_free(packet);
         return;
     }

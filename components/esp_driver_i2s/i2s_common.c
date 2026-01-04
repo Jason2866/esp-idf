@@ -21,9 +21,8 @@
 #endif
 #include "esp_log.h"
 
-#include "soc/i2s_periph.h"
+#include "hal/i2s_periph.h"
 #include "soc/soc_caps.h"
-#include "soc/soc_caps_full.h"
 #include "hal/i2s_hal.h"
 #include "hal/hal_utils.h"
 #include "hal/dma_types.h"
@@ -227,13 +226,13 @@ static esp_err_t i2s_destroy_controller_obj(i2s_controller_t **i2s_obj)
  * @param id        i2s port id
  * @param search_reverse   reverse the sequence of port acquirement
  *                  set false to acquire from I2S_NUM_0 first
- *                  set true to acquire from SOC_I2S_ATTR(INST_NUM) - 1 first
+ *                  set true to acquire from I2S_LL_GET(INST_NUM) - 1 first
  * @return
  *      - pointer of acquired i2s controller object
  */
 static i2s_controller_t *i2s_acquire_controller_obj(int id)
 {
-    if (id < 0 || id >= SOC_I2S_ATTR(INST_NUM)) {
+    if (id < 0 || id >= I2S_LL_GET(INST_NUM)) {
         return NULL;
     }
     /* pre-alloc controller object */
@@ -372,6 +371,40 @@ err:
     return ret;
 }
 
+#if SOC_I2S_HW_VERSION_1
+esp_err_t i2s_channel_change_port(i2s_chan_handle_t handle, int id)
+{
+    I2S_NULL_POINTER_CHECK(TAG, handle);
+    ESP_RETURN_ON_FALSE(id >= 0 && id < I2S_LL_GET(INST_NUM), ESP_ERR_INVALID_ARG, TAG, "invalid I2S port id");
+    if (id == handle->controller->id) {
+        return ESP_OK;
+    }
+    i2s_controller_t *i2s_obj = i2s_acquire_controller_obj(id);
+    if (!i2s_obj || !i2s_take_available_channel(i2s_obj, handle->dir)) {
+        return ESP_ERR_NOT_FOUND;
+    }
+    i2s_controller_t *old_i2s_obj = handle->controller;
+    portENTER_CRITICAL(&g_i2s.spinlock);
+    if (handle->dir == I2S_DIR_TX) {
+        i2s_obj->tx_chan = handle;
+        i2s_obj->chan_occupancy |= I2S_DIR_TX;
+        old_i2s_obj->tx_chan = NULL;
+        old_i2s_obj->full_duplex = false;
+        old_i2s_obj->chan_occupancy &= ~I2S_DIR_TX;
+    } else {
+        i2s_obj->rx_chan = handle;
+        i2s_obj->chan_occupancy |= I2S_DIR_RX;
+        old_i2s_obj->rx_chan = NULL;
+        old_i2s_obj->full_duplex = false;
+        old_i2s_obj->chan_occupancy &= ~I2S_DIR_RX;
+    }
+    handle->controller = i2s_obj;
+    portEXIT_CRITICAL(&g_i2s.spinlock);
+
+    return ESP_OK;
+}
+#endif
+
 #ifndef __cplusplus
 /* To make sure the i2s_event_callbacks_t is same size as i2s_event_callbacks_internal_t */
 _Static_assert(sizeof(i2s_event_callbacks_t) == sizeof(i2s_event_callbacks_internal_t), "Invalid size of i2s_event_callbacks_t structure");
@@ -418,6 +451,9 @@ uint32_t i2s_get_buf_size(i2s_chan_handle_t handle, uint32_t data_bit_width, uin
     uint32_t bytes_per_sample = (data_bit_width + 7) / 8;
 #endif  // CONFIG_IDF_TARGET_ESP32
     uint32_t bytes_per_frame = bytes_per_sample * active_chan;
+    if (bytes_per_frame == 0) {
+        return 0;
+    }
     uint32_t bufsize = dma_frame_num * bytes_per_frame;
 #if SOC_CACHE_INTERNAL_MEM_VIA_L1CACHE
     /* bufsize need to align with cache line size */
@@ -755,17 +791,17 @@ esp_err_t i2s_init_dma_intr(i2s_chan_handle_t handle, int intr_flag)
 {
     esp_err_t ret = ESP_OK;
     int port_id = handle->controller->id;
-    ESP_RETURN_ON_FALSE((port_id >= 0) && (port_id < SOC_I2S_ATTR(INST_NUM)), ESP_ERR_INVALID_ARG, TAG, "invalid handle");
+    ESP_RETURN_ON_FALSE((port_id >= 0) && (port_id < I2S_LL_GET(INST_NUM)), ESP_ERR_INVALID_ARG, TAG, "invalid handle");
     /* Set GDMA trigger module */
     gdma_trigger_t trig = {.periph = GDMA_TRIG_PERIPH_I2S};
 
     switch (port_id) {
-#if SOC_I2S_ATTR(INST_NUM) > 2
+#if I2S_LL_GET(INST_NUM) > 2
     case I2S_NUM_2:
         trig.instance_id = SOC_GDMA_TRIG_PERIPH_I2S2;
         break;
 #endif
-#if SOC_I2S_ATTR(INST_NUM) > 1
+#if I2S_LL_GET(INST_NUM) > 1
     case I2S_NUM_1:
         trig.instance_id = SOC_GDMA_TRIG_PERIPH_I2S1;
         break;
@@ -826,7 +862,7 @@ esp_err_t i2s_init_dma_intr(i2s_chan_handle_t handle, int intr_flag)
 {
     esp_err_t ret = ESP_OK;
     int port_id = handle->controller->id;
-    ESP_RETURN_ON_FALSE((port_id >= 0) && (port_id < SOC_I2S_ATTR(INST_NUM)), ESP_ERR_INVALID_ARG, TAG, "invalid handle");
+    ESP_RETURN_ON_FALSE((port_id >= 0) && (port_id < I2S_LL_GET(INST_NUM)), ESP_ERR_INVALID_ARG, TAG, "invalid handle");
     intr_flag |= handle->intr_prio_flags;
     /* Initialize I2S module interrupt */
     if (handle->dir == I2S_DIR_TX) {
@@ -948,7 +984,7 @@ esp_err_t i2s_new_channel(const i2s_chan_config_t *chan_cfg, i2s_chan_handle_t *
     /* Parameter validity check */
     I2S_NULL_POINTER_CHECK(TAG, chan_cfg);
     I2S_NULL_POINTER_CHECK(TAG, tx_handle || rx_handle);
-    ESP_RETURN_ON_FALSE((chan_cfg->id >= 0 && chan_cfg->id < SOC_I2S_ATTR(INST_NUM)) || chan_cfg->id == I2S_NUM_AUTO, ESP_ERR_INVALID_ARG, TAG, "invalid I2S port id");
+    ESP_RETURN_ON_FALSE((chan_cfg->id >= 0 && chan_cfg->id < I2S_LL_GET(INST_NUM)) || chan_cfg->id == I2S_NUM_AUTO, ESP_ERR_INVALID_ARG, TAG, "invalid I2S port id");
     ESP_RETURN_ON_FALSE(chan_cfg->dma_desc_num >= 2, ESP_ERR_INVALID_ARG, TAG, "there should be at least 2 DMA buffers");
     ESP_RETURN_ON_FALSE(chan_cfg->intr_priority >= 0 && chan_cfg->intr_priority <= 7, ESP_ERR_INVALID_ARG, TAG, "intr_priority should be within 0~7");
 #if !SOC_HAS(PAU)
@@ -966,7 +1002,7 @@ esp_err_t i2s_new_channel(const i2s_chan_config_t *chan_cfg, i2s_chan_handle_t *
     /* Channel will be registered to one i2s port automatically if id is I2S_NUM_AUTO
      * Otherwise, the channel will be registered to the specific port. */
     if (id == I2S_NUM_AUTO) {
-        for (int i = 0; i < SOC_I2S_ATTR(INST_NUM) && !channel_found; i++) {
+        for (int i = 0; i < I2S_LL_GET(INST_NUM) && !channel_found; i++) {
             i2s_obj = i2s_acquire_controller_obj(i);
             if (!i2s_obj) {
                 continue;
@@ -985,6 +1021,7 @@ esp_err_t i2s_new_channel(const i2s_chan_config_t *chan_cfg, i2s_chan_handle_t *
         ESP_GOTO_ON_ERROR(i2s_register_channel(i2s_obj, I2S_DIR_TX, chan_cfg->dma_desc_num),
                           err, TAG, "register I2S tx channel failed");
         i2s_obj->tx_chan->role = chan_cfg->role;
+        i2s_obj->tx_chan->is_port_auto = id == I2S_NUM_AUTO;
         i2s_obj->tx_chan->intr_prio_flags = chan_cfg->intr_priority ? BIT(chan_cfg->intr_priority) : ESP_INTR_FLAG_LOWMED;
         i2s_obj->tx_chan->dma.auto_clear_after_cb = chan_cfg->auto_clear_after_cb;
         i2s_obj->tx_chan->dma.auto_clear_before_cb = chan_cfg->auto_clear_before_cb;
@@ -1000,6 +1037,7 @@ esp_err_t i2s_new_channel(const i2s_chan_config_t *chan_cfg, i2s_chan_handle_t *
         ESP_GOTO_ON_ERROR(i2s_register_channel(i2s_obj, I2S_DIR_RX, chan_cfg->dma_desc_num),
                           err, TAG, "register I2S rx channel failed");
         i2s_obj->rx_chan->role = chan_cfg->role;
+        i2s_obj->rx_chan->is_port_auto = id == I2S_NUM_AUTO;
         i2s_obj->rx_chan->intr_prio_flags = chan_cfg->intr_priority ? BIT(chan_cfg->intr_priority) : ESP_INTR_FLAG_LOWMED;
         i2s_obj->rx_chan->dma.desc_num = chan_cfg->dma_desc_num;
         i2s_obj->rx_chan->dma.frame_num = chan_cfg->dma_frame_num;
@@ -1023,7 +1061,7 @@ esp_err_t i2s_new_channel(const i2s_chan_config_t *chan_cfg, i2s_chan_handle_t *
 err:
     /* if the controller object has no channel, find the corresponding global object and destroy it */
     if (i2s_obj != NULL && i2s_obj->rx_chan == NULL && i2s_obj->tx_chan == NULL) {
-        for (int i = 0; i < SOC_I2S_ATTR(INST_NUM); i++) {
+        for (int i = 0; i < I2S_LL_GET(INST_NUM); i++) {
             if (i2s_obj == g_i2s.controller[i]) {
                 i2s_destroy_controller_obj(&g_i2s.controller[i]);
                 break;
@@ -1134,7 +1172,7 @@ esp_err_t i2s_channel_get_info(i2s_chan_handle_t handle, i2s_chan_info_t *chan_i
     I2S_NULL_POINTER_CHECK(TAG, chan_info);
 
     /* Find whether the handle is a registered i2s handle or still available */
-    for (int i = 0; i < SOC_I2S_ATTR(INST_NUM); i++) {
+    for (int i = 0; i < I2S_LL_GET(INST_NUM); i++) {
         if (g_i2s.controller[i] != NULL) {
             if (g_i2s.controller[i]->tx_chan == handle ||
                     g_i2s.controller[i]->rx_chan == handle) {

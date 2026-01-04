@@ -2528,10 +2528,6 @@ found_rx:
         }
     }
 
-    if (rpl) {
-        bt_mesh_update_rpl(rpl, net_rx);
-    }
-
     /* Mark segment as received */
     rx->block |= BIT(seg_o);
 
@@ -2542,6 +2538,10 @@ found_rx:
     }
 
     BT_DBG("Complete SDU");
+
+    if (rpl) {
+        bt_mesh_update_rpl(rpl, net_rx);
+    }
 
     *pdu_type = BLE_MESH_FRIEND_PDU_COMPLETE;
 
@@ -2723,9 +2723,9 @@ void bt_mesh_trans_init(void)
 
 #if CONFIG_BLE_MESH_LONG_PACKET
     for (i = 0; i < ARRAY_SIZE(ext_seg_rx); i++) {
-        ext_seg_rx[i].buf.size = CONFIG_BLE_MESH_LONG_PACKET_ADV_LEN;
+        ext_seg_rx[i].buf.size = BLE_MESH_EXT_RX_SDU_MAX;
         ext_seg_rx[i].buf.__buf = (ext_seg_rx_buf_data +
-                                (i * CONFIG_BLE_MESH_LONG_PACKET_ADV_LEN));
+                                (i * BLE_MESH_EXT_RX_SDU_MAX));
         ext_seg_rx[i].buf.data = ext_seg_rx[i].buf.__buf;
     }
 #endif

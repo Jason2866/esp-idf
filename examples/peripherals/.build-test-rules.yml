@@ -10,19 +10,11 @@
 examples/peripherals/adc/continuous_read:
   disable:
     - if: SOC_ADC_DMA_SUPPORTED != 1
-  disable_test:
-    - if: IDF_TARGET == "esp32p4"
-      temporary: true
-      reason: p4 rev3 migration # TODO: IDF-14357
   <<: *adc_dependencies
 
 examples/peripherals/adc/oneshot_read:
   disable:
     - if: SOC_ADC_SUPPORTED != 1
-  disable_test:
-    - if: IDF_TARGET == "esp32p4"
-      temporary: true
-      reason: p4 rev3 migration # TODO: IDF-14357
   <<: *adc_dependencies
 
 examples/peripherals/analog_comparator:
@@ -388,6 +380,7 @@ examples/peripherals/ppa/ppa_dsi:
     - if: SOC_PPA_SUPPORTED != 1 or SOC_MIPI_DSI_SUPPORTED != 1
   depends_components:
     - esp_driver_ppa
+    - esp_hal_ppa
     - esp_lcd
 
 examples/peripherals/rmt:
@@ -586,11 +579,12 @@ examples/peripherals/usb/device:
   disable:
     - if: SOC_USB_OTG_SUPPORTED != 1
   disable_test:
-    - if: IDF_TARGET not in ["esp32s2"]
+    - if: IDF_TARGET not in ["esp32s2", "esp32p4"]
       temporary: true
-      reason: lack of runners with usb_device tag # TODO: IDF-14369
+      reason: lack of runners with usb_device tag
   depends_components:
     - fatfs
+    - esp_hw_support # for usb_phy
   depends_filepatterns:
     - components/soc/esp32*/include/soc/usb_dwc_struct.h
     - components/esp_hw_support/usb_phy/usb_phy.c
@@ -625,6 +619,7 @@ examples/peripherals/usb/host:
   depends_components:
     - fatfs
     - esp_hal_usb
+    - esp_hw_support # for usb_phy
   depends_filepatterns:
     - components/soc/esp32*/include/soc/usb_dwc_struct.h
     - components/esp_hw_support/usb_phy/usb_phy.c

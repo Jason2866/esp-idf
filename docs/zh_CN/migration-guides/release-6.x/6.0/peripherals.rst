@@ -52,6 +52,11 @@ RTC 子系统控制
 
 低功耗模块通常会共享一些资源，比如中断号。为避免资源冲突，私有头文件 ``esp_private/rtc_ctrl.h`` 提供了相关 API 方便管理这些共享资源。原先用于同样目的的头文件 ``driver/rtc_cntl.h`` 已被移除。
 
+驱动头文件移除 FreeRTOS 依赖
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+自 v6.0 起，为了增强 IDF 驱动的通用性，所有公开的驱动头文件不再包含具体操作系统(FreeRTOS)相关的头文件。因此，以前依赖这种隐式包含逻辑的应用代码，在 v6.0 之后需要显示添加对应的 FreeRTOS 头文件。
+
 ADC
 ---
 
@@ -266,6 +271,7 @@ LCD
 - ``esp_lcd_dpi_panel_set_color_conversion`` 函数已被 :cpp:func:`esp_lcd_dpi_panel_set_yuv_conversion` 取代,用于设置 YUV 到 RGB 的色彩转换配置。
 - :cpp:func:`esp_lcd_rgb_panel_set_yuv_conversion` 函数的签名已改变。原先使用的 ``esp_lcd_yuv_conv_config_t`` 配置类型现已被 :cpp:type:`esp_lcd_color_conv_yuv_config_t` 取代。
 - NT35510 LCD 设备驱动已经从 ESP-IDF 中移动到外部仓库，并且托管在了 `ESP Component Registry <https://components.espressif.com/components/espressif/esp_lcd_nt35510/versions/1.0.0/readme>`__ 上。如果你的项目使用到了 NT35510 驱动，你可以通过运行 ``idf.py add-dependency "espressif/esp_lcd_nt35510"`` 将它添加到你的项目中。
+- :cpp:type:`esp_lcd_dpi_panel_config_t` 结构体中的 ``use_dma2d`` 成员已被移除。请使用 :func:`esp_lcd_dpi_panel_enable_dma2d` 函数来启用 DMA2D 功能。当不使用 DMA2D 时，可以减小 10KB 左右的二进制文件大小。
 
 SPI
 ---
@@ -297,6 +303,7 @@ SPI flash 驱动
 - 已弃用的 API ``spi_flash_dump_counters`` 已被移除。请改用 :cpp:func:`esp_flash_dump_counters`。
 - 已弃用的 API ``spi_flash_get_counters`` 已被移除。请改用 :cpp:func:`esp_flash_get_counters`。
 - 已弃用的 API ``spi_flash_reset_counters`` 已被移除。请改用 :cpp:func:`esp_flash_reset_counters`。
+- ``esp_flash_os_functions_t::start`` 新增了一个参数 ``flags``。调用者和实现者应正确处理此参数。
 - Kconfig 选项 ``CONFIG_SPI_FLASH_ROM_DRIVER_PATCH`` 已被移除，考虑到这个选项不会被广泛被用户使用，且有因误用而导致出现严重的问题，遂决定移除。
 
 .. note::

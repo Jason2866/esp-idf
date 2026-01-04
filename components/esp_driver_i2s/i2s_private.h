@@ -13,7 +13,7 @@
 #include "freertos/queue.h"
 #include "soc/lldesc.h"
 #include "soc/soc_caps.h"
-#include "soc/soc_caps_full.h"
+#include "hal/i2s_periph.h"
 #include "hal/i2s_hal.h"
 #include "hal/lp_i2s_hal.h"
 #if SOC_LP_I2S_SUPPORTED
@@ -161,6 +161,7 @@ struct i2s_channel_obj_t {
     int                     intr_prio_flags;/*!< i2s interrupt priority flags */
     void                    *mode_info;     /*!< Slot, clock and gpio information of each mode */
     struct {
+        bool                is_port_auto: 1;   /*!< Whether the port is auto-assigned */
         bool                is_etm_start: 1;   /*!< Whether start by etm tasks */
         bool                is_etm_stop: 1;    /*!< Whether stop by etm tasks */
         bool                is_raw_pdm: 1;     /*!< Flag of whether send/receive PDM in raw data, i.e., no PCM2PDM/PDM2PCM filter enabled */
@@ -224,11 +225,11 @@ struct lp_i2s_channel_obj_t {
  */
 typedef struct {
     portMUX_TYPE            spinlock;                          /*!< Platform level lock */
-    i2s_controller_t        *controller[SOC_I2S_ATTR(INST_NUM)];          /*!< Controller object */
-    const char              *comp_name[SOC_I2S_ATTR(INST_NUM)];           /*!< The component name that occupied i2s controller */
+    i2s_controller_t        *controller[I2S_LL_GET(INST_NUM)];          /*!< Controller object */
+    const char              *comp_name[I2S_LL_GET(INST_NUM)];           /*!< The component name that occupied i2s controller */
 #if SOC_LP_I2S_SUPPORTED
     lp_i2s_controller_t     *lp_controller[SOC_LP_I2S_NUM];    /*!< LP controller object*/
-    const char              *lp_comp_name[SOC_I2S_ATTR(INST_NUM)];        /*!< The component name that occupied lp i2s controller */
+    const char              *lp_comp_name[I2S_LL_GET(INST_NUM)];        /*!< The component name that occupied lp i2s controller */
 #endif
 } i2s_platform_t;
 
@@ -340,6 +341,19 @@ void i2s_output_gpio_reserve(i2s_chan_handle_t handle, int gpio_num);
  * @param gpio_mask The output gpio mask to be revoked
  */
 void i2s_output_gpio_revoke(i2s_chan_handle_t handle, uint64_t gpio_mask);
+
+#if SOC_I2S_HW_VERSION_1
+/**
+ * @brief Change the port of the I2S channel
+ *
+ * @param handle        I2S channel handle
+ * @param id            I2S port id
+ * @return
+ *      - ESP_OK                Change port success
+ *      - ESP_ERR_NOT_FOUND     No available I2S port found
+ */
+esp_err_t i2s_channel_change_port(i2s_chan_handle_t handle, int id);
+#endif
 
 #ifdef __cplusplus
 }

@@ -19,9 +19,7 @@
 #include "soc/assist_debug_reg.h"
 #include "esp_cpu.h"
 #include "soc/rtc.h"
-#include "soc/spi_periph.h"
 #include "soc/cache_reg.h"
-#include "soc/io_mux_reg.h"
 #include "soc/pcr_reg.h"
 #include "esp32c5/rom/ets_sys.h"
 #include "esp32c5/rom/spi_flash.h"
@@ -43,6 +41,7 @@
 #include "hal/lpwdt_ll.h"
 #include "hal/regi2c_ctrl_ll.h"
 #include "hal/brownout_ll.h"
+#include "hal/axi_icm_ll.h"
 
 ESP_LOG_ATTR_TAG(TAG, "boot.esp32c5");
 
@@ -85,6 +84,9 @@ static void bootloader_super_wdt_auto_feed(void)
 
 static inline void bootloader_hardware_init(void)
 {
+    // Clear bit reset_event_bypass to ensure that the system bus is also reset during a core reset (WDT),
+    // preventing bus freezing caused by an incorrect MSPI core reset in ROM.
+    axi_icm_ll_reset_with_core_reset(true);
     _regi2c_ctrl_ll_master_enable_clock(true); // keep ana i2c mst clock always enabled in bootloader
     regi2c_ctrl_ll_master_configure_clock();
 }
