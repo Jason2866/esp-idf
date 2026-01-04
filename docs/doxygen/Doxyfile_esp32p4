@@ -39,6 +39,7 @@ INPUT += \
     $(PROJECT_PATH)/components/esp_driver_isp/include/driver/isp_bf.h \
     $(PROJECT_PATH)/components/esp_driver_isp/include/driver/isp_blc.h \
     $(PROJECT_PATH)/components/esp_driver_isp/include/driver/isp_lsc.h \
+    $(PROJECT_PATH)/components/esp_driver_isp/include/driver/isp_crop.h \
     $(PROJECT_PATH)/components/esp_driver_isp/include/driver/isp_demosaic.h \
     $(PROJECT_PATH)/components/esp_driver_isp/include/driver/isp_sharpen.h \
     $(PROJECT_PATH)/components/esp_driver_isp/include/driver/isp_core.h \
@@ -55,6 +56,4 @@ INPUT += \
     $(PROJECT_PATH)/components/esp_lcd/dsi/include/esp_lcd_mipi_dsi.h \
     $(PROJECT_PATH)/components/esp_lcd/rgb/include/esp_lcd_panel_rgb.h \
     $(PROJECT_PATH)/components/soc/$(IDF_TARGET)/include/soc/bitscrambler_peri_select.h \
-    $(PROJECT_PATH)/components/sdmmc/include/sd_pwr_ctrl.h \
-    $(PROJECT_PATH)/components/sdmmc/include/sd_pwr_ctrl_by_on_chip_ldo.h \
     $(PROJECT_PATH)/components/ulp/lp_core/shared/include/ulp_lp_core_lp_uart_shared.h \

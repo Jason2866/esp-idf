@@ -165,8 +165,8 @@
 #define SOC_INT_HW_NESTED_SUPPORTED     1       // Support for hardware interrupts nesting
 #define SOC_BRANCH_PREDICTOR_SUPPORTED  1
 
-#define SOC_CPU_BREAKPOINTS_NUM         4
-#define SOC_CPU_WATCHPOINTS_NUM         4
+#define SOC_CPU_BREAKPOINTS_NUM         3
+#define SOC_CPU_WATCHPOINTS_NUM         3
 #define SOC_CPU_WATCHPOINT_MAX_REGION_SIZE         0x100 // bytes
 
 #define SOC_CPU_HAS_PMA                 1
@@ -718,6 +718,7 @@
 #define SOC_BLE_MULTI_CONN_OPTIMIZATION     (1)    /*!< Support multiple connections optimization */
 #define SOC_BLE_PERIODIC_ADV_ENH_SUPPORTED  (1)    /*!< Support For BLE Periodic Adv Enhancements */
 #define SOC_BLE_CTE_SUPPORTED               (1)    /*!< Support Bluetooth LE Constant Tone Extension (CTE) */
+#define SOC_BLE_PERIODIC_ADV_WITH_RESPONSE  (1)    /*!< Support Bluetooth LE Periodic Advertising with Response (PAwR) */
 
 /*------------------------------------- PHY CAPS -------------------------------------*/
 // #define SOC_PHY_COMBO_MODULE                  (1) /*!< Support Wi-Fi, BLE and 15.4*/

@@ -114,7 +114,9 @@ menu "AVRCP Features"
         default y
         select BT_GOEPC_ENABLED
         help
-            This enable Cover Art feature of AVRCP CT role
+            This enable Cover Art feature for AVRCP CT role, Cover Art requires AVRCP
+            version 1.6 or higher. Therefore, if the Cover Art feature is enabled,
+            AVRCP version will set to 1.6, otherwise, it will remain at 1.5
 
 endmenu
 
@@ -297,6 +299,16 @@ config BT_BLE_BLUFI_ENABLE
     default n
     help
         This option can be close when the app does not require blufi function.
+
+config BT_BLUFI_BLE_SMP_ENABLE
+    bool "Enable BLE SMP support for BluFi"
+    depends on BT_BLE_BLUFI_ENABLE && BT_BLE_SMP_ENABLE
+    default n
+    help
+        Enable BLE Security Manager Protocol (SMP) for BluFi.
+        When enabled, BluFi will support BLE pairing and encryption
+        before Wi-Fi provisioning, providing a more secure provisioning process.
+        This feature is only supported with the Bluedroid host.
 
 config BT_GATT_MAX_SR_PROFILES
     int "Max GATT Server Profiles"
