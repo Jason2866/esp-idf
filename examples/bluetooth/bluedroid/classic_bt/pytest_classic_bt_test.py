@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+# SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
 # SPDX-License-Identifier: CC0-1.0
 import os.path
 from typing import Tuple
@@ -10,7 +10,7 @@ from pytest_embedded_idf.dut import IdfDut
 
 # Case 1: SPP
 @pytest.mark.esp32
-@pytest.mark.wifi_two_dut
+@pytest.mark.two_duts
 @pytest.mark.parametrize(
     'count, app_path, target, erase_all, config', [
         (2,
@@ -31,7 +31,7 @@ def test_bt_spp_only(app_path: str, dut: Tuple[IdfDut, IdfDut]) -> None:
 
     if 'ESP_BT_GAP_KEY_REQ_EVT Please enter passkey!' in str(initiator_output):
         passkey = acceptor.expect(r'ESP_BT_GAP_KEY_NOTIF_EVT passkey:(\d+)').group(1).decode('utf8')
-        initiator.write(f'spp key {passkey};')
+        initiator.write(f'spp key {passkey};')  # noqa: E702 multiple statements on one line (semicolon)
         acceptor.expect_exact('authentication success', timeout=30)
         initiator.expect_exact('authentication success', timeout=30)
     acceptor.expect_exact('ESP_SPP_SRV_OPEN_EVT status:0', timeout=30)
@@ -40,7 +40,7 @@ def test_bt_spp_only(app_path: str, dut: Tuple[IdfDut, IdfDut]) -> None:
 
 # Case 2: SPP_VFS
 @pytest.mark.esp32
-@pytest.mark.wifi_two_dut
+@pytest.mark.two_duts
 @pytest.mark.parametrize(
     'count, app_path, target, config', [
         (2,
@@ -63,32 +63,9 @@ def test_bt_spp_vfs(app_path: str, dut: Tuple[IdfDut, IdfDut]) -> None:
     acceptor.expect_exact('ESP_SPP_SRV_OPEN_EVT status:0', timeout=30)
 
 
-# Case 3: A2DP
+# Case 3: HFP
 @pytest.mark.esp32
-@pytest.mark.wifi_two_dut
-@pytest.mark.parametrize(
-    'count, app_path, target, config', [
-        (2,
-         f'{os.path.join(os.path.dirname(__file__), "a2dp_sink")}|{os.path.join(os.path.dirname(__file__), "a2dp_source")}',
-         'esp32|esp32', 'test'),
-    ],
-    indirect=True,
-)
-def test_bt_a2dp(app_path: str, dut: Tuple[IdfDut, IdfDut]) -> None:
-    sink_dut = dut[0]
-    source_dut = dut[1]
-    source_dut_mac = source_dut.expect(r'Bluetooth MAC: (([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})').group(1).decode('utf8')
-    sink_dut.expect_exact('A2DP PROF STATE: Init Complete', timeout=30)
-    source_dut.expect_exact('a2dp connecting to peer', timeout=30)
-    source_dut.expect_exact('a2dp connected', timeout=30)
-    source_dut.expect_exact('a2dp media start successfully', timeout=30)
-    sink_dut.expect_exact(f'A2DP connection state: Connected, [{source_dut_mac}]', timeout=30)
-    sink_dut.expect_exact('start volume change simulation', timeout=30)
-
-
-# Case 4: HFP
-@pytest.mark.esp32
-@pytest.mark.wifi_two_dut
+@pytest.mark.two_duts
 @pytest.mark.parametrize(
     'count, app_path, target, config', [
         (2,
@@ -108,9 +85,9 @@ def test_bt_hfp(app_path: str, dut: Tuple[IdfDut, IdfDut]) -> None:
     hfp_ag.expect_exact('connection state SLC_CONNECTED', timeout=30)
 
 
-# # Case 5: HID
+# # Case 4: HID
 @pytest.mark.esp32
-@pytest.mark.wifi_two_dut
+@pytest.mark.two_duts
 @pytest.mark.parametrize(
     'count, app_path, target, config', [
         (2,
@@ -134,9 +111,9 @@ def test_bt_hid(app_path: str, dut: Tuple[IdfDut, IdfDut]) -> None:
     hid_host.expect_exact(f'ESP_HIDH_DEMO: {hid_device_mac} OPEN', timeout=30)
 
 
-# Case 6: L2CAP
+# Case 5: L2CAP
 @pytest.mark.esp32
-@pytest.mark.wifi_two_dut
+@pytest.mark.two_duts
 @pytest.mark.parametrize(
     'count, app_path, target, config', [
         (2,
@@ -150,9 +127,66 @@ def test_bt_l2cap(app_path: str, dut: Tuple[IdfDut, IdfDut]) -> None:
     client = dut[1]
 
     server.expect_exact('ESP_BT_L2CAP_INIT_EVT: status:0', timeout=30)
-    server.expect_exact('ESP_BT_L2CAP_START_EVT: status:0', timeout=30)
-    server.expect_exact('ESP_SDP_CREATE_RECORD_COMP_EVT: status:0', timeout=30)
+    server.expect(
+        r'(?s)(ESP_BT_L2CAP_START_EVT: status:0.*ESP_SDP_CREATE_RECORD_COMP_EVT: status:0|'
+        r'ESP_SDP_CREATE_RECORD_COMP_EVT: status:0.*ESP_BT_L2CAP_START_EVT: status:0)',
+        timeout=30,
+    )
     client.expect_exact('ESP_BT_L2CAP_INIT_EVT: status:0', timeout=30)
     client.expect_exact('ESP_SDP_SEARCH_COMP_EVT: status:0', timeout=30)
     client.expect_exact('ESP_BT_L2CAP_OPEN_EVT: status:0', timeout=30)
     server.expect_exact('ESP_BT_L2CAP_OPEN_EVT: status:0', timeout=30)
+
+
+# case 6: A2DP Stream
+@pytest.mark.esp32
+@pytest.mark.two_duts
+@pytest.mark.parametrize(
+    'count, app_path, target, config',
+    [
+        (
+            2,
+            f'{os.path.join(os.path.dirname(__file__), "a2dp_sink_stream")}|{os.path.join(os.path.dirname(__file__), "a2dp_source")}',
+            'esp32|esp32',
+            'test',
+        ),
+    ],
+    indirect=True,
+)
+def test_bt_a2dp_stream(app_path: str, dut: Tuple[IdfDut, IdfDut]) -> None:
+    sink_dut = dut[0]
+    source_dut = dut[1]
+    source_dut_mac = source_dut.expect(r'Bluetooth MAC: (([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})').group(1).decode('utf8')
+    sink_dut.expect_exact('A2DP PROF STATE: Init Complete', timeout=30)
+    source_dut.expect_exact('a2dp connecting to peer', timeout=30)
+    source_dut.expect_exact('a2dp connected', timeout=30)
+    source_dut.expect_exact('a2dp media start successfully', timeout=30)
+    sink_dut.expect_exact(f'A2DP connection state: Connected, [{source_dut_mac}]', timeout=30)
+
+
+# case 7: AVRCP absolute volume
+@pytest.mark.esp32
+@pytest.mark.two_duts
+@pytest.mark.parametrize(
+    'count, app_path, target, config',
+    [
+        (
+            2,
+            f'{os.path.join(os.path.dirname(__file__), "avrcp_absolute_volume")}|{os.path.join(os.path.dirname(__file__), "a2dp_source")}',
+            'esp32|esp32',
+            'test',
+        ),
+    ],
+    indirect=True,
+)
+def test_bt_avrcp_absolute_volume(app_path: str, dut: Tuple[IdfDut, IdfDut]) -> None:
+    sink_dut = dut[0]
+    source_dut = dut[1]
+    source_dut_mac = source_dut.expect(r'Bluetooth MAC: (([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})').group(1).decode('utf8')
+    sink_dut.expect_exact('AVRCP CT STATE: Init Complete', timeout=30)
+    sink_dut.expect_exact('AVRCP TG STATE: Init Complete', timeout=30)
+    source_dut.expect_exact('a2dp connecting to peer', timeout=30)
+    source_dut.expect_exact('a2dp connected', timeout=30)
+    sink_dut.expect_exact(f'AVRC conn_state event: state 1, [{source_dut_mac}]', timeout=30)
+    sink_dut.expect_exact(f'AVRC conn_state evt: state 1, [{source_dut_mac}]', timeout=30)
+    sink_dut.expect_exact('start volume change simulation', timeout=30)

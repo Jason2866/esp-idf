@@ -98,6 +98,7 @@
 #include "hal/cache_hal.h"
 #include "hal/cache_ll.h"
 #include "hal/efuse_ll.h"
+#include "soc/uart_pins.h"
 #include "soc/periph_defs.h"
 #include "esp_cpu.h"
 #include "esp_private/esp_clk.h"
@@ -121,13 +122,13 @@
 #include "esp_private/startup_internal.h"
 #include "esp_private/system_internal.h"
 
-#if SOC_MEM_NON_CONTIGUOUS_SRAM
+#if CONFIG_ESP32P4_SELECTS_REV_LESS_V3
 extern int _bss_start_low, _bss_start_high;
 extern int _bss_end_low, _bss_end_high;
 #else
 extern int _bss_start;
 extern int _bss_end;
-#endif // SOC_MEM_NON_CONTIGUOUS_SRAM
+#endif // CONFIG_ESP32P4_SELECTS_REV_LESS_V3
 extern int _rtc_bss_start;
 extern int _rtc_bss_end;
 #if CONFIG_BT_LE_RELEASE_IRAM_SUPPORTED
@@ -431,12 +432,12 @@ void IRAM_ATTR call_start_cpu0(void)
 #endif
 
     //Clear BSS. Please do not attempt to do any complex stuff (like early logging) before this.
-#if SOC_MEM_NON_CONTIGUOUS_SRAM
+#if CONFIG_ESP32P4_SELECTS_REV_LESS_V3
     memset(&_bss_start_low, 0, (&_bss_end_low - &_bss_start_low) * sizeof(_bss_start_low));
     memset(&_bss_start_high, 0, (&_bss_end_high - &_bss_start_high) * sizeof(_bss_start_high));
 #else
     memset(&_bss_start, 0, (&_bss_end - &_bss_start) * sizeof(_bss_start));
-#endif // SOC_MEM_NON_CONTIGUOUS_SRAM
+#endif // CONFIG_ESP32P4_SELECTS_REV_LESS_V3
 
 #if CONFIG_BT_LE_RELEASE_IRAM_SUPPORTED
     // Clear Bluetooth bss
@@ -522,12 +523,6 @@ void IRAM_ATTR call_start_cpu0(void)
     rom_config_data_cache_mode(CONFIG_ESP32S3_DATA_CACHE_SIZE, CONFIG_ESP32S3_DCACHE_ASSOCIATED_WAYS, CONFIG_ESP32S3_DATA_CACHE_LINE_SIZE);
     Cache_Resume_DCache(0);
 #endif // CONFIG_IDF_TARGET_ESP32S3
-
-#if CONFIG_IDF_TARGET_ESP32P4
-    //TODO: IDF-5670, add cache init API
-    extern void esp_config_l2_cache_mode(void);
-    esp_config_l2_cache_mode();
-#endif
 
 #if ESP_ROM_NEEDS_SET_CACHE_MMU_SIZE
 #if CONFIG_APP_BUILD_TYPE_ELF_RAM
@@ -741,8 +736,15 @@ void IRAM_ATTR call_start_cpu0(void)
     // In a single thread mode, the freertos is not started yet. So don't have to use a critical section.
     int __DECLARE_RCC_ATOMIC_ENV __attribute__((unused));  // To avoid build errors about spinlock's __DECLARE_RCC_ATOMIC_ENV
     esp_rom_uart_set_clock_baudrate(CONFIG_ESP_CONSOLE_ROM_SERIAL_PORT_NUM, clock_hz, CONFIG_ESP_CONSOLE_UART_BAUDRATE);
+    int console_uart_tx_pin = U0TXD_GPIO_NUM;
+    int console_uart_rx_pin = U0RXD_GPIO_NUM;
+#if CONFIG_ESP_CONSOLE_UART_CUSTOM
+    console_uart_tx_pin = (CONFIG_ESP_CONSOLE_UART_TX_GPIO >= 0) ? CONFIG_ESP_CONSOLE_UART_TX_GPIO : U0TXD_GPIO_NUM;
+    console_uart_rx_pin = (CONFIG_ESP_CONSOLE_UART_RX_GPIO >= 0) ? CONFIG_ESP_CONSOLE_UART_RX_GPIO : U0RXD_GPIO_NUM;
 #endif
-#endif
+    ESP_EARLY_LOGI(TAG, "GPIO %d and %d are used as console UART I/O pins", console_uart_rx_pin, console_uart_tx_pin);
+#endif // CONFIG_ESP_CONSOLE_UART
+#endif // !CONFIG_IDF_ENV_FPGA
 
 #if SOC_DEEP_SLEEP_SUPPORTED
     // Need to unhold the IOs that were hold right before entering deep sleep, which are used as wakeup pins

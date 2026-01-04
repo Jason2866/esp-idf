@@ -23,7 +23,9 @@
 #define BENDPOINTADDRESS_NUM_MSK     0x0F   //Endpoint number mask of the bEndpointAddress field of an endpoint descriptor
 #define BENDPOINTADDRESS_DIR_MSK     0x80   //Endpoint direction mask of the bEndpointAddress field of an endpoint descriptor
 
-#define CORE_REG_GSNPSID    0x4F54400A      //Release number of USB_DWC used in Espressif's SoCs
+// Core register IDs supported by this driver: v4.00a and v4.30a
+#define CORE_REG_GSNPSID_4_00a    0x4F54400A
+#define CORE_REG_GSNPSID_4_30a    0x4F54430A
 
 // -------------------- Configurable -----------------------
 
@@ -42,7 +44,8 @@
 
 //Interrupts that pertain to core events
 #define CORE_EVENTS_INTRS_MSK (USB_DWC_LL_INTR_CORE_DISCONNINT | \
-                               USB_DWC_LL_INTR_CORE_HCHINT)
+                               USB_DWC_LL_INTR_CORE_HCHINT | \
+                               USB_DWC_LL_INTR_CORE_WKUPINT)
 
 //Interrupt that pertain to host port events
 #define PORT_EVENTS_INTRS_MSK (USB_DWC_LL_INTR_HPRT_PRTCONNDET | \
@@ -131,7 +134,7 @@ void usb_dwc_hal_init(usb_dwc_hal_context_t *hal, int port_id)
     HAL_ASSERT(port_id < SOC_USB_OTG_PERIPH_NUM);
     usb_dwc_dev_t *dev = USB_DWC_LL_GET_HW(port_id);
     uint32_t core_id = usb_dwc_ll_gsnpsid_get_id(dev);
-    HAL_ASSERT(core_id == CORE_REG_GSNPSID);
+    HAL_ASSERT(core_id == CORE_REG_GSNPSID_4_00a || core_id == CORE_REG_GSNPSID_4_30a);
     (void) core_id;     //Suppress unused variable warning if asserts are disabled
 
     // Initialize HAL context
@@ -163,9 +166,6 @@ void usb_dwc_hal_deinit(usb_dwc_hal_context_t *hal)
 void usb_dwc_hal_core_soft_reset(usb_dwc_hal_context_t *hal)
 {
     usb_dwc_ll_grstctl_core_soft_reset(hal->dev);
-    while (usb_dwc_ll_grstctl_is_core_soft_reset_in_progress(hal->dev)) {
-        ;   // Wait until core reset is done
-    }
     while (!usb_dwc_ll_grstctl_is_ahb_idle(hal->dev)) {
         ;   // Wait until AHB Master bus is idle before doing any other operations
     }
@@ -464,6 +464,8 @@ usb_dwc_hal_port_event_t usb_dwc_hal_decode_intr(usb_dwc_hal_context_t *hal)
         } else if (intrs_port & USB_DWC_LL_INTR_HPRT_PRTCONNDET && !hal->flags.dbnc_lock_enabled) {
             event = USB_DWC_HAL_PORT_EVENT_CONN;
             debounce_lock_enable(hal);
+        } else if (intrs_core & USB_DWC_LL_INTR_CORE_WKUPINT) {
+            event = USB_DWC_HAL_PORT_EVENT_REMOTE_WAKEUP;   // Remote wakeup was generated from device
         }
     }
     //Port events always take precedence over channel events

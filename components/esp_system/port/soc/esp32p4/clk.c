@@ -203,6 +203,14 @@ static void select_rtc_slow_clk(soc_rtc_slow_clk_src_t rtc_slow_clk_src)
         if (rtc_slow_clk_src != SOC_RTC_SLOW_CLK_SRC_RC32K) {
             rtc_clk_rc32k_enable(false);
         }
+        // We have enabled all LP clock power in pmu_init, re-initialize the LP clock power based on the slow clock source after selection.
+        pmu_lp_power_t lp_clk_power = {
+            .xpd_xtal32k = (rtc_slow_clk_src == SOC_RTC_SLOW_CLK_SRC_XTAL32K),
+            .xpd_rc32k = (rtc_slow_clk_src == SOC_RTC_SLOW_CLK_SRC_RC32K),
+            .xpd_fosc = 1,
+            .pd_osc = 0
+        };
+        pmu_ll_lp_set_clk_power(&PMU, PMU_MODE_LP_ACTIVE, lp_clk_power.val);
 
         if (SLOW_CLK_CAL_CYCLES > 0) {
             /* TODO: 32k XTAL oscillator has some frequency drift at startup.
@@ -260,17 +268,8 @@ __attribute__((weak)) void esp_perip_clk_init(void)
         REG_CLR_BIT(HP_SYS_CLKRST_CLK_FORCE_ON_CTRL0_REG,   HP_SYS_CLKRST_REG_CPUICM_GATED_CLK_FORCE_ON
                     | HP_SYS_CLKRST_REG_TCM_CPU_CLK_FORCE_ON
                     | HP_SYS_CLKRST_REG_BUSMON_CPU_CLK_FORCE_ON
-                    | HP_SYS_CLKRST_REG_L1CACHE_CPU_CLK_FORCE_ON
-                    | HP_SYS_CLKRST_REG_L1CACHE_D_CPU_CLK_FORCE_ON
-                    | HP_SYS_CLKRST_REG_L1CACHE_I0_CPU_CLK_FORCE_ON
-                    | HP_SYS_CLKRST_REG_L1CACHE_I1_CPU_CLK_FORCE_ON
                     | HP_SYS_CLKRST_REG_TRACE_CPU_CLK_FORCE_ON
-                    | HP_SYS_CLKRST_REG_TRACE_SYS_CLK_FORCE_ON
-                    | HP_SYS_CLKRST_REG_L1CACHE_MEM_CLK_FORCE_ON
-                    | HP_SYS_CLKRST_REG_L1CACHE_D_MEM_CLK_FORCE_ON
-                    | HP_SYS_CLKRST_REG_L1CACHE_I0_MEM_CLK_FORCE_ON
-                    | HP_SYS_CLKRST_REG_L1CACHE_I1_MEM_CLK_FORCE_ON
-                    | HP_SYS_CLKRST_REG_L2CACHE_MEM_CLK_FORCE_ON);
+                    | HP_SYS_CLKRST_REG_TRACE_SYS_CLK_FORCE_ON);
         _adc_ll_sar1_clock_force_en(false);
         _adc_ll_sar2_clock_force_en(false);
         _emac_ll_clock_force_en(false);

@@ -1254,6 +1254,11 @@ void btm_ble_adv_set_terminated_evt(tBTM_BLE_ADV_TERMINAT *params)
         return;
     }
 
+    if (params->adv_handle >= MAX_BLE_ADV_INSTANCE) {
+        BTM_TRACE_ERROR("%s, Invalid adv_handle %d, max is %d.", __func__, params->adv_handle, MAX_BLE_ADV_INSTANCE);
+        return;
+    }
+
     // adv terminated due to connection, save the adv handle and connection handle
     if(params->status == 0x00) {
         adv_record[params->adv_handle].ter_con_handle = params->conn_handle;
@@ -1390,6 +1395,12 @@ uint8_t btm_ble_ext_adv_active_count(void)
 
     for (uint8_t i = 0; i < MAX_BLE_ADV_INSTANCE; i++) {
         if (adv_record[i].enabled == true) {
+            BTM_TRACE_DEBUG("%s EXT ADV active #%d: instance=%d, duration=%d, max_events=%d",
+                            __func__,
+                            count,
+                            adv_record[i].instance,
+                            adv_record[i].duration,
+                            adv_record[i].max_events);
             count++;
         }
     }

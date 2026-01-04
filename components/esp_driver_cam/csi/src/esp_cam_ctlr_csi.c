@@ -52,6 +52,7 @@ static esp_err_t s_ctlr_csi_stop(esp_cam_ctlr_handle_t handle);
 static esp_err_t s_csi_ctlr_disable(esp_cam_ctlr_handle_t ctlr);
 static esp_err_t s_ctlr_csi_receive(esp_cam_ctlr_handle_t handle, esp_cam_ctlr_trans_t *trans, uint32_t timeout_ms);
 static void *s_csi_ctlr_alloc_buffer(esp_cam_ctlr_t *handle, size_t size, uint32_t buf_caps);
+static esp_err_t s_csi_ctlr_format_conversion(esp_cam_ctlr_t *handle, const cam_ctlr_format_conv_config_t *config);
 
 static esp_err_t s_csi_claim_controller(csi_controller_t *controller)
 {
@@ -223,6 +224,7 @@ esp_err_t esp_cam_new_csi_ctlr(const esp_cam_ctlr_csi_config_t *config, esp_cam_
     ctlr->base.get_internal_buffer = s_csi_ctlr_get_internal_buffer;
     ctlr->base.get_buffer_len = s_csi_ctlr_get_buffer_length;
     ctlr->base.alloc_buffer = s_csi_ctlr_alloc_buffer;
+    ctlr->base.format_conversion = s_csi_ctlr_format_conversion;
 
     *ret_handle = &(ctlr->base);
 
@@ -350,6 +352,10 @@ IRAM_ATTR static bool csi_dma_trans_done_callback(dw_gdma_channel_handle_t chan,
         }
     }
 
+    esp_err_t ret = esp_cache_msync((void *)(new_trans.buffer), new_trans.buflen, ESP_CACHE_MSYNC_FLAG_DIR_M2C);
+    assert(ret == ESP_OK);
+    (void)ret;
+
     ESP_EARLY_LOGD(TAG, "new_trans.buffer: %p, new_trans.buflen: %d", new_trans.buffer, new_trans.buflen);
     dw_gdma_channel_config_transfer(chan, &csi_dma_transfer_config);
     dw_gdma_channel_enable_ctrl(chan, true);
@@ -446,6 +452,9 @@ esp_err_t s_ctlr_csi_start(esp_cam_ctlr_handle_t handle)
         }
     }
 
+    ESP_RETURN_ON_ERROR(esp_cache_msync((void *)(trans.buffer), trans.buflen, ESP_CACHE_MSYNC_FLAG_DIR_M2C),
+                        TAG, "failed to sync(M2C) trans buffer");
+
     ESP_LOGD(TAG, "trans.buffer: %p, trans.buflen: %d", trans.buffer, trans.buflen);
     ctlr->trans = trans;
 
@@ -539,4 +548,11 @@ static void *s_csi_ctlr_alloc_buffer(esp_cam_ctlr_t *handle, size_t size, uint32
     ESP_LOGD(TAG, "Allocated camera buffer: %p, size: %zu", buffer, size);
 
     return buffer;
+}
+
+static esp_err_t s_csi_ctlr_format_conversion(esp_cam_ctlr_t *handle, const cam_ctlr_format_conv_config_t *config)
+{
+    ESP_RETURN_ON_FALSE(handle, ESP_ERR_INVALID_ARG, TAG, "invalid argument: null pointer");
+    // CSI controller doesn't support format conversion yet
+    return ESP_ERR_NOT_SUPPORTED;
 }

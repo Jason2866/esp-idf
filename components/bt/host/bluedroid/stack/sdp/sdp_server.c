@@ -179,7 +179,6 @@ static void process_service_search (tCONN_CB *p_ccb, UINT16 trans_num,
     tSDP_RECORD    *p_rec = NULL;
     BT_HDR         *p_buf;
     BOOLEAN         is_cont = FALSE;
-    UNUSED(p_req_end);
 
     p_req = sdpu_extract_uid_seq (p_req, param_len, &uid_seq);
 
@@ -214,6 +213,10 @@ static void process_service_search (tCONN_CB *p_ccb, UINT16 trans_num,
     }
 
     /* Check if this is a continuation request */
+    if (p_req + 1 > p_req_end) {
+        sdpu_build_n_send_error (p_ccb, trans_num, SDP_INVALID_CONT_STATE, SDP_TEXT_BAD_CONT_LEN);
+        return;
+    }
     if (*p_req) {
         if (*p_req++ != SDP_CONTINUATION_LEN || (p_req >= p_req_end)) {
             sdpu_build_n_send_error (p_ccb, trans_num, SDP_INVALID_CONT_STATE,
@@ -351,10 +354,15 @@ static void process_service_attr_req (tCONN_CB *p_ccb, UINT16 trans_num,
     }
 
     /* Check if this is a continuation request */
+    if (p_req + 1 > p_req_end) {
+        sdpu_build_n_send_error (p_ccb, trans_num, SDP_INVALID_CONT_STATE, SDP_TEXT_BAD_CONT_LEN);
+        return;
+    }
     if (*p_req) {
         /* Free and reallocate buffer */
         if (p_ccb->rsp_list) {
             osi_free(p_ccb->rsp_list);
+            p_ccb->rsp_list = NULL;
         }
 
         p_ccb->rsp_list = (UINT8 *)osi_malloc(max_list_len);
@@ -457,7 +465,7 @@ static void process_service_attr_req (tCONN_CB *p_ccb, UINT16 trans_num,
             }
         }
     }
-    /* If all the attributes have been accomodated in p_rsp,
+    /* If all the attributes have been accommodated in p_rsp,
        reset next_attr_index */
     if (xx == attr_seq.num_attr) {
         p_ccb->cont_info.next_attr_index = 0;
@@ -564,7 +572,7 @@ static void process_service_search_attr_req (tCONN_CB *p_ccb, UINT16 trans_num,
     /* Extract the UUID sequence to search for */
     p_req = sdpu_extract_uid_seq (p_req, param_len, &uid_seq);
 
-    if ((!p_req) || (!uid_seq.num_uids)) {
+    if ((!p_req) || (!uid_seq.num_uids) || (p_req + 2 > p_req_end)) {
         sdpu_build_n_send_error (p_ccb, trans_num, SDP_INVALID_REQ_SYNTAX, SDP_TEXT_BAD_UUID_LIST);
         return;
     }
@@ -585,11 +593,21 @@ static void process_service_search_attr_req (tCONN_CB *p_ccb, UINT16 trans_num,
 
     memcpy(&attr_seq_sav, &attr_seq, sizeof(tSDP_ATTR_SEQ)) ;
 
+    if (max_list_len < 4) {
+        sdpu_build_n_send_error (p_ccb, trans_num, SDP_ILLEGAL_PARAMETER, NULL);
+        return;
+    }
+
     /* Check if this is a continuation request */
+    if (p_req + 1 > p_req_end) {
+        sdpu_build_n_send_error(p_ccb, trans_num, SDP_INVALID_CONT_STATE, SDP_TEXT_BAD_CONT_LEN);
+        return;
+    }
     if (*p_req) {
         /* Free and reallocate buffer */
         if (p_ccb->rsp_list) {
             osi_free (p_ccb->rsp_list);
+            p_ccb->rsp_list = NULL;
         }
 
         p_ccb->rsp_list = (UINT8 *)osi_malloc (max_list_len);
@@ -598,7 +616,7 @@ static void process_service_search_attr_req (tCONN_CB *p_ccb, UINT16 trans_num,
             return;
         }
 
-        if (*p_req++ != SDP_CONTINUATION_LEN) {
+        if ((*p_req++ != SDP_CONTINUATION_LEN) || (p_req + 2 > p_req_end)) {
             sdpu_build_n_send_error (p_ccb, trans_num, SDP_INVALID_CONT_STATE, SDP_TEXT_BAD_CONT_LEN);
             return;
         }
@@ -623,6 +641,7 @@ static void process_service_search_attr_req (tCONN_CB *p_ccb, UINT16 trans_num,
         /* Free and reallocate if the earlier allocated buffer is small */
         if (p_ccb->rsp_list) {
             osi_free (p_ccb->rsp_list);
+            p_ccb->rsp_list = NULL;
         }
 
         p_ccb->rsp_list = (UINT8 *)osi_malloc (max_list_len);
