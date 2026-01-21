@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2015-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2015-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -156,7 +156,11 @@
 #define FAST_CLK_SRC_CAL_CYCLES     (2048)  /* ~ 127.4 us */
 
 #ifdef CONFIG_IDF_TARGET_ESP32
+#if !CONFIG_PM_SLP_IRAM_OPT
+#define DEFAULT_SLEEP_OUT_OVERHEAD_US       (476)
+#else
 #define DEFAULT_SLEEP_OUT_OVERHEAD_US       (212)
+#endif
 #define DEFAULT_HARDWARE_OUT_OVERHEAD_US    (60)
 #elif CONFIG_IDF_TARGET_ESP32S2
 #define DEFAULT_SLEEP_OUT_OVERHEAD_US       (147)
@@ -164,6 +168,10 @@
 #elif CONFIG_IDF_TARGET_ESP32S3
 #define DEFAULT_SLEEP_OUT_OVERHEAD_US       (382)
 #define DEFAULT_HARDWARE_OUT_OVERHEAD_US    (133)
+# if !CONFIG_PM_SLP_IRAM_OPT
+  #undef DEFAULT_SLEEP_OUT_OVERHEAD_US
+  #define DEFAULT_SLEEP_OUT_OVERHEAD_US     (8628)
+# endif
 #elif CONFIG_IDF_TARGET_ESP32C3
 #define DEFAULT_SLEEP_OUT_OVERHEAD_US       (105)
 #define DEFAULT_HARDWARE_OUT_OVERHEAD_US    (37)
@@ -215,10 +223,6 @@
 #define DEEP_SLEEP_TIME_OVERHEAD_US         (650 + 100 * 240 / CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ)
 #else
 #define DEEP_SLEEP_TIME_OVERHEAD_US         (250 + 100 * 240 / CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ)
-#endif
-
-#if SOC_PM_MMU_TABLE_RETENTION_WHEN_TOP_PD
-#define SLEEP_MMU_TABLE_RETENTION_OVERHEAD_US  (1220)
 #endif
 
 #define RTC_MODULE_SLEEP_PREPARE_CYCLES (6)
@@ -915,9 +919,6 @@ static esp_err_t FORCE_IRAM_ATTR esp_sleep_start_safe(uint32_t sleep_flags, uint
 
 #if CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP
         if (sleep_flags & PMU_SLEEP_PD_TOP) {
-#if SOC_PM_MMU_TABLE_RETENTION_WHEN_TOP_PD
-            esp_sleep_mmu_retention(true);
-#endif
 #if CONFIG_IDF_TARGET_ESP32P4 && (CONFIG_ESP_REV_MIN_FULL == 300)
             sleep_retention_do_extra_retention(true);
 #endif
@@ -945,8 +946,8 @@ static esp_err_t FORCE_IRAM_ATTR esp_sleep_start_safe(uint32_t sleep_flags, uint
 
 #if CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP
         if (sleep_flags & PMU_SLEEP_PD_TOP) {
-#if SOC_PM_MMU_TABLE_RETENTION_WHEN_TOP_PD
-            esp_sleep_mmu_retention(false);
+#if SOC_PM_RETENTION_SW_TRIGGER_REGDMA
+            sleep_retention_do_system_retention(false);
 #endif
 #if CONFIG_IDF_TARGET_ESP32P4 && (CONFIG_ESP_REV_MIN_FULL == 300)
             sleep_flash_p4_rev3_workaround();
@@ -1160,13 +1161,11 @@ static esp_err_t SLEEP_FN_ATTR esp_sleep_start(uint32_t sleep_flags, uint32_t cl
 
     if (!deep_sleep) {
         if (result == ESP_OK) {
-#if !CONFIG_PM_SLP_IRAM_OPT && !CONFIG_IDF_TARGET_ESP32
+            s_config.ccount_ticks_record = esp_cpu_get_cycle_count();
+#if !CONFIG_PM_SLP_IRAM_OPT && !(CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32P4)
 #if CONFIG_SPIRAM
-# if CONFIG_IDF_TARGET_ESP32P4
-            cache_ll_writeback_all(CACHE_LL_LEVEL_ALL, CACHE_TYPE_DATA, CACHE_LL_ID_ALL);
-# else
+            // TODO: PM-651
             Cache_WriteBack_All();
-# endif
 #endif
             /* When the IRAM optimization for the sleep flow is disabled, all
              * cache contents are forcibly invalidated before exiting the sleep
@@ -1174,12 +1173,6 @@ static esp_err_t SLEEP_FN_ATTR esp_sleep_start(uint32_t sleep_flags, uint32_t cl
              * flow remains consistent, allowing the use of ccount to
              * dynamically calculate the sleep adjustment time. */
             cache_ll_invalidate_all(CACHE_LL_LEVEL_ALL, CACHE_TYPE_ALL, CACHE_LL_ID_ALL);
-#endif
-            s_config.ccount_ticks_record = esp_cpu_get_cycle_count();
-#if SOC_PM_RETENTION_SW_TRIGGER_REGDMA
-            if (sleep_flags & PMU_SLEEP_PD_TOP) {
-                sleep_retention_do_system_retention(false);
-            }
 #endif
         }
         misc_modules_wake_prepare(sleep_flags);
@@ -1494,10 +1487,6 @@ esp_err_t esp_light_sleep_start(void)
     int sleep_time_sw_adjustment = LIGHT_SLEEP_TIME_OVERHEAD_US + sleep_time_overhead_in + s_config.sleep_time_overhead_out;
     int sleep_time_hw_adjustment = pmu_sleep_calculate_hw_wait_time(sleep_flags, rtc_clk_slow_src_get(), s_config.rtc_clk_cal_period, s_config.fast_clk_cal_period);
     s_config.sleep_time_adjustment = sleep_time_sw_adjustment + sleep_time_hw_adjustment;
-#if SOC_PM_MMU_TABLE_RETENTION_WHEN_TOP_PD
-    int sleep_time_sw_mmu_table_restore = (sleep_flags & PMU_SLEEP_PD_TOP) ? SLEEP_MMU_TABLE_RETENTION_OVERHEAD_US : 0;
-    s_config.sleep_time_adjustment += sleep_time_sw_mmu_table_restore;
-#endif
 #else
     uint32_t rtc_cntl_xtl_buf_wait_slp_cycles = rtc_time_us_to_slowclk(RTC_CNTL_XTL_BUF_WAIT_SLP_US, s_config.rtc_clk_cal_period);
     s_config.sleep_time_adjustment = LIGHT_SLEEP_TIME_OVERHEAD_US + sleep_time_overhead_in + s_config.sleep_time_overhead_out
@@ -2549,9 +2538,6 @@ FORCE_INLINE_ATTR bool top_domain_pd_allowed(void) {
 #else
     top_pd_allowed = false;
 #endif
-#if CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP && SOC_PM_MMU_TABLE_RETENTION_WHEN_TOP_PD
-    top_pd_allowed &= mmu_domain_pd_allowed();
-#endif
     top_pd_allowed &= clock_domain_pd_allowed();
     top_pd_allowed &= peripheral_domain_pd_allowed();
 #if SOC_PM_SUPPORT_MODEM_PD
@@ -2560,10 +2546,11 @@ FORCE_INLINE_ATTR bool top_domain_pd_allowed(void) {
 #if SOC_XTAL_CLOCK_PATH_DEPENDS_ON_TOP_DOMAIN
     top_pd_allowed &= (s_config.domain[ESP_PD_DOMAIN_XTAL].pd_option != ESP_PD_OPTION_ON);
 #endif
-#if SOC_PM_TOP_PD_NOT_ALLOWED
-    // TODO: PM-436, Need to use efuse_hal_chip_revision() to determine whether
-    // the TOP domain power-down is allowed
-    top_pd_allowed = false;
+#if CONFIG_IDF_TARGET_ESP32C5
+    if (!ESP_CHIP_REV_ABOVE(efuse_hal_chip_revision(), 102)) {
+        // ESP32C5 chips lower than v1.2 are not supported to power down the TOP domain
+        top_pd_allowed = false;
+    }
 #endif
 
     return top_pd_allowed;
