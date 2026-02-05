@@ -200,7 +200,8 @@ BT_HDR *attp_build_read_by_type_value_cmd (UINT16 payload_size, tGATT_FIND_TYPE_
 BT_HDR *attp_build_read_multi_cmd(UINT8 op_code, UINT16 payload_size, UINT16 num_handle, UINT16 *p_handle)
 {
     BT_HDR      *p_buf = NULL;
-    UINT8       *p, i = 0;
+    UINT8       *p;
+    UINT16      i = 0;
 
     if ((p_buf = (BT_HDR *)osi_malloc((UINT16)(sizeof(BT_HDR) + num_handle * 2 + 1 + L2CAP_MIN_OFFSET))) != NULL) {
         p = (UINT8 *)(p_buf + 1) + L2CAP_MIN_OFFSET;
@@ -394,8 +395,7 @@ tGATT_STATUS attp_send_msg_to_l2cap(tGATT_TCB *p_tcb, BT_HDR *p_toL2CAP)
     }
 
     if (l2cap_ret == L2CAP_DW_FAILED) {
-        GATT_TRACE_DEBUG("ATT   failed to pass msg:0x%0x to L2CAP",
-                         *((UINT8 *)(p_toL2CAP + 1) + p_toL2CAP->offset));
+        GATT_TRACE_DEBUG("ATT failed to pass msg to L2CAP");
         return GATT_INTERNAL_ERROR;
     } else if (l2cap_ret == L2CAP_DW_CONGESTED) {
         GATT_TRACE_DEBUG("ATT congested, message accepted");

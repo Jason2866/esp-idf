@@ -549,48 +549,6 @@ void BTM_BleSecureConnectionCreateOobData(void)
 #endif
 }
 
-#if (BLE_HOST_CONN_SCAN_PARAM_EN == TRUE)
-/******************************************************************************
-**
-** Function         BTM_BleSetConnScanParams
-**
-** Description      Set scan parameter used in BLE connection request
-**
-** Parameters:      scan_interval: scan interval
-**                  scan_window: scan window
-**
-** Returns          void
-**
-*******************************************************************************/
-void BTM_BleSetConnScanParams (UINT32 scan_interval, UINT32 scan_window)
-{
-#if SMP_INCLUDED == TRUE
-    tBTM_BLE_CB *p_ble_cb = &btm_cb.ble_ctr_cb;
-    BOOLEAN     new_param = FALSE;
-
-    if (BTM_BLE_ISVALID_PARAM(scan_interval, BTM_BLE_SCAN_INT_MIN, BTM_BLE_SCAN_INT_MAX) &&
-            BTM_BLE_ISVALID_PARAM(scan_window, BTM_BLE_SCAN_WIN_MIN, BTM_BLE_SCAN_WIN_MAX)) {
-        if (p_ble_cb->scan_int != scan_interval) {
-            p_ble_cb->scan_int = scan_interval;
-            new_param = TRUE;
-        }
-
-        if (p_ble_cb->scan_win != scan_window) {
-            p_ble_cb->scan_win = scan_window;
-            new_param = TRUE;
-        }
-#if (tGATT_BG_CONN_DEV == TRUE)
-        if (new_param && p_ble_cb->conn_state == BLE_BG_CONN) {
-            btm_ble_suspend_bg_conn();
-        }
-#endif // #if (tGATT_BG_CONN_DEV == TRUE)
-    } else {
-        BTM_TRACE_ERROR("Illegal Connection Scan Parameters");
-    }
-#endif
-}
-#endif // #if (BLE_HOST_CONN_SCAN_PARAM_EN == TRUE)
-
 /********************************************************
 **
 ** Function         BTM_BleSetPrefConnParams
@@ -2389,7 +2347,7 @@ BOOLEAN BTM_BleVerifySignature (BD_ADDR bd_addr, UINT8 *p_orig, UINT16 len, UINT
     tBTM_SEC_DEV_REC *p_rec = btm_find_dev (bd_addr);
     UINT8 p_mac[BTM_CMAC_TLEN_SIZE];
 
-    if (p_rec == NULL || (p_rec && !(p_rec->ble.key_type & BTM_LE_KEY_PCSRK))) {
+    if (p_rec == NULL || !(p_rec->ble.key_type & BTM_LE_KEY_PCSRK)) {
         BTM_TRACE_ERROR("can not verify signature for unknown device");
     } else if (counter < p_rec->ble.keys.counter) {
         BTM_TRACE_ERROR("signature received with out dated sign counter");

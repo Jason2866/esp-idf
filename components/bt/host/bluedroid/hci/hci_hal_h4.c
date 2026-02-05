@@ -360,7 +360,7 @@ int hci_adv_credits_prep_to_release(uint16_t num)
     hci_hal_env.adv_credits_to_release = credits_to_release;
     osi_mutex_unlock(&hci_hal_env.adv_flow_lock);
 
-    if (credits_to_release == num && num != 0) {
+    if (credits_to_release == num) {
         osi_alarm_cancel(hci_hal_env.adv_flow_monitor);
         osi_alarm_set(hci_hal_env.adv_flow_monitor, HCI_ADV_FLOW_MONITOR_PERIOD_MS);
     }
@@ -481,6 +481,10 @@ static void hci_hal_h4_hdl_rx_packet(BT_HDR *packet)
     packet->len--;
     if (type == HCI_BLE_EVENT) {
 #if (!CONFIG_BT_STACK_NO_LOG)
+        if (packet->len < 1) {
+            osi_free(packet);
+            return;
+        }
         uint8_t len = 0;
         STREAM_TO_UINT8(len, stream);
 #endif
@@ -608,9 +612,9 @@ static int host_recv_pkt_cb(uint8_t *data, uint16_t len)
 #if CONFIG_BT_BLE_LOG_SPI_OUT_HCI_ENABLED
     ble_log_spi_out_hci_write(BLE_LOG_SPI_OUT_SOURCE_HCI_UPSTREAM, data, len);
 #endif // CONFIG_BT_BLE_LOG_SPI_OUT_HCI_ENABLED
-#if CONFIG_BLE_LOG_ENABLED
+#if CONFIG_BLE_LOG_HOST_SIDE_HCI_LOG_ENABLED
     ble_log_write_hex(BLE_LOG_SRC_HCI, data, len);
-#endif /* CONFIG_BLE_LOG_ENABLED */
+#endif /* CONFIG_BLE_LOG_HOST_SIDE_HCI_LOG_ENABLED */
     //Target has packet to host, malloc new buffer for packet
     BT_HDR *pkt = NULL;
 #if (BLE_42_SCAN_EN == TRUE)
@@ -666,7 +670,7 @@ static int host_recv_pkt_cb(uint8_t *data, uint16_t len)
         }
 #endif
         pkt_size = BT_PKT_LINKED_HDR_SIZE + BT_HDR_SIZE + len;
-        #if HEAP_MEMORY_DEBUG
+        #if (HEAP_MEMORY_DEBUG || HEAP_MEMORY_STATS)
         linked_pkt = (pkt_linked_item_t *) osi_calloc(pkt_size);
         #else
         linked_pkt = (pkt_linked_item_t *) osi_calloc_base(pkt_size);

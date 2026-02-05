@@ -22,7 +22,15 @@
 #include "btm_int.h"
 #include "stack/l2c_api.h"
 #include "smp_int.h"
+#if (SMP_CRYPTO_MBEDTLS == TRUE)
+#include "mbedtls/ecp.h"
+#elif (SMP_CRYPTO_TINYCRYPT == TRUE)
+#include "tinycrypt/ecc_dh.h"
+#include "tinycrypt/ecc.h"
+#include "tinycrypt/constants.h"
+#else
 #include "p_256_ecc_pp.h"
+#endif
 //#include "utils/include/bt_utils.h"
 
 #if SMP_INCLUDED == TRUE
@@ -771,10 +779,98 @@ void smp_process_pairing_public_key(tSMP_CB *p_cb, tSMP_INT_DATA *p_data)
     }
     /* In order to prevent the x and y coordinates of the public key from being modified,
        we need to check whether the x and y coordinates are on the given elliptic curve. */
+#if (SMP_CRYPTO_MBEDTLS == TRUE)
+    {
+        /*
+         * mbedTLS validates the public key using mbedtls_ecp_check_pubkey.
+         */
+        mbedtls_ecp_group grp = {0};
+        mbedtls_ecp_point pt = {0};
+        int rc;
+        UINT8 pub_be[BT_OCTET32_LEN + BT_OCTET32_LEN + 1];  /* 0x04 || X (32 bytes) || Y (32 bytes) */
+
+        mbedtls_ecp_group_init(&grp);
+        mbedtls_ecp_point_init(&pt);
+
+        /* Load the group */
+        rc = mbedtls_ecp_group_load(&grp, MBEDTLS_ECP_DP_SECP256R1);
+        if (rc != 0) {
+            SMP_TRACE_ERROR("%s, Invalid Public key. mbedtls_ecp_group_load failed: %d\n", __func__, rc);
+            mbedtls_ecp_point_free(&pt);
+            mbedtls_ecp_group_free(&grp);
+            reason = SMP_INVALID_PARAMETERS;
+            smp_sm_event(p_cb, SMP_AUTH_CMPL_EVT, &reason);
+            return;
+        }
+
+        /* Construct peer public key in uncompressed format (0x04 || X || Y) */
+        pub_be[0] = 0x04;
+        for (int i = 0; i < BT_OCTET32_LEN; i++) {
+            pub_be[1 + i] = p_cb->peer_publ_key.x[BT_OCTET32_LEN - 1 - i];
+            pub_be[33 + i] = p_cb->peer_publ_key.y[BT_OCTET32_LEN - 1 - i];
+        }
+
+        /* Read public key */
+        rc = mbedtls_ecp_point_read_binary(&grp, &pt, pub_be, sizeof(pub_be));
+        if (rc != 0) {
+            SMP_TRACE_ERROR("%s, Invalid Public key. mbedtls_ecp_point_read_binary failed: %d\n", __func__, rc);
+            mbedtls_ecp_point_free(&pt);
+            mbedtls_ecp_group_free(&grp);
+            reason = SMP_INVALID_PARAMETERS;
+            smp_sm_event(p_cb, SMP_AUTH_CMPL_EVT, &reason);
+            return;
+        }
+
+        /* Validate public key - check if it's on the curve */
+        rc = mbedtls_ecp_check_pubkey(&grp, &pt);
+        if (rc != 0) {
+            SMP_TRACE_ERROR("%s, Invalid Public key. mbedtls_ecp_check_pubkey failed: %d\n", __func__, rc);
+            mbedtls_ecp_point_free(&pt);
+            mbedtls_ecp_group_free(&grp);
+            reason = SMP_INVALID_PARAMETERS;
+            smp_sm_event(p_cb, SMP_AUTH_CMPL_EVT, &reason);
+            return;
+        }
+
+        /* Key is valid, clean up */
+        mbedtls_ecp_point_free(&pt);
+        mbedtls_ecp_group_free(&grp);
+    }
+#elif (SMP_CRYPTO_TINYCRYPT == TRUE)
+    {
+        /*
+         * TinyCrypt validates the public key using uECC_valid_public_key.
+         * TinyCrypt expects public key in format: X (32 bytes) || Y (32 bytes), no prefix.
+         */
+        UINT8 pub_be[64];  /* TinyCrypt format: X (32 bytes) || Y (32 bytes), no prefix */
+
+        /* Convert peer public key from little-endian to big-endian */
+        /* TinyCrypt format: X (32 bytes) || Y (32 bytes), no prefix */
+        for (int i = 0; i < BT_OCTET32_LEN; i++) {
+            pub_be[i] = p_cb->peer_publ_key.x[BT_OCTET32_LEN - 1 - i];
+            pub_be[BT_OCTET32_LEN + i] = p_cb->peer_publ_key.y[BT_OCTET32_LEN - 1 - i];
+        }
+
+        /* Validate public key - TinyCrypt will check if it's on the curve */
+        /* uECC_valid_public_key returns 0 if valid, negative value if invalid */
+        if (uECC_valid_public_key(pub_be, uECC_secp256r1()) < 0) {
+            SMP_TRACE_ERROR("%s, Invalid Public key. uECC_valid_public_key failed\n", __func__);
+            reason = SMP_INVALID_PARAMETERS;
+            smp_sm_event(p_cb, SMP_AUTH_CMPL_EVT, &reason);
+            memset(pub_be, 0, sizeof(pub_be));
+            return;
+        }
+
+        /* Clear sensitive data from stack */
+        memset(pub_be, 0, sizeof(pub_be));
+    }
+#else
     if (!ECC_CheckPointIsInElliCur_P256((Point *)&p_cb->peer_publ_key)) {
         SMP_TRACE_ERROR("%s, Invalid Public key.", __func__);
         smp_sm_event(p_cb, SMP_AUTH_CMPL_EVT, &reason);
+        return;
     }
+#endif /* SMP_CRYPTO_MBEDTLS */
     p_cb->flags |= SMP_PAIR_FLAG_HAVE_PEER_PUBL_KEY;
 
     smp_wait_for_both_public_keys(p_cb, NULL);
@@ -865,7 +961,7 @@ void smp_br_process_pairing_command(tSMP_CB *p_cb, tSMP_INT_DATA *p_data)
 
     SMP_TRACE_DEBUG("%s", __func__);
     /* rejecting BR pairing request over non-SC BR link */
-    if (!p_dev_rec->new_encryption_key_is_p256 && p_cb->role == HCI_ROLE_SLAVE) {
+    if (p_dev_rec && !p_dev_rec->new_encryption_key_is_p256 && p_cb->role == HCI_ROLE_SLAVE) {
         reason = SMP_XTRANS_DERIVE_NOT_ALLOW;
         smp_br_state_machine_event(p_cb, SMP_BR_AUTH_CMPL_EVT, &reason);
         return;
@@ -1343,7 +1439,14 @@ void smp_key_distribution(tSMP_CB *p_cb, tSMP_INT_DATA *p_data)
         /* state check to prevent re-entrant */
         if (smp_get_state() == SMP_STATE_BOND_PENDING) {
             if (p_cb->derive_lk) {
-                smp_derive_link_key_from_long_term_key(p_cb, NULL);
+                tBTM_SEC_DEV_REC* p_dev_rec = btm_find_dev(p_cb->pairing_bda);
+                if (!(p_dev_rec->sec_flags & BTM_SEC_LE_LINK_KEY_AUTHED) &&
+                    (p_dev_rec->sec_flags & BTM_SEC_LINK_KEY_AUTHED)) {
+                    SMP_TRACE_DEBUG("%s BREDR key is higher security than existing LE keys, "
+                                    "don't derive LK from LTK", __func__);
+                } else {
+                    smp_derive_link_key_from_long_term_key(p_cb, NULL);
+                }
                 p_cb->derive_lk = FALSE;
             }
 
