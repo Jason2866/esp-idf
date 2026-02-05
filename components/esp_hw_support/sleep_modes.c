@@ -40,6 +40,10 @@
 #include "hal/rtc_io_hal.h"
 #include "hal/clk_tree_hal.h"
 
+#if __has_include("hal/rng_ll.h")
+#include "hal/rng_ll.h"
+#endif
+
 #if SOC_SLEEP_SYSTIMER_STALL_WORKAROUND
 #include "hal/systimer_ll.h"
 #endif
@@ -751,7 +755,7 @@ static SLEEP_FN_ATTR void misc_modules_sleep_prepare(uint32_t sleep_flags, bool 
         regi2c_tsens_reg_read();
 #endif
     }
-#if CONFIG_ESP_ENABLE_PVT
+#if CONFIG_ESP_ENABLE_PVT && SOC_PVT_EN_WITH_SLEEP
     pvt_func_enable(false);
 #endif
 
@@ -766,7 +770,7 @@ static SLEEP_FN_ATTR void misc_modules_sleep_prepare(uint32_t sleep_flags, bool 
  */
 static SLEEP_FN_ATTR void misc_modules_wake_prepare(uint32_t sleep_flags)
 {
-#if CONFIG_ESP_ENABLE_PVT
+#if CONFIG_ESP_ENABLE_PVT && SOC_PVT_EN_WITH_SLEEP
     pvt_func_enable(true);
 #endif
 
@@ -809,6 +813,13 @@ static SLEEP_FN_ATTR void misc_modules_wake_prepare(uint32_t sleep_flags)
 #endif
 #if SOC_TEMPERATURE_SENSOR_SUPPORT_SLEEP_RETENTION
     regi2c_tsens_reg_write();
+#endif
+#if RNG_LL_DEPENDS_ON_LP_PERIPH
+    if (sleep_flags & PMU_SLEEP_PD_LP_PERIPH) {
+        // Re-enable the RNG module.
+        rng_ll_reset();
+        rng_ll_enable();
+    }
 #endif
 }
 
@@ -2706,7 +2717,8 @@ static SLEEP_FN_ATTR uint32_t get_power_down_flags(void)
 #endif
 
 #if SOC_PM_SUPPORT_CNNT_PD
-    if (s_config.domain[ESP_PD_DOMAIN_CNNT].pd_option != ESP_PD_OPTION_ON && top_domain_pd_allowed()) {
+    // The TOP domain depends on the CNNT domain, only after the TOP power domain has been powered off is the CNNT power domain allowed to power down.
+    if (s_config.domain[ESP_PD_DOMAIN_CNNT].pd_option != ESP_PD_OPTION_ON && (pd_flags & PMU_SLEEP_PD_TOP)) {
         pd_flags |= PMU_SLEEP_PD_CNNT;
     }
 #endif
@@ -2737,9 +2749,6 @@ static SLEEP_FN_ATTR uint32_t get_power_down_flags(void)
         // TOP power domain depends on the RTC_PERIPH power domain on ESP32C6, RTC_PERIPH should only be disabled when the TOP domain is down.
         pd_flags &= ~RTC_SLEEP_PD_RTC_PERIPH;
     }
-#elif CONFIG_IDF_TARGET_ESP32C5
-    // TODO: [ESP32C5] PM-642 RNG module depends on LP PERIPH domain, force it on temporary.
-    pd_flags &= ~RTC_SLEEP_PD_RTC_PERIPH;
 #endif
     return pd_flags;
 }
