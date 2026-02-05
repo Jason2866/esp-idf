@@ -29,11 +29,11 @@
 #define GDMA_LL_RX_EVENT_MASK       (0x1F)
 #define GDMA_LL_TX_EVENT_MASK       (0x0F)
 
+// the following event bits are identical for ahb-dma and axi-dma
 #define GDMA_LL_EVENT_TX_TOTAL_EOF  (1<<3)
 #define GDMA_LL_EVENT_TX_DESC_ERROR (1<<2)
 #define GDMA_LL_EVENT_TX_EOF        (1<<1)
 #define GDMA_LL_EVENT_TX_DONE       (1<<0)
-
 #define GDMA_LL_EVENT_RX_DESC_EMPTY (1<<4)
 #define GDMA_LL_EVENT_RX_DESC_ERROR (1<<3)
 #define GDMA_LL_EVENT_RX_ERR_EOF    (1<<2)
@@ -63,6 +63,14 @@
 #if HAL_CONFIG(CHIP_SUPPORT_MIN_REV) >= 300
 #define GDMA_LL_AHB_BURST_SIZE_ADJUSTABLE 1 // AHB GDMA supports adjustable burst size
 #endif
+
+#if HAL_CONFIG(CHIP_SUPPORT_MIN_REV) >= 300
+#define GDMA_LL_AHB_M2M_CAPABLE_PAIR_MASK   0x06  // only pair 1,2 are M2M capable
+#else
+#define GDMA_LL_AHB_M2M_CAPABLE_PAIR_MASK   0x07  // pair 0,1,2 are M2M capable
+#endif
+
+#define GDMA_LL_AXI_M2M_CAPABLE_PAIR_MASK   0x07  // pair 0,1,2 are M2M capable
 
 #define GDMA_LL_TX_ETM_EVENT_TABLE(group, chan, event)                \
     (uint32_t[2][GDMA_ETM_EVENT_MAX]){                                \

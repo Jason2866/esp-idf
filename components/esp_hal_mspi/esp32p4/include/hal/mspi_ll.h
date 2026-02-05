@@ -47,6 +47,9 @@ extern "C" {
 #define MSPI_TIMING_LL_MSPI_ID_0                      0
 #define MSPI_TIMING_LL_MSPI_ID_1                      1
 
+// PSRAM frequency should be constrained by AXI frequency to avoid FIFO underflow.
+#define MSPI_TIMING_LL_PSRAM_FREQ_AXI_CONSTRAINED     1
+
 #define MSPI_TIMING_LL_HP_FLASH_CORE_CLK_DIV          4
 #define MSPI_TIMING_LL_LP_FLASH_CORE_CLK_DIV          6
 #define MSPI_TIMING_LL_FLASH_FDUMMY_RIN_SUPPORTED     1
@@ -395,6 +398,8 @@ __attribute__((always_inline))
 static inline void mspi_timinng_ll_enable_flash_timing_adjust_clk(uint8_t spi_num)
 {
     HAL_ASSERT(spi_num == MSPI_TIMING_LL_MSPI_ID_0);
+    // Should set ie always on to ensure it can read flash sr2
+    REG_SET_BIT(SPI_MEM_C_CTRL_REG, SPI_MEM_C_DATA_IE_ALWAYS_ON);
     REG_GET_BIT(SPI_MEM_C_TIMING_CALI_REG, SPI_MEM_C_TIMING_CLK_ENA);
 }
 

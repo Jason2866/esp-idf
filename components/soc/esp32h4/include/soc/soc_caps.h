@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0 OR MIT
  */
@@ -65,8 +65,8 @@
 #define SOC_I2C_SUPPORTED               1
 #define SOC_SYSTIMER_SUPPORTED          1
 // #define SOC_SUPPORT_COEXISTENCE         1    // TODO: [ESP32H4] IDF-12251 IDF-12252 IDF-12253
-// #define SOC_AES_SUPPORTED               0    // TODO: [ESP32H4] IDF-12266
-// #define SOC_SHA_SUPPORTED               1    // TODO: [ESP32H4] IDF-12263
+#define SOC_AES_SUPPORTED               1
+#define SOC_SHA_SUPPORTED               1
 // #define SOC_HMAC_SUPPORTED              0    // TODO: [ESP32H4] IDF-12257
 #define SOC_ECC_SUPPORTED               1
 #define SOC_ECC_EXTENDED_MODES_SUPPORTED   1
@@ -96,13 +96,15 @@
 #define SOC_XTAL_CLOCK_PATH_DEPENDS_ON_TOP_DOMAIN   1
 
 /*-------------------------- AES CAPS -----------------------------------------*/
-// #define SOC_AES_SUPPORT_DMA     (1)
+#define SOC_AES_SUPPORT_DMA     (1)
 
 /* Has a centralized DMA, which is shared with all peripherals */
-// #define SOC_AES_GDMA            (1)
+#define SOC_AES_GDMA            (1)
 
-// #define SOC_AES_SUPPORT_AES_128 (1)
-// #define SOC_AES_SUPPORT_AES_256 (1)
+#define SOC_AES_SUPPORT_AES_128 (1)
+#define SOC_AES_SUPPORT_AES_256 (1)
+
+#define SOC_AES_SUPPORT_PSEUDO_ROUND_FUNCTION (1)
 
 /*-------------------------- ADC CAPS -------------------------------*/
 /*!< SAR ADC Module*/
@@ -253,25 +255,18 @@
 #define SOC_ETM_SUPPORT_SLEEP_RETENTION 1
 
 /*-------------------------- I2C CAPS ----------------------------------------*/
-// ESP32-H4 has 2 I2C
-#define SOC_I2C_NUM                 (2U)
-#define SOC_HP_I2C_NUM              (2U)
+#define SOC_I2C_NUM                             (2U)
+#define SOC_HP_I2C_NUM                          (2U)
 
-#define SOC_I2C_FIFO_LEN            (32) /*!< I2C hardware FIFO depth */
-#define SOC_I2C_CMD_REG_NUM         (8)  /*!< Number of I2C command registers */
-#define SOC_I2C_SUPPORT_SLAVE       (1)
+#define SOC_I2C_SUPPORT_XTAL                    (1)
+#define SOC_I2C_SUPPORT_RTC                     (1)
+#define SOC_I2C_SUPPORT_10BIT_ADDR              (1)
 
-#define SOC_I2C_SUPPORT_HW_FSM_RST  (1)
-#define SOC_I2C_SUPPORT_HW_CLR_BUS  (1)
+#define SOC_I2C_SUPPORT_SLAVE                   (1)
+#define SOC_I2C_SLAVE_SUPPORT_BROADCAST         (1)
+#define SOC_I2C_SLAVE_CAN_GET_STRETCH_CAUSE     (1)
 
-#define SOC_I2C_SUPPORT_XTAL        (1)
-#define SOC_I2C_SUPPORT_RTC         (1)
-#define SOC_I2C_SUPPORT_10BIT_ADDR   (1)
-#define SOC_I2C_SLAVE_SUPPORT_BROADCAST    (1)
-#define SOC_I2C_SLAVE_CAN_GET_STRETCH_CAUSE    (1)
-#define SOC_I2C_SLAVE_SUPPORT_I2CRAM_ACCESS   (1)
-#define SOC_I2C_SLAVE_SUPPORT_SLAVE_UNMATCH    (1)
-#define SOC_I2C_SUPPORT_SLEEP_RETENTION (1)
+#define SOC_I2C_SUPPORT_SLEEP_RETENTION         (1)
 
 /*-------------------------- I2S CAPS ----------------------------------------*/
 #define SOC_I2S_HW_VERSION_2        (1)
@@ -349,19 +344,22 @@
    for SHA this means that the biggest safe amount of bytes is
    31 blocks of 128 bytes = 3968
 */
-// #define SOC_SHA_DMA_MAX_BUFFER_SIZE     (3968)
-// #define SOC_SHA_SUPPORT_DMA             (1)
+#define SOC_SHA_DMA_MAX_BUFFER_SIZE     (3968)
+#define SOC_SHA_SUPPORT_DMA             (1)
 
 /* The SHA engine is able to resume hashing from a user */
-// #define SOC_SHA_SUPPORT_RESUME          (1)
+#define SOC_SHA_SUPPORT_RESUME          (1)
 
 /* Has a centralized DMA, which is shared with all peripherals */
-// #define SOC_SHA_GDMA             (1)
+#define SOC_SHA_GDMA             (1)
 
 /* Supported HW algorithms */
-// #define SOC_SHA_SUPPORT_SHA1            (1)
-// #define SOC_SHA_SUPPORT_SHA224          (1)
-// #define SOC_SHA_SUPPORT_SHA256          (1)
+#define SOC_SHA_SUPPORT_SHA1            (1)
+#define SOC_SHA_SUPPORT_SHA224          (1)
+#define SOC_SHA_SUPPORT_SHA256          (1)
+#define SOC_SHA_SUPPORT_SHA384          (1)
+#define SOC_SHA_SUPPORT_SHA512          (1)
+#define SOC_SHA_SUPPORT_SHA512_T        (1)
 
 /*--------------------------- ECC CAPS ---------------------------------------*/
 #define SOC_ECC_CONSTANT_TIME_POINT_MUL           1
@@ -381,7 +379,6 @@
 #define SOC_SPI_MEM_SUPPORT_SW_SUSPEND                    (1)
 #define SOC_SPI_MEM_SUPPORT_CHECK_SUS                     (1)
 #define SOC_SPI_MEM_SUPPORT_WRAP                          (1)
-#define SOC_SPI_MEM_PSRAM_FREQ_AXI_CONSTRAINED               (1)
 #define SOC_MEMSPI_IS_INDEPENDENT                          1
 
 /*-------------------------- SYSTIMER CAPS ----------------------------------*/
@@ -453,11 +450,11 @@
 
 #define SOC_UART_SUPPORT_SLEEP_RETENTION   (1)         /*!< Support back up registers before sleep */
 
-// #define SOC_UART_WAKEUP_CHARS_SEQ_MAX_LEN 5
+#define SOC_UART_WAKEUP_CHARS_SEQ_MAX_LEN 5
 #define SOC_UART_WAKEUP_SUPPORT_ACTIVE_THRESH_MODE (1)
-// #define SOC_UART_WAKEUP_SUPPORT_FIFO_THRESH_MODE   (1)      // TODO: [ESP32H4] PM-457
-// #define SOC_UART_WAKEUP_SUPPORT_START_BIT_MODE     (1)
-// #define SOC_UART_WAKEUP_SUPPORT_CHAR_SEQ_MODE      (1)
+#define SOC_UART_WAKEUP_SUPPORT_FIFO_THRESH_MODE   (1)
+#define SOC_UART_WAKEUP_SUPPORT_START_BIT_MODE     (1)
+#define SOC_UART_WAKEUP_SUPPORT_CHAR_SEQ_MODE      (1)
 
 /*-------------------------- SPIRAM CAPS -------------------------------------*/
 #define SOC_SPIRAM_XIP_SUPPORTED      1
@@ -493,6 +490,8 @@
 // #define SOC_PM_SUPPORT_PMU_MODEM_STATE  (1)
 // /* macro redefine for pass esp_wifi headers md5sum check */
 // #define MAC_SUPPORT_PMU_MODEM_STATE     SOC_PM_SUPPORT_PMU_MODEM_STATE
+
+#define SOC_PM_SUPPORT_PMU_CLK_ICG          (1)
 
 #define SOC_PM_CPU_RETENTION_BY_SW          (1)
 #define SOC_PM_MODEM_RETENTION_BY_REGDMA    (1)

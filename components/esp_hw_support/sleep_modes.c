@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2015-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2015-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -168,7 +168,11 @@
 #define FAST_CLK_SRC_CAL_CYCLES     (2048)  /* ~ 127.4 us */
 
 #ifdef CONFIG_IDF_TARGET_ESP32
+#if !CONFIG_PM_SLP_IRAM_OPT
+#define DEFAULT_SLEEP_OUT_OVERHEAD_US       (476)
+#else
 #define DEFAULT_SLEEP_OUT_OVERHEAD_US       (212)
+#endif
 #define DEFAULT_HARDWARE_OUT_OVERHEAD_US    (60)
 #elif CONFIG_IDF_TARGET_ESP32S2
 #define DEFAULT_SLEEP_OUT_OVERHEAD_US       (147)
@@ -195,12 +199,15 @@
 #elif CONFIG_IDF_TARGET_ESP32C6
 #define DEFAULT_SLEEP_OUT_OVERHEAD_US       (318)
 #define DEFAULT_HARDWARE_OUT_OVERHEAD_US    (56)
+#define PVT_REINIT_COST_US                  (60)
 #elif CONFIG_IDF_TARGET_ESP32C5
 #define DEFAULT_SLEEP_OUT_OVERHEAD_US       (318)
 #define DEFAULT_HARDWARE_OUT_OVERHEAD_US    (56)
+#define PVT_REINIT_COST_US                  (25)
 #elif CONFIG_IDF_TARGET_ESP32C61
 #define DEFAULT_SLEEP_OUT_OVERHEAD_US       (65)
 #define DEFAULT_HARDWARE_OUT_OVERHEAD_US    (70)
+#define PVT_REINIT_COST_US                  (90)
 #elif CONFIG_IDF_TARGET_ESP32H2
 #define DEFAULT_SLEEP_OUT_OVERHEAD_US       (118)
 #define DEFAULT_HARDWARE_OUT_OVERHEAD_US    (9)
@@ -223,10 +230,6 @@
 #define DEEP_SLEEP_TIME_OVERHEAD_US         (650 + 100 * 240 / CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ)
 #else
 #define DEEP_SLEEP_TIME_OVERHEAD_US         (250 + 100 * 240 / CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ)
-#endif
-
-#if SOC_PM_MMU_TABLE_RETENTION_WHEN_TOP_PD
-#define SLEEP_MMU_TABLE_RETENTION_OVERHEAD_US  (1220)
 #endif
 
 #define RTC_MODULE_SLEEP_PREPARE_CYCLES (6)
@@ -348,6 +351,10 @@ void esp_sleep_overhead_out_time_refresh(void)
 static uint32_t get_power_down_flags(void);
 static uint32_t get_sleep_flags(uint32_t pd_flags, bool deepsleep);
 static uint32_t get_sleep_clock_icg_flags(void);
+#if CONFIG_ESP_SLEEP_ENABLE_RTC_WDT_IN_SLEEP
+static uint32_t get_sleep_rtc_wdt_timeout(uint64_t sleep_duration);
+static uint32_t calc_sleep_slow_clk_required_cycles(uint32_t timeout, uint32_t rtc_slow_clk_cal_period);
+#endif
 #if SOC_PM_SUPPORT_EXT0_WAKEUP
 static void ext0_wakeup_prepare(void);
 #endif
@@ -693,7 +700,7 @@ static SLEEP_FN_ATTR void misc_modules_sleep_prepare(uint32_t sleep_flags, bool 
         regi2c_tsens_reg_read();
 #endif
     }
-#if CONFIG_ESP_ENABLE_PVT
+#if CONFIG_ESP_ENABLE_PVT && SOC_PVT_EN_WITH_SLEEP
     pvt_func_enable(false);
 #endif
 
@@ -710,7 +717,7 @@ static SLEEP_FN_ATTR void misc_modules_sleep_prepare(uint32_t sleep_flags, bool 
  */
 static SLEEP_FN_ATTR void misc_modules_wake_prepare(uint32_t sleep_flags)
 {
-#if CONFIG_ESP_ENABLE_PVT
+#if CONFIG_ESP_ENABLE_PVT && SOC_PVT_EN_WITH_SLEEP
     pvt_func_enable(true);
 #endif
 
@@ -763,6 +770,33 @@ static SLEEP_FN_ATTR void misc_modules_wake_prepare(uint32_t sleep_flags)
         rng_ll_enable();
     }
 #endif
+}
+
+/**
+ * RTC WDT prepare for using during sleep
+ */
+static SLEEP_FN_ATTR void sleep_rtc_wdt_prepare(bool enable)
+{
+    wdt_hal_context_t rtc_wdt_ctx = RWDT_HAL_CONTEXT_DEFAULT();
+    if (enable) {
+        wdt_hal_init(&rtc_wdt_ctx, WDT_RWDT, 0, false);
+        // Use default timeout for sleep monitoring
+        uint32_t rtc_wdt_timeout_required_cycles = (uint32_t)(1000ULL * rtc_clk_slow_freq_get_hz() / 1000ULL);
+#if CONFIG_ESP_SLEEP_ENABLE_RTC_WDT_IN_SLEEP
+        if (s_config.wakeup_triggers & RTC_TIMER_TRIG_EN) {
+            uint32_t rtc_wdt_timeout = get_sleep_rtc_wdt_timeout(s_config.sleep_duration);
+            rtc_wdt_timeout_required_cycles = calc_sleep_slow_clk_required_cycles(rtc_wdt_timeout, s_config.rtc_clk_cal_period);
+        }
+#endif
+        wdt_hal_write_protect_disable(&rtc_wdt_ctx);
+        wdt_hal_config_stage(&rtc_wdt_ctx, WDT_STAGE0, rtc_wdt_timeout_required_cycles, WDT_STAGE_ACTION_RESET_RTC);
+        wdt_hal_enable(&rtc_wdt_ctx);
+        wdt_hal_write_protect_enable(&rtc_wdt_ctx);
+    } else {
+        wdt_hal_write_protect_disable(&rtc_wdt_ctx);
+        wdt_hal_disable(&rtc_wdt_ctx);
+        wdt_hal_write_protect_enable(&rtc_wdt_ctx);
+    }
 }
 
 static SLEEP_FN_ATTR void sleep_low_power_clock_calibration(bool is_dslp)
@@ -887,9 +921,6 @@ static esp_err_t FORCE_IRAM_ATTR esp_sleep_start_safe(uint32_t sleep_flags, uint
 
 #if CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP
         if (sleep_flags & PMU_SLEEP_PD_TOP) {
-#if SOC_PM_MMU_TABLE_RETENTION_WHEN_TOP_PD
-            esp_sleep_mmu_retention(true);
-#endif
 #if CONFIG_IDF_TARGET_ESP32P4 && (CONFIG_ESP_REV_MIN_FULL == 300)
             sleep_retention_do_extra_retention(true);
 #endif
@@ -917,13 +948,10 @@ static esp_err_t FORCE_IRAM_ATTR esp_sleep_start_safe(uint32_t sleep_flags, uint
 
 #if CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP
         if (sleep_flags & PMU_SLEEP_PD_TOP) {
-#if SOC_PM_MMU_TABLE_RETENTION_WHEN_TOP_PD
-            esp_sleep_mmu_retention(false);
-#endif
 #if SOC_PM_RETENTION_SW_TRIGGER_REGDMA
             sleep_retention_do_system_retention(false);
 #endif
-#if CONFIG_IDF_TARGET_ESP32P4 && (CONFIG_ESP_REV_MIN_FULL == 300)
+#if CONFIG_P4_REV3_MSPI_CRASH_AFTER_POWER_UP_WORKAROUND
             sleep_flash_p4_rev3_workaround();
             sleep_retention_do_extra_retention(false);
 #endif
@@ -1134,18 +1162,6 @@ static esp_err_t SLEEP_FN_ATTR esp_sleep_start(uint32_t sleep_flags, uint32_t cl
     if (!deep_sleep) {
         if (result == ESP_OK) {
             s_config.ccount_ticks_record = esp_cpu_get_cycle_count();
-#if !CONFIG_PM_SLP_IRAM_OPT && !(CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32P4)
-#if CONFIG_SPIRAM
-            // TODO: PM-651
-            Cache_WriteBack_All();
-#endif
-            /* When the IRAM optimization for the sleep flow is disabled, all
-             * cache contents are forcibly invalidated before exiting the sleep
-             * flow. This ensures that the code execution time of sleep exit
-             * flow remains consistent, allowing the use of ccount to
-             * dynamically calculate the sleep adjustment time. */
-            cache_ll_invalidate_all(CACHE_LL_LEVEL_ALL, CACHE_TYPE_ALL, CACHE_LL_ID_ALL);
-#endif
         }
         misc_modules_wake_prepare(sleep_flags);
     }
@@ -1225,6 +1241,15 @@ static esp_err_t FORCE_IRAM_ATTR deep_sleep_start(bool allow_sleep_rejection)
     // Correct the sleep time
     s_config.sleep_time_adjustment = DEEP_SLEEP_TIME_OVERHEAD_US;
 
+    // Safety net: enable WDT in case exit from deep sleep fails
+    wdt_hal_context_t rtc_wdt_ctx = RWDT_HAL_CONTEXT_DEFAULT();
+    bool rtc_wdt_was_enabled = wdt_hal_is_enabled(&rtc_wdt_ctx);    // If WDT was enabled in the user code, then do not change it here.
+    if (!rtc_wdt_was_enabled) {
+        sleep_rtc_wdt_prepare(true);
+    } else {
+        ESP_EARLY_LOGW(TAG, "RTC WDT is enabled and will not be reconfigured again!");
+    }
+
 #if SOC_PMU_SUPPORTED
     uint32_t force_pd_flags = PMU_SLEEP_PD_TOP | PMU_SLEEP_PD_VDDSDIO | PMU_SLEEP_PD_MODEM | PMU_SLEEP_PD_HP_PERIPH \
                             | PMU_SLEEP_PD_CPU | PMU_SLEEP_PD_MEM | PMU_SLEEP_PD_XTAL;
@@ -1271,6 +1296,10 @@ static esp_err_t FORCE_IRAM_ATTR deep_sleep_start(bool allow_sleep_rejection)
         ESP_INFINITE_LOOP();
     }
     // Never returns here, except that the sleep is rejected.
+    if (!rtc_wdt_was_enabled) {
+        sleep_rtc_wdt_prepare(false);
+    }
+
     esp_ipc_isr_stall_resume();
     esp_ipc_isr_release_other_cpu();
     esp_os_exit_critical(&spinlock_rtc_deep_sleep);
@@ -1452,9 +1481,9 @@ esp_err_t esp_light_sleep_start(void)
     // Re-calibrate the RTC clock
     sleep_low_power_clock_calibration(false);
 
+    uint32_t cur_cpu_freq = esp_clk_cpu_freq() / MHZ;
+    uint32_t xtal_freq = rtc_clk_xtal_freq_get();
     if (s_config.overhead_out_need_remeasure) {
-        uint32_t cur_cpu_freq = esp_clk_cpu_freq() / MHZ;
-        uint32_t xtal_freq = rtc_clk_xtal_freq_get();
         if (cur_cpu_freq < xtal_freq) {
             s_config.sleep_time_overhead_out = DEFAULT_SLEEP_OUT_OVERHEAD_US * xtal_freq / cur_cpu_freq;
         } else {
@@ -1471,12 +1500,19 @@ esp_err_t esp_light_sleep_start(void)
      */
 #if SOC_PMU_SUPPORTED
     int sleep_time_sw_adjustment = LIGHT_SLEEP_TIME_OVERHEAD_US + sleep_time_overhead_in + s_config.sleep_time_overhead_out;
+#if CONFIG_ESP_ENABLE_PVT && !SOC_PVT_EN_WITH_SLEEP
+    /* PVT will only be enabled during the wake-up process if the CPU's clock source is PLL when the CPU goes to sleep. */
+    if ((cur_cpu_freq > xtal_freq)
+#if CONFIG_IDF_TARGET_ESP32C5
+         /* On esp32c5, CPU 40m is divided from PLL160/240M */
+        || (xtal_freq == SOC_XTAL_FREQ_48M && cur_cpu_freq == 40)
+#endif
+        ) {
+        sleep_time_sw_adjustment += PVT_REINIT_COST_US;
+    }
+#endif
     int sleep_time_hw_adjustment = pmu_sleep_calculate_hw_wait_time(sleep_flags, rtc_clk_slow_src_get(), s_config.rtc_clk_cal_period, s_config.fast_clk_cal_period);
     s_config.sleep_time_adjustment = sleep_time_sw_adjustment + sleep_time_hw_adjustment;
-#if SOC_PM_MMU_TABLE_RETENTION_WHEN_TOP_PD
-    int sleep_time_sw_mmu_table_restore = (sleep_flags & PMU_SLEEP_PD_TOP) ? SLEEP_MMU_TABLE_RETENTION_OVERHEAD_US : 0;
-    s_config.sleep_time_adjustment += sleep_time_sw_mmu_table_restore;
-#endif
 #else
     uint32_t rtc_cntl_xtl_buf_wait_slp_cycles = rtc_time_us_to_slowclk(RTC_CNTL_XTL_BUF_WAIT_SLP_US, s_config.rtc_clk_cal_period);
     s_config.sleep_time_adjustment = LIGHT_SLEEP_TIME_OVERHEAD_US + sleep_time_overhead_in + s_config.sleep_time_overhead_out
@@ -1546,14 +1582,11 @@ esp_err_t esp_light_sleep_start(void)
 
     // Safety net: enable WDT in case exit from light sleep fails
     wdt_hal_context_t rtc_wdt_ctx = RWDT_HAL_CONTEXT_DEFAULT();
-    bool wdt_was_enabled = wdt_hal_is_enabled(&rtc_wdt_ctx);    // If WDT was enabled in the user code, then do not change it here.
-    if (!wdt_was_enabled) {
-        wdt_hal_init(&rtc_wdt_ctx, WDT_RWDT, 0, false);
-        uint32_t stage_timeout_ticks = (uint32_t)(1000ULL * rtc_clk_slow_freq_get_hz() / 1000ULL);
-        wdt_hal_write_protect_disable(&rtc_wdt_ctx);
-        wdt_hal_config_stage(&rtc_wdt_ctx, WDT_STAGE0, stage_timeout_ticks, WDT_STAGE_ACTION_RESET_RTC);
-        wdt_hal_enable(&rtc_wdt_ctx);
-        wdt_hal_write_protect_enable(&rtc_wdt_ctx);
+    bool rtc_wdt_was_enabled = wdt_hal_is_enabled(&rtc_wdt_ctx);    // If WDT was enabled in the user code, then do not change it here.
+    if (!rtc_wdt_was_enabled) {
+        sleep_rtc_wdt_prepare(true);
+    } else {
+        ESP_EARLY_LOGW(TAG, "RTC WDT is enabled and will not be reconfigured again!");
     }
 
     esp_err_t err = ESP_OK;
@@ -1625,10 +1658,8 @@ esp_err_t esp_light_sleep_start(void)
 #endif
 #endif
 
-    if (!wdt_was_enabled) {
-        wdt_hal_write_protect_disable(&rtc_wdt_ctx);
-        wdt_hal_disable(&rtc_wdt_ctx);
-        wdt_hal_write_protect_enable(&rtc_wdt_ctx);
+    if (!rtc_wdt_was_enabled) {
+        sleep_rtc_wdt_prepare(false);
     }
 
 #if CONFIG_ESP_TASK_WDT_USE_ESP_TIMER
@@ -2611,9 +2642,6 @@ FORCE_INLINE_ATTR bool top_domain_pd_allowed(void) {
 #else
     top_pd_allowed = false;
 #endif
-#if CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP && SOC_PM_MMU_TABLE_RETENTION_WHEN_TOP_PD
-    top_pd_allowed &= mmu_domain_pd_allowed();
-#endif
     top_pd_allowed &= clock_domain_pd_allowed();
     top_pd_allowed &= peripheral_domain_pd_allowed();
 #if SOC_PM_SUPPORT_MODEM_PD
@@ -2622,10 +2650,11 @@ FORCE_INLINE_ATTR bool top_domain_pd_allowed(void) {
 #if SOC_XTAL_CLOCK_PATH_DEPENDS_ON_TOP_DOMAIN
     top_pd_allowed &= (s_config.domain[ESP_PD_DOMAIN_XTAL].pd_option != ESP_PD_OPTION_ON);
 #endif
-#if SOC_PM_TOP_PD_NOT_ALLOWED
-    // TODO: PM-436, Need to use efuse_hal_chip_revision() to determine whether
-    // the TOP domain power-down is allowed
-    top_pd_allowed = false;
+#if CONFIG_IDF_TARGET_ESP32C5
+    if (!ESP_CHIP_REV_ABOVE(efuse_hal_chip_revision(), 102)) {
+        // ESP32C5 chips lower than v1.2 are not supported to power down the TOP domain
+        top_pd_allowed = false;
+    }
 #endif
 
     return top_pd_allowed;
@@ -2880,6 +2909,14 @@ static SLEEP_FN_ATTR uint32_t get_sleep_flags(uint32_t sleep_flags, bool deepsle
     }
 #endif
 
+#if CONFIG_ESP_SLEEP_ENABLE_RTC_WDT_IN_SLEEP
+    if (s_config.wakeup_triggers & RTC_TIMER_TRIG_EN) {
+        sleep_flags |= RTC_SLEEP_USE_RTC_WDT;
+    } else {
+        sleep_flags &= ~RTC_SLEEP_USE_RTC_WDT;
+    }
+#endif
+
 #if CONFIG_IDF_TARGET_ESP32P4
     /* Due to esp32p4 eco0 hardware bug, if LP peripheral power domain is powerdowned in sleep, there will be a possibility of
        triggering the EFUSE_CRC reset, so disable the power-down of this power domain on lightsleep for ECO0 version. */
@@ -2930,6 +2967,35 @@ static SLEEP_FN_ATTR uint32_t get_sleep_clock_icg_flags(void)
 #endif /* SOC_PM_SUPPORT_PMU_CLK_ICG */
     return clk_flags;
 }
+
+#if CONFIG_ESP_SLEEP_ENABLE_RTC_WDT_IN_SLEEP
+/* TODO: PM-609 */
+/* Calculate drift cycles of rtc slow clock in long-term working scenarios. */
+static SLEEP_FN_ATTR uint32_t calc_sleep_slow_clk_required_cycles(uint32_t timeout, uint32_t rtc_slow_clk_cal_period)
+{
+    uint32_t timeout_cycles = 0;
+    uint32_t required_timeout_cycles = 0;
+    timeout_cycles = (uint32_t)rtc_time_us_to_slowclk(timeout, rtc_slow_clk_cal_period);
+    /* TODO: Add slow clock drift compensation */
+    required_timeout_cycles = timeout_cycles;
+    return required_timeout_cycles;
+}
+
+/* Get the timeout in microseconds for the RTC WDT sleep monitoring.
+ * Returns: default_timeout (1 second) + sleep_duration, all in microseconds.
+ */
+static SLEEP_FN_ATTR uint32_t get_sleep_rtc_wdt_timeout(uint64_t sleep_duration)
+{
+    uint32_t default_timeout = 1000000;  // 1 second in microseconds
+    uint32_t sleep_timeout = 0;
+    uint32_t rtc_wdt_timeout = 0;
+
+    sleep_timeout = (uint32_t)sleep_duration;
+    rtc_wdt_timeout = default_timeout + sleep_timeout;
+
+    return rtc_wdt_timeout;
+}
+#endif
 
 #if CONFIG_IDF_TARGET_ESP32
 /* APP core of esp32 can't access to RTC FAST MEMORY, do not define it with RTC_IRAM_ATTR */

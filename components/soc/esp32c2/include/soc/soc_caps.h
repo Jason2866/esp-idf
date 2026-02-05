@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2021-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2021-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0 OR MIT
  */
@@ -151,15 +151,8 @@
 #define SOC_GPIO_CLOCKOUT_CHANNEL_NUM       (3)
 
 /*-------------------------- I2C CAPS ----------------------------------------*/
-// ESP32-C2 has 1 I2C
 #define SOC_I2C_NUM                 (1U)
 #define SOC_HP_I2C_NUM              (1U)
-
-#define SOC_I2C_FIFO_LEN            (16) /*!< I2C hardware FIFO depth */
-#define SOC_I2C_CMD_REG_NUM         (8)  /*!< Number of I2C command registers */
-
-// FSM_RST only resets the FSM, not using it. So SOC_I2C_SUPPORT_HW_FSM_RST not defined.
-#define SOC_I2C_SUPPORT_HW_CLR_BUS  (1)
 
 #define SOC_I2C_SUPPORT_XTAL        (1)
 #define SOC_I2C_SUPPORT_RTC         (1)
@@ -232,10 +225,6 @@
 // Peripheral supports output given level during its "dummy phase"
 #define SOC_MEMSPI_SUPPORT_CONTROL_DUMMY_OUT      1
 #define SOC_MEMSPI_IS_INDEPENDENT                 1
-#define SOC_MEMSPI_SRC_FREQ_60M_SUPPORTED         1
-#define SOC_MEMSPI_SRC_FREQ_30M_SUPPORTED         1
-#define SOC_MEMSPI_SRC_FREQ_20M_SUPPORTED         1
-#define SOC_MEMSPI_SRC_FREQ_15M_SUPPORTED         1
 
 /*-------------------------- SYSTIMER CAPS ----------------------------------*/
 #define SOC_SYSTIMER_COUNTER_NUM            2  // Number of counter units

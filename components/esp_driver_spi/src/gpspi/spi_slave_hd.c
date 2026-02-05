@@ -349,7 +349,7 @@ esp_err_t spi_slave_hd_deinit(spi_host_device_t host_id)
     }
 #endif
 
-    spicommon_bus_free_io_cfg(&host->bus_attr->bus_cfg, &host->bus_attr->gpio_reserve);
+    spicommon_bus_free_io_cfg(host_id);
     spicommon_cs_free_io(host->cs_io_num, &host->bus_attr->gpio_reserve);
     spicommon_bus_free(host_id);
     free(host->dma_ctx->dmadesc_tx);
@@ -376,7 +376,7 @@ esp_err_t spi_slave_hd_enable(spi_host_device_t host_id)
 
 // If going to TOP_PD power down, the bus_clock is required during reg_dma, and will be disabled by sleep flow then
 #if !CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP
-    SPI_COMMON_RCC_CLOCK_ATOMIC() {
+    PERIPH_RCC_ATOMIC() {
         spi_ll_enable_bus_clock(host_id, true);
     }
 #endif
@@ -396,7 +396,7 @@ esp_err_t spi_slave_hd_disable(spi_host_device_t host_id)
 
 // same as above
 #if !CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP
-    SPI_COMMON_RCC_CLOCK_ATOMIC() {
+    PERIPH_RCC_ATOMIC() {
         spi_ll_enable_bus_clock(host_id, false);
     }
 #endif

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -22,6 +22,8 @@
 #define UART_LL_FIFO_DEF_LEN  (SOC_UART_FIFO_LEN)
 // Get UART hardware instance with giving uart num
 #define UART_LL_GET_HW(num) (((num) == UART_NUM_0) ? (&UART0) : (&UART1))
+// Get UART sleep clock with giving uart num
+#define UART_LL_SLEEP_CLOCK(num) (((num) == UART_NUM_0) ? (ESP_SLEEP_CLOCK_UART0) : (ESP_SLEEP_CLOCK_UART1))
 
 #define UART_LL_PULSE_TICK_CNT_MAX          UART_LOWPULSE_MIN_CNT_V
 
@@ -295,9 +297,37 @@ FORCE_INLINE_ATTR uint32_t uart_ll_get_baudrate(uart_dev_t *hw, uint32_t sclk_fr
 {
     typeof(hw->clkdiv_sync) div_reg;
     div_reg.val = hw->clkdiv_sync.val;
-    int sclk_div;
-    sclk_div = UART_LL_PCR_REG_U32_GET(hw, sclk_conf, sclk_div_num) + 1;
+    int sclk_div = UART_LL_PCR_REG_U32_GET(hw, sclk_conf, sclk_div_num) + 1;
     return ((sclk_freq << 4)) / (((div_reg.clkdiv << 4) | div_reg.clkdiv_frag) * sclk_div);
+}
+
+/**
+ * @brief  Set the UART glitch filter threshold. Any high pulse lasting shorter than this value will be ignored when the filter is enabled.
+ *
+ * @param  hw Beginning address of the peripheral registers.
+ * @param  glitch_filt_thrd The glitch filter threshold to be set (unit: ns)
+ * @param  sclk_freq Frequency of the clock source of UART, in Hz.
+ */
+FORCE_INLINE_ATTR void uart_ll_set_glitch_filt_thrd(uart_dev_t *hw, uint32_t glitch_filt_thrd, uint32_t sclk_freq)
+{
+    uint32_t clk_cycles = 0;
+    if (glitch_filt_thrd > 0) {
+        uint32_t ref_clk_freq = sclk_freq / (UART_LL_PCR_REG_U32_GET(hw, sclk_conf, sclk_div_num) + 1);
+        clk_cycles = ((uint64_t)glitch_filt_thrd * ref_clk_freq + 1000000000 - 1) / 1000000000; // round up to always filter something
+        HAL_ASSERT(clk_cycles <= UART_GLITCH_FILT_V);
+    }
+    HAL_FORCE_MODIFY_U32_REG_FIELD(hw->rx_filt, glitch_filt, clk_cycles);
+}
+
+/**
+ * @brief  Enable or disable the UART glitch filter
+ *
+ * @param  hw Beginning address of the peripheral registers.
+ * @param  enable True to enable the filter, False to disable the filter
+ */
+FORCE_INLINE_ATTR void uart_ll_enable_glitch_filt(uart_dev_t *hw, bool enable)
+{
+    hw->rx_filt.glitch_filt_en = enable;
 }
 
 /**
@@ -784,15 +814,15 @@ FORCE_INLINE_ATTR void uart_ll_set_wakeup_mode(uart_dev_t *hw, uart_wakeup_mode_
     case UART_WK_MODE_ACTIVE_THRESH:
         hw->sleep_conf2.wk_mode_sel = 0;
         break;
-    // case UART_WK_MODE_FIFO_THRESH:        // TODO: [ESP32H4] PM-457
-    //     hw->sleep_conf2.wk_mode_sel = 1;
-    //     break;
-    // case UART_WK_MODE_START_BIT:
-    //     hw->sleep_conf2.wk_mode_sel = 2;
-    //     break;
-    // case UART_WK_MODE_CHAR_SEQ:
-    //     hw->sleep_conf2.wk_mode_sel = 3;
-    //     break;
+    case UART_WK_MODE_FIFO_THRESH:
+        hw->sleep_conf2.wk_mode_sel = 1;
+        break;
+    case UART_WK_MODE_START_BIT:
+        hw->sleep_conf2.wk_mode_sel = 2;
+        break;
+    case UART_WK_MODE_CHAR_SEQ:
+        hw->sleep_conf2.wk_mode_sel = 3;
+        break;
     default:
         abort();
         break;

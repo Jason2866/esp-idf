@@ -4,7 +4,7 @@ set(priv_requires bootloader_support esp_driver_gptimer esp_tee esp_timer mbedtl
 # Test FW related
 list(APPEND priv_requires nvs_flash test_utils unity)
 # TEE related
-list(APPEND priv_requires tee_sec_storage tee_attestation tee_ota_ops test_sec_srv)
+list(APPEND priv_requires tee_sec_storage tee_ota_ops test_sec_srv)
 
 set(srcs "app_main.c")
 
@@ -50,5 +50,6 @@ list(APPEND srcs "${mbedtls_test_srcs_dir}/test_apb_dport_access.c"
                  "${mbedtls_test_srcs_dir}/test_mbedtls_utils.c")
 
 idf_component_register(SRCS ${srcs}
+                       PRIV_INCLUDE_DIRS "${idf_path}/components/mbedtls/test_apps/include"
                        PRIV_REQUIRES ${priv_requires}
                        WHOLE_ARCHIVE)

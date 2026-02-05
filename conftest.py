@@ -222,13 +222,15 @@ class OpenOCD:
         else:
             raise ConnectionRefusedError
 
-    def write(self, s: str) -> t.Any:
+    def write(self, s: str, timeout: int = 30) -> t.Any:
         if self.telnet is None:
             logging.error('Telnet connection is not established.')
             return ''
         resp = self.telnet.read_very_eager()
         self.telnet.write(to_bytes(s, '\n'))
-        resp += self.telnet.read_until(b'>')
+        resp += self.telnet.read_until(b'>', timeout=timeout)
+        if not resp.endswith(b'>'):
+            return ''
         return to_str(resp)
 
     def apptrace_wait_stop(self, timeout: int = 30) -> None:
@@ -243,6 +245,17 @@ class OpenOCD:
             if not stopped and time.time() > end_before:
                 raise pexpect.TIMEOUT('Failed to wait for apptrace stop!')
             time.sleep(1)
+
+    def gcov_dump(self, on_the_fly: bool = True) -> t.Any:
+        cmd = 'esp gcov'
+        if not on_the_fly:
+            cmd += ' dump'
+        cmd_out = self.write(cmd)
+        if 'Targets connected.' not in cmd_out:
+            raise pexpect.TIMEOUT('Failed to start gcov dump!')
+        if 'Targets disconnected.' not in cmd_out:
+            raise pexpect.TIMEOUT('Failed to stop gcov dump!')
+        return cmd_out
 
     def kill(self) -> None:
         # Check if the process is still running
@@ -414,61 +427,6 @@ def log_performance(record_property: t.Callable[[str, object], None]) -> t.Calla
         """
         logging.info('[Performance][%s]: %s', item, value)
         record_property(item, value)
-
-    return real_func
-
-
-@pytest.fixture
-def check_performance(idf_path: str) -> t.Callable[[str, float, str], None]:
-    """
-    check if the given performance item meets the passing standard or not
-    """
-
-    def real_func(item: str, value: float, target: str) -> None:
-        """
-        :param item: performance item name
-        :param value: performance item value
-        :param target: target chip
-        :raise: AssertionError: if check fails
-        """
-
-        def _find_perf_item(operator: str, path: str) -> float:
-            with open(path, encoding='utf-8') as f:
-                data = f.read()
-            match = re.search(rf'#define\s+IDF_PERFORMANCE_{operator}_{item.upper()}\s+([\d.]+)', data)
-            return float(match.group(1))  # type: ignore
-
-        def _check_perf(operator: str, standard_value: float) -> None:
-            if operator == 'MAX':
-                ret = value <= standard_value
-            else:
-                ret = value >= standard_value
-            if not ret:
-                raise AssertionError(
-                    f"[Performance] {item} value is {value}, doesn't meet pass standard {standard_value}"
-                )
-
-        path_prefix = os.path.join(idf_path, 'components', 'idf_test', 'include')
-        performance_files = (
-            os.path.join(path_prefix, target, 'idf_performance_target.h'),
-            os.path.join(path_prefix, 'idf_performance.h'),
-        )
-
-        found_item = False
-        for op in ['MIN', 'MAX']:
-            for performance_file in performance_files:
-                try:
-                    standard = _find_perf_item(op, performance_file)
-                except (OSError, AttributeError):
-                    # performance file doesn't exist or match is not found in it
-                    continue
-
-                _check_perf(op, standard)
-                found_item = True
-                break
-
-        if not found_item:
-            raise AssertionError(f'Failed to get performance standard for {item}')
 
     return real_func
 

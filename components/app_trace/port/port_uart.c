@@ -11,19 +11,19 @@
 #include "esp_log.h"
 #include "esp_cpu.h"
 #include "esp_attr.h"
-#include "esp_private/uart_share_hw_ctrl.h"
 #include "hal/uart_hal.h"
 #include "hal/gpio_hal.h"
 #include "driver/uart.h"
 #include "hal/uart_periph.h"
 #include "esp_clk_tree.h"
-#include "esp_private/esp_clk_tree_common.h"
 #include "soc/gpio_periph.h"
 #include "esp_rom_gpio.h"
 #include "hal/uart_ll.h"
 #include "esp_intr_alloc.h"
 #include "esp_heap_caps.h"
+#include "esp_private/esp_clk_tree_common.h"
 #include "esp_private/esp_gpio_reserve.h"
+#include "esp_private/periph_ctrl.h"
 
 #include "esp_app_trace_port.h"
 #include "esp_app_trace_util.h"
@@ -244,11 +244,11 @@ static esp_err_t esp_apptrace_uart_init(void *hw_data, const esp_apptrace_config
 
         uart_data->hal_ctx.dev = UART_LL_GET_HW(uart_config->uart_num);
 
-        HP_UART_BUS_CLK_ATOMIC() {
+        PERIPH_RCC_ATOMIC() {
             uart_ll_enable_bus_clock(uart_config->uart_num, true);
             uart_ll_reset_register(uart_config->uart_num);
         }
-        HP_UART_SRC_CLK_ATOMIC() {
+        PERIPH_RCC_ATOMIC() {
             uart_ll_sclk_enable(uart_data->hal_ctx.dev);
         }
 
@@ -260,9 +260,7 @@ static esp_err_t esp_apptrace_uart_init(void *hw_data, const esp_apptrace_config
         /* Initialize UART HAL (sets default 8N1 mode) */
         uart_hal_init(&uart_data->hal_ctx, uart_config->uart_num);
 
-        ESP_LOGI(TAG, "uart_hal_init: %d", uart_config->uart_num);
-
-        HP_UART_SRC_CLK_ATOMIC() {
+        PERIPH_RCC_ATOMIC() {
             uart_hal_set_sclk(&uart_data->hal_ctx, UART_SCLK_DEFAULT);
             uart_hal_set_baudrate(&uart_data->hal_ctx, uart_config->baud_rate, sclk_hz);
         }
@@ -340,10 +338,10 @@ err_alloc_msg_buff:
     heap_caps_free(uart_data->tx_ring.buffer);
 err_init_ring_buff:
     esp_clk_tree_enable_src(UART_SCLK_DEFAULT, false);
-    HP_UART_SRC_CLK_ATOMIC() {
+    PERIPH_RCC_ATOMIC() {
         uart_ll_sclk_disable(uart_data->hal_ctx.dev);
     }
-    HP_UART_BUS_CLK_ATOMIC() {
+    PERIPH_RCC_ATOMIC() {
         uart_ll_enable_bus_clock(uart_config->uart_num, false);
     }
     esp_gpio_revoke(gpio_mask);
@@ -429,13 +427,25 @@ static uint8_t *esp_apptrace_uart_down_buffer_get(void *hw_data, uint32_t *size,
         return NULL;
     }
 
-    uint32_t rx_len = uart_ll_get_rxfifo_len(uart_data->hal_ctx.dev);
-    int to_read = MIN(rx_len, MIN(uart_data->rx_msg_buff_size, *size));
-    if (to_read) {
-        uart_hal_read_rxfifo(&uart_data->hal_ctx, uart_data->rx_msg_buff, &to_read);
-    }
-    *size = to_read;
+    /* Read until we get the requested number of bytes (or timeout) */
+    const uint32_t req_size = MIN(uart_data->rx_msg_buff_size, *size);
+    uint32_t total_read = 0;
+    while (total_read < req_size) {
+        uint32_t rx_len = uart_hal_get_rxfifo_len(&uart_data->hal_ctx);
+        int to_read = MIN((uint32_t)(req_size - total_read), rx_len);
+        if (to_read > 0) {
+            uart_hal_read_rxfifo(&uart_data->hal_ctx, uart_data->rx_msg_buff + total_read, &to_read);
+            total_read += to_read;
+            continue;
+        }
 
+        if (esp_apptrace_tmo_check(tmo) != ESP_OK) {
+            break;
+        }
+        esp_rom_delay_us(50);
+    }
+
+    *size = total_read;
     esp_apptrace_uart_unlock(uart_data);
 
     return (*size > 0) ? uart_data->rx_msg_buff : NULL;

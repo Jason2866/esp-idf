@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -61,23 +61,30 @@ void gdma_ahb_hal_set_priority(gdma_hal_context_t *hal, int chan_id, gdma_channe
     }
 }
 
-void gdma_ahb_hal_connect_peri(gdma_hal_context_t *hal, int chan_id, gdma_channel_direction_t dir, gdma_trigger_peripheral_t periph, int periph_sub_id)
+void gdma_ahb_hal_connect_peri(gdma_hal_context_t *hal, int chan_id, gdma_channel_direction_t dir, int periph_id)
 {
     if (dir == GDMA_CHANNEL_DIRECTION_RX) {
-        ahb_dma_ll_rx_reset_channel(hal->ahb_dma_dev, chan_id); // reset channel
-        ahb_dma_ll_rx_connect_to_periph(hal->ahb_dma_dev, chan_id, periph, periph_sub_id);
+        ahb_dma_ll_rx_connect_to_periph(hal->ahb_dma_dev, chan_id, periph_id);
     } else {
-        ahb_dma_ll_tx_reset_channel(hal->ahb_dma_dev, chan_id); // reset channel
-        ahb_dma_ll_tx_connect_to_periph(hal->ahb_dma_dev, chan_id, periph, periph_sub_id);
+        ahb_dma_ll_tx_connect_to_periph(hal->ahb_dma_dev, chan_id, periph_id);
     }
 }
 
-void gdma_ahb_hal_disconnect_peri(gdma_hal_context_t *hal, int chan_id, gdma_channel_direction_t dir)
+void gdma_ahb_hal_connect_mem(gdma_hal_context_t *hal, int chan_id, gdma_channel_direction_t dir, int dummy_id)
 {
     if (dir == GDMA_CHANNEL_DIRECTION_RX) {
-        ahb_dma_ll_rx_disconnect_from_periph(hal->ahb_dma_dev, chan_id);
+        ahb_dma_ll_rx_connect_to_mem(hal->ahb_dma_dev, chan_id, dummy_id);
     } else {
-        ahb_dma_ll_tx_disconnect_from_periph(hal->ahb_dma_dev, chan_id);
+        ahb_dma_ll_tx_connect_to_mem(hal->ahb_dma_dev, chan_id, dummy_id);
+    }
+}
+
+void gdma_ahb_hal_disconnect_all(gdma_hal_context_t *hal, int chan_id, gdma_channel_direction_t dir)
+{
+    if (dir == GDMA_CHANNEL_DIRECTION_RX) {
+        ahb_dma_ll_rx_disconnect_all(hal->ahb_dma_dev, chan_id);
+    } else {
+        ahb_dma_ll_tx_disconnect_all(hal->ahb_dma_dev, chan_id);
     }
 }
 
@@ -253,7 +260,8 @@ void gdma_ahb_hal_init(gdma_hal_context_t *hal, const gdma_hal_config_t *config)
     hal->reset = gdma_ahb_hal_reset;
     hal->set_priority = gdma_ahb_hal_set_priority;
     hal->connect_peri = gdma_ahb_hal_connect_peri;
-    hal->disconnect_peri = gdma_ahb_hal_disconnect_peri;
+    hal->connect_mem = gdma_ahb_hal_connect_mem;
+    hal->disconnect_all = gdma_ahb_hal_disconnect_all;
     hal->enable_burst = gdma_ahb_hal_enable_burst;
     hal->set_strategy = gdma_ahb_hal_set_strategy;
     hal->enable_intr = gdma_ahb_hal_enable_intr;
@@ -277,7 +285,7 @@ void gdma_ahb_hal_init(gdma_hal_context_t *hal, const gdma_hal_config_t *config)
     if (config->flags.enable_weighted_arbitration) {
         ahb_dma_ll_enable_weighted_arb(hal->ahb_dma_dev, true);
         // always enable weighted arbitration optimize
-        for (int i = 0; i < GDMA_LL_GET(PAIRS_PER_INST); i++) {
+        for (int i = 0; i < GDMA_LL_GET(AHB_PAIRS_PER_GROUP); i++) {
             ahb_dma_ll_tx_enable_weighted_arb_opt(hal->ahb_dma_dev, i, true);
             ahb_dma_ll_rx_enable_weighted_arb_opt(hal->ahb_dma_dev, i, true);
         }
@@ -289,3 +297,43 @@ void gdma_ahb_hal_init(gdma_hal_context_t *hal, const gdma_hal_config_t *config)
 #endif // SOC_GDMA_SUPPORT_WEIGHTED_ARBITRATION
     ahb_dma_ll_set_default_memory_range(hal->ahb_dma_dev);
 }
+
+#if SOC_LP_AHB_GDMA_SUPPORTED
+/**
+ * @brief Private data for LP AHB GDMA HAL
+ */
+static gdma_hal_priv_data_t gdma_lp_ahb_hal_priv_data = {
+    .m2m_free_periph_mask = LP_AHB_DMA_LL_M2M_FREE_PERIPH_ID_MASK,
+};
+
+void gdma_lp_ahb_hal_init(gdma_hal_context_t *hal, const gdma_hal_config_t *config)
+{
+    // LP AHB DMA uses group_id 2, we pass this directly to the LL layer
+    hal->ahb_dma_dev = AHB_DMA_LL_GET_HW(config->group_id);
+    hal->priv_data = &gdma_lp_ahb_hal_priv_data;
+    // LP AHB GDMA reuses the same HAL functions as HP AHB GDMA
+    hal->start_with_desc = gdma_ahb_hal_start_with_desc;
+    hal->stop = gdma_ahb_hal_stop;
+    hal->append = gdma_ahb_hal_append;
+    hal->reset = gdma_ahb_hal_reset;
+    hal->set_priority = gdma_ahb_hal_set_priority;
+    hal->connect_peri = gdma_ahb_hal_connect_peri;
+    hal->connect_mem = gdma_ahb_hal_connect_mem;
+    hal->disconnect_all = gdma_ahb_hal_disconnect_all;
+    hal->enable_burst = gdma_ahb_hal_enable_burst;
+    hal->set_strategy = gdma_ahb_hal_set_strategy;
+    hal->enable_intr = gdma_ahb_hal_enable_intr;
+    hal->clear_intr = gdma_ahb_hal_clear_intr;
+    hal->read_intr_status = gdma_ahb_hal_read_intr_status;
+    hal->get_intr_status_reg = gdma_ahb_hal_get_intr_status_reg;
+    hal->get_eof_desc_addr = gdma_ahb_hal_get_eof_desc_addr;
+#if SOC_GDMA_SUPPORT_ETM
+    hal->enable_etm_task = gdma_ahb_hal_enable_etm_task;
+#endif // SOC_GDMA_SUPPORT_ETM
+#if GDMA_LL_GET(AHB_BURST_SIZE_ADJUSTABLE)
+    hal->set_burst_size = gdma_ahb_hal_set_burst_size;
+#endif // GDMA_LL_GET(AHB_BURST_SIZE_ADJUSTABLE)
+    // LP AHB GDMA has a different memory range
+    lp_ahb_dma_ll_set_default_memory_range(hal->ahb_dma_dev);
+}
+#endif // SOC_LP_AHB_GDMA_SUPPORTED

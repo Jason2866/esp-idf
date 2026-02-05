@@ -141,18 +141,23 @@ const pmu_sleep_config_t* pmu_sleep_config_default(
 
     if (dslp) {
         config->param.lp_sys.analog_wait_target_cycle  = rtc_time_us_to_slowclk(PMU_LP_ANALOG_WAIT_TARGET_TIME_DSLP_US, slowclk_period);
+
+        pmu_sleep_digital_config_t digital_default = PMU_SLEEP_DIGITAL_DSLP_CONFIG_DEFAULT(sleep_flags, clk_flags);
+
+        config->digital = digital_default;
+
         pmu_sleep_analog_config_t analog_default = PMU_SLEEP_ANALOG_DSLP_CONFIG_DEFAULT(sleep_flags);
         config->analog = analog_default;
     } else {
-        pmu_sleep_digital_config_t digital_default = PMU_SLEEP_DIGITAL_LSLP_CONFIG_DEFAULT(sleep_flags);
+        pmu_sleep_digital_config_t digital_default = PMU_SLEEP_DIGITAL_LSLP_CONFIG_DEFAULT(sleep_flags, clk_flags);
         config->digital = digital_default;
 
         pmu_sleep_analog_config_t analog_default = PMU_SLEEP_ANALOG_LSLP_CONFIG_DEFAULT(sleep_flags);
-        analog_default.hp_sys.analog.dbias = PMU_HP_DBIAS_LIGHTSLEEP_0V6_DEFAULT;
+        analog_default.hp_sys.analog.drv_b = PMU_HP_DRVB_LIGHTSLEEP;
         analog_default.lp_sys[LP(SLEEP)].analog.dbias = get_slp_lp_dbias();
         if (!(sleep_flags & PMU_SLEEP_PD_XTAL)){
             analog_default.hp_sys.analog.xpd_trx = PMU_XPD_TRX_SLEEP_ON;
-            analog_default.hp_sys.analog.dbias = get_act_hp_dbias();
+            analog_default.hp_sys.analog.drv_b = get_act_hp_drvb();
             analog_default.hp_sys.analog.pd_cur = PMU_PD_CUR_SLEEP_ON;
             analog_default.hp_sys.analog.bias_sleep = PMU_BIASSLP_SLEEP_ON;
 
@@ -160,7 +165,7 @@ const pmu_sleep_config_t* pmu_sleep_config_default(
             analog_default.lp_sys[LP(SLEEP)].analog.bias_sleep = PMU_BIASSLP_SLEEP_ON;
             analog_default.lp_sys[LP(SLEEP)].analog.dbias = get_act_lp_dbias();
         } else if (!(sleep_flags & PMU_SLEEP_PD_RC_FAST)) {
-            analog_default.hp_sys.analog.dbias = get_act_hp_dbias();
+            analog_default.hp_sys.analog.drv_b = get_act_hp_drvb();
             analog_default.lp_sys[LP(SLEEP)].analog.dbias = get_act_lp_dbias();
         }
         config->analog = analog_default;
@@ -173,6 +178,7 @@ static void pmu_sleep_power_init(pmu_context_t *ctx, const pmu_sleep_power_confi
     pmu_ll_hp_set_dig_power(ctx->hal->dev, HP(SLEEP), power->hp_sys.dig_power.val);
     pmu_ll_hp_set_clk_power(ctx->hal->dev, HP(SLEEP), power->hp_sys.clk_power.val);
     pmu_ll_hp_set_xtal_xpd (ctx->hal->dev, HP(SLEEP), power->hp_sys.xtal.xpd_xtal);
+    pmu_ll_hp_set_xtalx2_xpd (ctx->hal->dev, HP(SLEEP), power->hp_sys.xtal.xpd_xtalx2);
 
     if (dslp) {
         pmu_ll_hp_set_memory_power_on_mask(ctx->hal->dev, 0);
@@ -186,11 +192,17 @@ static void pmu_sleep_power_init(pmu_context_t *ctx, const pmu_sleep_power_confi
     pmu_ll_lp_set_dig_power(ctx->hal->dev, LP(SLEEP), power->lp_sys[LP(SLEEP)].dig_power.val);
     pmu_ll_lp_set_clk_power(ctx->hal->dev, LP(SLEEP), power->lp_sys[LP(SLEEP)].clk_power.val);
     pmu_ll_lp_set_xtal_xpd (ctx->hal->dev, LP(SLEEP), power->lp_sys[LP(SLEEP)].xtal.xpd_xtal);
+    pmu_ll_lp_set_xtalx2_xpd (ctx->hal->dev, LP(SLEEP), power->lp_sys[LP(SLEEP)].xtal.xpd_xtalx2);
 }
 
-static void pmu_sleep_digital_init(pmu_context_t *ctx, const pmu_sleep_digital_config_t *dig)
+static void pmu_sleep_digital_init(pmu_context_t *ctx, const pmu_sleep_digital_config_t *dig, bool dslp)
 {
-    pmu_ll_hp_set_dig_pad_slp_sel   (ctx->hal->dev, HP(SLEEP), dig->syscntl.dig_pad_slp_sel);
+    pmu_ll_hp_set_pause_watchdog(ctx->hal->dev, HP(SLEEP), dig->syscntl.dig_pause_wdt);
+    pmu_ll_hp_set_icg_sysclk_enable(ctx->hal->dev, HP(SLEEP), (dig->icg_func != 0));
+    pmu_ll_hp_set_icg_func(ctx->hal->dev, HP(SLEEP), dig->icg_func);
+    if (!dslp) {
+        pmu_ll_hp_set_dig_pad_slp_sel(ctx->hal->dev, HP(SLEEP), dig->syscntl.dig_pad_slp_sel);
+    }
 }
 
 static void pmu_sleep_analog_init(pmu_context_t *ctx, const pmu_sleep_analog_config_t *analog, bool dslp)
@@ -200,8 +212,8 @@ static void pmu_sleep_analog_init(pmu_context_t *ctx, const pmu_sleep_analog_con
     pmu_ll_hp_set_current_power_off    (ctx->hal->dev, HP(SLEEP), analog->hp_sys.analog.pd_cur);
     pmu_ll_hp_set_bias_sleep_enable    (ctx->hal->dev, HP(SLEEP), analog->hp_sys.analog.bias_sleep);
     pmu_ll_hp_set_regulator_xpd        (ctx->hal->dev, HP(SLEEP), analog->hp_sys.analog.xpd);
-    pmu_ll_hp_set_regulator_dbias      (ctx->hal->dev, HP(SLEEP), analog->hp_sys.analog.dbias);
     pmu_ll_hp_set_regulator_driver_bar (ctx->hal->dev, HP(SLEEP), analog->hp_sys.analog.drv_b);
+    pmu_ll_hp_set_trx_xpd              (ctx->hal->dev, HP(SLEEP), analog->hp_sys.analog.xpd_trx);
 
     pmu_ll_lp_set_current_power_off    (ctx->hal->dev, LP(SLEEP), analog->lp_sys[LP(SLEEP)].analog.pd_cur);
     pmu_ll_lp_set_bias_sleep_enable    (ctx->hal->dev, LP(SLEEP), analog->lp_sys[LP(SLEEP)].analog.bias_sleep);
@@ -246,9 +258,7 @@ void pmu_sleep_init(const pmu_sleep_config_t *config, bool dslp)
 {
     assert(PMU_instance());
     pmu_sleep_power_init(PMU_instance(), &config->power, dslp);
-    if(!dslp){
-        pmu_sleep_digital_init(PMU_instance(), &config->digital);
-    }
+    pmu_sleep_digital_init(PMU_instance(), &config->digital, dslp);
     pmu_sleep_analog_init(PMU_instance(), &config->analog, dslp);
     pmu_sleep_param_init(PMU_instance(), &config->param, dslp);
 }

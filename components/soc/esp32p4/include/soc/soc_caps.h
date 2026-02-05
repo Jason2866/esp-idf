@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0 OR MIT
  */
@@ -85,6 +85,8 @@
 #define SOC_APM_SUPPORTED               1
 #define SOC_PMU_SUPPORTED               1
 #define SOC_PMU_PVT_SUPPORTED           1
+#define SOC_PVT_EN_WITH_SLEEP           1
+#define SOC_PVT_RETENTION_BY_REGDMA     1
 #define SOC_DCDC_SUPPORTED              1
 #define SOC_PAU_SUPPORTED               1     //TODO: IDF-7531
 #define SOC_RTC_TIMER_V2_SUPPORTED      1
@@ -305,32 +307,19 @@
 #define SOC_ANA_CMPR_SUPPORT_ETM               (1)
 
 /*-------------------------- I2C CAPS ----------------------------------------*/
-// ESP32-P4 has 2 I2Cs
-#define SOC_I2C_NUM                 (3U) // I2C_NUM = HP_I2C + LP_I2C
-#define SOC_HP_I2C_NUM              (2U)
+#define SOC_I2C_NUM                             (3U)
+#define SOC_HP_I2C_NUM                          (2U)
+#define SOC_LP_I2C_NUM                          (1U)
 
-#define SOC_I2C_FIFO_LEN            (32) /*!< I2C hardware FIFO depth */
-#define SOC_I2C_CMD_REG_NUM         (8)  /*!< Number of I2C command registers */
-#define SOC_I2C_SUPPORT_SLAVE       (1)
+#define SOC_I2C_SUPPORT_XTAL                    (1)
+#define SOC_I2C_SUPPORT_RTC                     (1)
+#define SOC_I2C_SUPPORT_10BIT_ADDR              (1)
 
-#define SOC_I2C_SUPPORT_HW_FSM_RST  (1)
-#define SOC_I2C_SUPPORT_HW_CLR_BUS  (1)
+#define SOC_I2C_SUPPORT_SLAVE                   (1)
+#define SOC_I2C_SLAVE_SUPPORT_BROADCAST         (1)
+#define SOC_I2C_SLAVE_CAN_GET_STRETCH_CAUSE     (1)
 
-#define SOC_I2C_SUPPORT_XTAL        (1)
-#define SOC_I2C_SUPPORT_RTC         (1)
-#define SOC_I2C_SUPPORT_10BIT_ADDR  (1)
-#define SOC_I2C_SLAVE_SUPPORT_BROADCAST    (1)
-#define SOC_I2C_SLAVE_CAN_GET_STRETCH_CAUSE    (1)
-#define SOC_I2C_SLAVE_SUPPORT_I2CRAM_ACCESS   (1)
-#define SOC_I2C_SLAVE_SUPPORT_SLAVE_UNMATCH    (1)
-
-#define SOC_I2C_SUPPORT_SLEEP_RETENTION (1)
-
-/*-------------------------- LP_I2C CAPS -------------------------------------*/
-// ESP32-P4 has 1 LP_I2C
-#define SOC_LP_I2C_NUM              (1U)
-
-#define SOC_LP_I2C_FIFO_LEN         (16) /*!< LP_I2C hardware FIFO depth */
+#define SOC_I2C_SUPPORT_SLEEP_RETENTION         (1)
 
 /*-------------------------- I2S CAPS ----------------------------------------*/
 #define SOC_I2S_HW_VERSION_2        (1)
@@ -543,17 +532,13 @@
 #define SOC_MEMSPI_TIMING_TUNING_BY_DQS                   (1)
 #define SOC_MEMSPI_TIMING_TUNING_BY_FLASH_DELAY           (1)
 #define SOC_SPI_MEM_SUPPORT_CACHE_32BIT_ADDR_MAP          (1)
-#define SOC_SPI_MEM_PSRAM_FREQ_AXI_CONSTRAINED            (1)
 #define SOC_SPI_MEM_SUPPORT_TSUS_TRES_SEPERATE_CTR        (1)
 
 #define SOC_MSPI_HAS_INDEPENT_IOMUX               1
 #define SOC_MEMSPI_IS_INDEPENDENT                 1
 #define SOC_MEMSPI_SUPPORT_CONTROL_DUMMY_OUT      1
 
-#define SOC_MEMSPI_SRC_FREQ_80M_SUPPORTED         1
-#define SOC_MEMSPI_SRC_FREQ_40M_SUPPORTED         1
-#define SOC_MEMSPI_SRC_FREQ_20M_SUPPORTED         1
-#define SOC_MEMSPI_SRC_FREQ_120M_SUPPORTED        1
+#define SOC_SPI_MEM_FLASH_SUPPORT_HPM                         (1) /*!< Support High Performance Mode */
 
 /*-------------------------- SYSTIMER CAPS ----------------------------------*/
 #define SOC_SYSTIMER_COUNTER_NUM            2  // Number of counter units
@@ -633,7 +618,7 @@
 #define SOC_FLASH_ENCRYPTION_XTS_AES_OPTIONS 1
 #define SOC_FLASH_ENCRYPTION_XTS_AES_128    1  /* SOC_EFUSE_XTS_AES_KEY_128 (1) || SOC_KEY_MANAGER_FE_KEY_DEPLOY_XTS_AES_128 (1) */
 #define SOC_FLASH_ENCRYPTION_XTS_AES_256    1  /* SOC_EFUSE_XTS_AES_KEY_256 (1) || SOC_KEY_MANAGER_FE_KEY_DEPLOY_XTS_AES_256 (1) */
-
+#define SOC_FLASH_ENCRYPTION_XTS_AES_SUPPORT_PSEUDO_ROUND  1 /*!< Only available in chip version above 3.0 */
 /*-------------------------- MEMPROT CAPS ------------------------------------*/
 
 /*-------------------------- UART CAPS ---------------------------------------*/
@@ -707,7 +692,6 @@
 
 #define SOC_CLK_APLL_SUPPORTED                    (1)     /*!< Support Audio PLL */
 #define SOC_CLK_MPLL_SUPPORTED                    (1)     /*!< Support MSPI PLL */
-#define SOC_CLK_SDIO_PLL_SUPPORTED                (1)     /*!< Support SDIO PLL */
 #define SOC_CLK_XTAL32K_SUPPORTED                 (1)     /*!< Support to connect an external low frequency crystal */
 #define SOC_CLK_RC32K_SUPPORTED                   (1)     /*!< Support an internal 32kHz RC oscillator */
 
@@ -739,11 +723,6 @@
 
 /*--------------------------- CAM ---------------------------------*/
 #define SOC_LCDCAM_CAM_SUPPORT_RGB_YUV_CONV         (1)
-
-/*--------------------------- I3C ---------------------------------*/
-#define SOC_I3C_MASTER_PERIPH_NUM                   (1)
-#define SOC_I3C_MASTER_ADDRESS_TABLE_NUM            (12)
-#define SOC_I3C_MASTER_COMMAND_TABLE_NUM            (12)
 
 /*------------------------------------- ULP CAPS -------------------------------------*/
 #define SOC_LP_CORE_SUPPORT_ETM                     (1) /*!< LP Core supports ETM */

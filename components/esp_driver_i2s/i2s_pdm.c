@@ -85,7 +85,7 @@ static esp_err_t i2s_pdm_tx_set_clock(i2s_chan_handle_t handle, const i2s_pdm_tx
     hal_utils_clk_div_t ret_mclk_div = {};
     portENTER_CRITICAL(&g_i2s.spinlock);
     /* Set clock configurations in HAL*/
-    I2S_CLOCK_SRC_ATOMIC() {
+    PERIPH_RCC_ATOMIC() {
         i2s_hal_set_tx_clock(&handle->controller->hal, &clk_info, clk_cfg->clk_src, &ret_mclk_div);
     }
 #if SOC_I2S_HW_VERSION_2
@@ -104,6 +104,7 @@ static esp_err_t i2s_pdm_tx_set_clock(i2s_chan_handle_t handle, const i2s_pdm_tx
     handle->sclk_hz = clk_info.sclk;
     handle->origin_mclk_hz = ((uint64_t)clk_info.sclk * ret_mclk_div.denominator) / tmp_div;
     handle->curr_mclk_hz = handle->origin_mclk_hz;
+    handle->bclk_hz = clk_info.bclk;
 
     ESP_LOGD(TAG, "Clock division info: [sclk] %"PRIu32" Hz [mdiv] %"PRIu32" %"PRIu32"/%"PRIu32" [mclk] %"PRIu32" Hz [bdiv] %d [bclk] %"PRIu32" Hz",
              clk_info.sclk, ret_mclk_div.integer, ret_mclk_div.numerator, ret_mclk_div.denominator, handle->origin_mclk_hz, clk_info.bclk_div, clk_info.bclk);
@@ -183,7 +184,7 @@ static esp_err_t i2s_pdm_tx_set_gpio(i2s_chan_handle_t handle, const i2s_pdm_tx_
         i2s_gpio_check_and_set(handle, gpio_cfg->clk, i2s_periph_signal[id].m_tx_ws_sig, false, gpio_cfg->invert_flags.clk_inv);
     }
 #if SOC_I2S_HW_VERSION_2
-    I2S_CLOCK_SRC_ATOMIC() {
+    PERIPH_RCC_ATOMIC() {
         i2s_ll_mclk_bind_to_tx_clk(handle->controller->hal.dev);
     }
 #endif
@@ -421,7 +422,7 @@ static esp_err_t i2s_pdm_rx_set_clock(i2s_chan_handle_t handle, const i2s_pdm_rx
     hal_utils_clk_div_t ret_mclk_div = {};
     portENTER_CRITICAL(&g_i2s.spinlock);
     /* Set clock configurations in HAL*/
-    I2S_CLOCK_SRC_ATOMIC() {
+    PERIPH_RCC_ATOMIC() {
         i2s_hal_set_rx_clock(&handle->controller->hal, &clk_info, clk_cfg->clk_src, &ret_mclk_div);
     }
     portEXIT_CRITICAL(&g_i2s.spinlock);
@@ -435,6 +436,7 @@ static esp_err_t i2s_pdm_rx_set_clock(i2s_chan_handle_t handle, const i2s_pdm_rx
     handle->sclk_hz = clk_info.sclk;
     handle->origin_mclk_hz = ((uint64_t)clk_info.sclk * ret_mclk_div.denominator) / tmp_div;
     handle->curr_mclk_hz = handle->origin_mclk_hz;
+    handle->bclk_hz = clk_info.bclk;
     ESP_LOGD(TAG, "Clock division info: [sclk] %"PRIu32" Hz [mdiv] %"PRIu32" %"PRIu32"/%"PRIu32" [mclk] %"PRIu32" Hz [bdiv] %d [bclk] %"PRIu32" Hz",
              clk_info.sclk, ret_mclk_div.integer, ret_mclk_div.numerator, ret_mclk_div.denominator, handle->origin_mclk_hz, clk_info.bclk_div, clk_info.bclk);
 
@@ -515,7 +517,7 @@ static esp_err_t i2s_pdm_rx_set_gpio(i2s_chan_handle_t handle, const i2s_pdm_rx_
         }
     }
 #if SOC_I2S_HW_VERSION_2
-    I2S_CLOCK_SRC_ATOMIC() {
+    PERIPH_RCC_ATOMIC() {
         i2s_ll_mclk_bind_to_rx_clk(handle->controller->hal.dev);
     }
 #endif

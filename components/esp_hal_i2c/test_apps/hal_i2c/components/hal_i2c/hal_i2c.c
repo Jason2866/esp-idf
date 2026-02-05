@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Unlicense OR CC0-1.0
  */
@@ -37,19 +37,6 @@ static inline uint32_t time_get_us_by_ccount(uint32_t counter)
 
 ESP_LOG_ATTR_TAG(TAG, "hal-i2c");
 
-// If Reset and Clock Control is independent, we need this macro to avoid concurrency issue
-#if !SOC_RCC_IS_INDEPENDENT
-#define I2C_RCC_ATOMIC() PERIPH_RCC_ATOMIC()
-#else
-#define I2C_RCC_ATOMIC()
-#endif
-
-#if SOC_PERIPH_CLK_CTRL_SHARED
-#define I2C_CLOCK_SRC_ATOMIC() PERIPH_RCC_ATOMIC()
-#else
-#define I2C_CLOCK_SRC_ATOMIC()
-#endif
-
 typedef struct {
     i2c_dev_t *i2c_dev;
     bool initialized;
@@ -76,7 +63,7 @@ esp_err_t hal_i2c_init(hal_i2c_config *cfg)
     uint32_t freq = cfg->freq;
     i2c_dev_t *dev = i2c_context[cfg->i2c_port].i2c_dev;
 
-    I2C_RCC_ATOMIC() {
+    PERIPH_RCC_ATOMIC() {
         i2c_ll_enable_bus_clock(0, true);
         i2c_ll_reset_register(0);
     }
@@ -130,7 +117,7 @@ esp_err_t hal_i2c_init(hal_i2c_config *cfg)
 
     // init clock, always use xtal in hal driver.
     i2c_hal_clk_config_t clk_cal = {0};
-    I2C_CLOCK_SRC_ATOMIC() {
+    PERIPH_RCC_ATOMIC() {
         i2c_ll_set_source_clk(dev, SOC_MOD_CLK_XTAL);
     }
     uint32_t xtal_freq = 0;
@@ -220,7 +207,7 @@ esp_err_t hal_i2c_write(i2c_port_t port_num, uint16_t addr, const uint8_t *txdat
 
     uint32_t remaining_byte = txlength;
     while (remaining_byte) {
-        uint32_t tx_len_tmp = remaining_byte > SOC_I2C_FIFO_LEN - 1 ? SOC_I2C_FIFO_LEN - 1 : remaining_byte;
+        uint32_t tx_len_tmp = remaining_byte > I2C_LL_GET(FIFO_LEN) - 1 ? I2C_LL_GET(FIFO_LEN) - 1 : remaining_byte;
         i2c_ll_write_txfifo(dev, txdata, tx_len_tmp);
         /*The I2C controller support up to  I2C commands, as such, if we need to enqueue more commands than that,
         we can tell the hardware to start with the enqueued commands first and wait for the next commands to send afterwards.
@@ -262,7 +249,7 @@ esp_err_t hal_i2c_read(i2c_port_t port_num, uint16_t addr, uint8_t *rxdata, uint
     uint32_t remaining_byte = rxlength;
 
     while (remaining_byte) {
-        uint32_t tmp_rx_length = (remaining_byte > SOC_I2C_FIFO_LEN) ? SOC_I2C_FIFO_LEN : remaining_byte;
+        uint32_t tmp_rx_length = (remaining_byte > I2C_LL_GET(FIFO_LEN)) ? I2C_LL_GET(FIFO_LEN) : remaining_byte;
         remaining_byte -= tmp_rx_length;
         if (tmp_rx_length == 1) {
             i2c_format_cmd(port_num, cmd_idx++, I2C_LL_CMD_READ, NACK_VALUE, 0, NOT_CHECK_ACK_VALUE, 1);
@@ -307,7 +294,7 @@ esp_err_t hal_i2c_write_read(i2c_port_t port_num, uint16_t addr, const uint8_t *
     // Write first
     uint32_t remaining_byte = txlength;
     while (remaining_byte) {
-        uint32_t tx_len_tmp = remaining_byte > SOC_I2C_FIFO_LEN - 1 ? SOC_I2C_FIFO_LEN - 1 : remaining_byte;
+        uint32_t tx_len_tmp = remaining_byte > I2C_LL_GET(FIFO_LEN) - 1 ? I2C_LL_GET(FIFO_LEN) - 1 : remaining_byte;
         i2c_ll_write_txfifo(dev, txdata, tx_len_tmp);
         /*The I2C controller support up to  I2C commands, as such, if we need to enqueue more commands than that,
         we can tell the hardware to start with the enqueued commands first and wait for the next commands to send afterwards.
@@ -333,7 +320,7 @@ esp_err_t hal_i2c_write_read(i2c_port_t port_num, uint16_t addr, const uint8_t *
     remaining_byte = rxlength;
 
     while (remaining_byte) {
-        uint32_t tmp_rx_length = (remaining_byte > SOC_I2C_FIFO_LEN) ? SOC_I2C_FIFO_LEN : remaining_byte;
+        uint32_t tmp_rx_length = (remaining_byte > I2C_LL_GET(FIFO_LEN)) ? I2C_LL_GET(FIFO_LEN) : remaining_byte;
         remaining_byte -= tmp_rx_length;
         if (tmp_rx_length == 1) {
             i2c_format_cmd(port_num, cmd_idx++, I2C_LL_CMD_READ, NACK_VALUE, 0, NOT_CHECK_ACK_VALUE, 1);

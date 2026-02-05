@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0 OR MIT
  */
@@ -25,15 +25,15 @@
 /*-------------------------- COMMON CAPS ---------------------------------------*/
 // #define SOC_ADC_SUPPORTED               1      // TODO: [ESP32S31] IDF-14741
 // #define SOC_ANA_CMPR_SUPPORTED          1      // TODO: [ESP32S31] IDF-14787
-// #define SOC_DEDICATED_GPIO_SUPPORTED    1      // TODO: [ESP32S31] IDF-14782
+#define SOC_DEDICATED_GPIO_SUPPORTED    1
 #define SOC_UART_SUPPORTED              1         // TODO: [ESP32S31] IDF-14789
-// #define SOC_GDMA_SUPPORTED              1      // TODO: [ESP32S31] IDF-14758
+#define SOC_GDMA_SUPPORTED              1
 // #define SOC_UHCI_SUPPORTED              1      // TODO: [ESP32S31] IDF-14791
-// #define SOC_AHB_GDMA_SUPPORTED          1      // TODO: [ESP32S31] IDF-14758
-// #define SOC_AXI_GDMA_SUPPORTED          1      // TODO: [ESP32S31] IDF-14758
-// #define SOC_DW_GDMA_SUPPORTED           1      // TODO: [ESP32S31] IDF-14758
+#define SOC_AHB_GDMA_SUPPORTED          1
+#define SOC_AXI_GDMA_SUPPORTED          1
+#define SOC_LP_AHB_GDMA_SUPPORTED       1
 // #define SOC_DMA2D_SUPPORTED             1      // TODO: [ESP32S31] IDF-14762
-// #define SOC_GPTIMER_SUPPORTED           1      // TODO: [ESP32S31] IDF-14745
+#define SOC_GPTIMER_SUPPORTED           1
 // #define SOC_PCNT_SUPPORTED              1      // TODO: [ESP32S31] IDF-14699
 // #define SOC_LCDCAM_SUPPORTED            1      // TODO: [ESP32S31] IDF-14722
 // #define SOC_LCDCAM_CAM_SUPPORTED        1      // TODO: [ESP32S31] IDF-14722
@@ -43,7 +43,7 @@
 // #define SOC_TWAI_SUPPORTED              1      // TODO: [ESP32S31] IDF-14719
 // #define SOC_ETM_SUPPORTED               1      // TODO: [ESP32S31] IDF-14724
 // #define SOC_PARLIO_SUPPORTED            1      // TODO: [ESP32S31] IDF-14711
-// #define SOC_ASYNC_MEMCPY_SUPPORTED      1      // TODO: [ESP32S31] IDF-14758
+#define SOC_ASYNC_MEMCPY_SUPPORTED      1
 // #define SOC_USB_OTG_SUPPORTED           1      // TODO: [ESP32S31] IDF-14701
 // #define SOC_USB_SERIAL_JTAG_SUPPORTED   1      // TODO: [ESP32S31] IDF-14788
 // #define SOC_TEMP_SENSOR_SUPPORTED       1      // TODO: [ESP32S31] IDF-14799
@@ -55,7 +55,7 @@
 // #define SOC_RTC_MEM_SUPPORTED           1      // TODO: [ESP32S31] IDF-14678
 // #define SOC_RMT_SUPPORTED               1      // TODO: [ESP32S31] IDF-14794
 // #define SOC_I2S_SUPPORTED               1      // TODO: [ESP32S31] IDF-14771
-// #define SOC_SDM_SUPPORTED               1      // TODO: [ESP32S31] IDF-14783
+#define SOC_SDM_SUPPORTED               1
 // #define SOC_GPSPI_SUPPORTED             1      // TODO: [ESP32S31] IDF-14734
 // #define SOC_LEDC_SUPPORTED              1      // TODO: [ESP32S31] IDF-14709
 // #define SOC_ISP_SUPPORTED               1      // TODO: [ESP32S31] IDF-14769
@@ -68,7 +68,7 @@
 // #define SOC_DIG_SIGN_SUPPORTED          1      // TODO: [ESP32S31] IDF-14624
 // #define SOC_ECC_SUPPORTED               1      // TODO: [ESP32S31] IDF-14631
 // #define SOC_ECC_EXTENDED_MODES_SUPPORTED   1   // TODO: [ESP32S31] IDF-14631
-#define SOC_FLASH_ENC_SUPPORTED         1         // TODO: [ESP32S31] IDF-14628
+// #define SOC_FLASH_ENC_SUPPORTED         1         // TODO: [ESP32S31] IDF-14628
 // #define SOC_SECURE_BOOT_SUPPORTED       1      // TODO: [ESP32S31] IDF-14629
 // #define SOC_BOD_SUPPORTED               1      // TODO: [ESP32S31] IDF-14658
 // #define SOC_APM_SUPPORTED               1      // TODO: [ESP32S31] IDF-14620
@@ -80,7 +80,7 @@
 // #define SOC_LP_I2C_SUPPORTED            1      // TODO: [ESP32S31] IDF-14635
 // #define SOC_LP_SPI_SUPPORTED            1      // TODO: [ESP32S31] IDF-14639
 // #define SOC_SPIRAM_SUPPORTED            1      // TODO: [ESP32S31] IDF-14718
-// #define SOC_PSRAM_DMA_CAPABLE           1      // TODO: [ESP32S31] IDF-14758
+#define SOC_PSRAM_DMA_CAPABLE           1
 // #define SOC_SDMMC_HOST_SUPPORTED        1      // TODO: [ESP32S31] IDF-14705
 // #define SOC_CLK_TREE_SUPPORTED          1      // TODO: [ESP32S31] IDF-14733
 // #define SOC_ASSIST_DEBUG_SUPPORTED      1      // TODO: [ESP32S31] IDF-14675
@@ -112,7 +112,6 @@
 #define SOC_CACHE_INTERNAL_MEM_VIA_L1CACHE      0
 
 /*-------------------------- CPU CAPS ----------------------------------------*/
-// TODO: [ESP32S31] IDF-14655
 #define SOC_CPU_CORES_NUM               (2U)
 #define SOC_CPU_INTR_NUM                32
 #define SOC_CPU_HAS_FLEXIBLE_INTC       1
@@ -128,8 +127,8 @@
 
 #define SOC_HP_CPU_HAS_MULTIPLE_CORES   1   // Convenience boolean macro used to determine if a target has multiple cores.
 
-#define SOC_CPU_BREAKPOINTS_NUM             3
-#define SOC_CPU_WATCHPOINTS_NUM             3
+#define SOC_CPU_BREAKPOINTS_NUM             4
+#define SOC_CPU_WATCHPOINTS_NUM             4
 #define SOC_CPU_WATCHPOINT_MAX_REGION_SIZE  0x100   // bytes
 
 #define SOC_CPU_HAS_PMA                 1
@@ -139,6 +138,18 @@
 #define SOC_CPU_HAS_LOCKUP_RESET        1
 
 #define SOC_SIMD_PREFERRED_DATA_ALIGNMENT 16 // The preferred data alignment accepted by the SIMD instructions, in bytes
+
+/*-------------------------- DMA Common CAPS ----------------------------------------*/
+#define SOC_DMA_CAN_ACCESS_FLASH 1 /*!< DMA can access Flash memory */
+
+/*-------------------------- GDMA CAPS -------------------------------------*/
+#define SOC_AHB_GDMA_VERSION                2
+#define SOC_GDMA_SUPPORT_ETM                1
+#define SOC_GDMA_SUPPORT_SLEEP_RETENTION    1
+#define SOC_GDMA_EXT_MEM_ENC_ALIGNMENT   (16)
+
+/*-------------------------- APM CAPS ----------------------------------------*/
+#define SOC_APM_CTRL_FILTER_SUPPORTED   1 /*!< Support for APM control filter */
 
 /*-------------------------- GPIO CAPS ---------------------------------------*/
 // ESP32-S31 has 1 GPIO peripheral
@@ -180,6 +191,13 @@
 /*-------------------------- RTCIO CAPS --------------------------------------*/
 #define SOC_RTCIO_PIN_COUNT                 8
 
+/*-------------------------- Sigma Delta Modulator CAPS -----------------*/
+#define SOC_SDM_SUPPORT_SLEEP_RETENTION     1
+
+/*-------------------------- LEDC CAPS ---------------------------------------*/
+// TODO: [ESP32S31] IDF-14709
+#define SOC_LEDC_CHANNEL_NUM                (6)
+
 /*-------------------------- MMU CAPS ----------------------------------------*/
 // TODO: [ESP32S31] IDF-14669
 #define SOC_MMU_PERIPH_NUM                    (2U)
@@ -199,10 +217,6 @@
 #define SOC_MEMSPI_IS_INDEPENDENT                 1
 #define SOC_MEMSPI_SUPPORT_CONTROL_DUMMY_OUT      1
 
-#define SOC_MEMSPI_SRC_FREQ_80M_SUPPORTED         1
-#define SOC_MEMSPI_SRC_FREQ_40M_SUPPORTED         1
-#define SOC_SPI_MEM_PSRAM_FREQ_AXI_CONSTRAINED       1
-
 #define SOC_MEMSPI_FLASH_PSRAM_INDEPENDENT        1
 
 /*-------------------------- SYSTIMER CAPS ----------------------------------*/
@@ -215,6 +229,10 @@
 #define SOC_SYSTIMER_SUPPORT_RC_FAST        1  // Systimer can use RC_FAST clock source
 #define SOC_SYSTIMER_INT_LEVEL              1  // Systimer peripheral uses level interrupt
 #define SOC_SYSTIMER_ALARM_MISS_COMPENSATE  1  // Systimer peripheral can generate interrupt immediately if t(target) > t(current)
+
+/*--------------------------- TIMER GROUP CAPS ---------------------------------------*/
+#define SOC_TIMER_SUPPORT_ETM             (1)
+#define SOC_TIMER_SUPPORT_SLEEP_RETENTION (1)
 
 /*--------------------------- WATCHDOG CAPS ---------------------------------------*/
 // TODO: [ESP32S31] IDF-14656
@@ -241,6 +259,7 @@
 
 /*-------------------------- Flash Encryption CAPS----------------------------*/
 // TODO: [ESP32S31] IDF-14628
+#define SOC_FLASH_ENCRYPTION_XTS_AES        1
 #define SOC_FLASH_ENCRYPTED_XTS_AES_BLOCK_MAX   (64)
 
 /*-------------------------- UART CAPS ---------------------------------------*/
@@ -264,10 +283,11 @@
 #define SOC_MODEM_CLOCK_IS_INDEPENDENT            (1)
 
 #define SOC_CLK_APLL_SUPPORTED                    (1)     /*!< Support Audio PLL */
-#define SOC_CLK_SDIO_PLL_SUPPORTED                (1)     /*!< Support SDIO PLL */
 #define SOC_CLK_RC32K_SUPPORTED                   (1)     /*!< Support an internal 32kHz RC oscillator */
 
 #define SOC_CLK_LP_FAST_SUPPORT_LP_PLL            (1)      /*!< Support LP_PLL clock as the LP_FAST clock source */
 #define SOC_CLK_LP_FAST_SUPPORT_XTAL              (1)     /*!< Support XTAL clock as the LP_FAST clock source */
 
 #define SOC_CLK_ANA_I2C_MST_HAS_ROOT_GATE         (1)     /*!< Any regi2c operation needs enable the analog i2c master clock first */
+
+#define SOC_RCC_IS_INDEPENDENT                    1       /*!< Reset and Clock Control has own registers for each module */

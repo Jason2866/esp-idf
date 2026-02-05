@@ -96,6 +96,7 @@ INPUT = \
     $(PROJECT_PATH)/components/esp_driver_dac/include/driver/dac_cosine.h \
     $(PROJECT_PATH)/components/esp_driver_dac/include/driver/dac_oneshot.h \
     $(PROJECT_PATH)/components/esp_driver_dac/include/driver/dac_types.h \
+    $(PROJECT_PATH)/components/esp_driver_dma/include/esp_async_memcpy.h \
     $(PROJECT_PATH)/components/esp_driver_gpio/include/driver/dedic_gpio.h \
     $(PROJECT_PATH)/components/esp_driver_gpio/include/driver/gpio.h \
     $(PROJECT_PATH)/components/esp_driver_gpio/include/driver/gpio_etm.h \
@@ -127,6 +128,9 @@ INPUT = \
     $(PROJECT_PATH)/components/esp_driver_i2s/include/driver/i2s_std.h \
     $(PROJECT_PATH)/components/esp_driver_i2s/include/driver/i2s_tdm.h \
     $(PROJECT_PATH)/components/esp_driver_i2s/include/driver/i2s_types.h \
+    $(PROJECT_PATH)/components/esp_driver_i3c/include/driver/i3c_master.h \
+    $(PROJECT_PATH)/components/esp_driver_i3c/include/driver/i3c_master_i2c.h \
+    $(PROJECT_PATH)/components/esp_driver_i3c/include/driver/i3c_master_types.h \
     $(PROJECT_PATH)/components/esp_driver_pcnt/include/driver/pulse_cnt.h \
     $(PROJECT_PATH)/components/esp_driver_rmt/include/driver/rmt_common.h \
     $(PROJECT_PATH)/components/esp_driver_rmt/include/driver/rmt_encoder.h \
@@ -175,6 +179,7 @@ INPUT = \
     $(PROJECT_PATH)/components/esp_hal_timg/include/hal/timer_types.h \
     $(PROJECT_PATH)/components/esp_hal_i2c/include/hal/i2c_types.h \
     $(PROJECT_PATH)/components/esp_hal_i2s/include/hal/i2s_types.h \
+    $(PROJECT_PATH)/components/esp_hal_i3c/include/hal/i3c_master_types.h \
     $(PROJECT_PATH)/components/esp_hal_jpeg/include/hal/jpeg_types.h \
     $(PROJECT_PATH)/components/esp_hal_lcd/include/hal/lcd_types.h \
     $(PROJECT_PATH)/components/esp_hal_ledc/include/hal/ledc_types.h \
@@ -193,7 +198,6 @@ INPUT = \
     $(PROJECT_PATH)/components/esp_https_server/include/esp_https_server.h \
     $(PROJECT_PATH)/components/esp_hw_support/etm/include/esp_etm.h \
     $(PROJECT_PATH)/components/esp_hw_support/include/esp_clk_tree.h \
-    $(PROJECT_PATH)/components/esp_hw_support/include/esp_async_memcpy.h \
     $(PROJECT_PATH)/components/esp_hw_support/include/esp_chip_info.h \
     $(PROJECT_PATH)/components/esp_hw_support/include/esp_cpu.h \
     $(PROJECT_PATH)/components/esp_hw_support/include/esp_crc.h \
@@ -292,7 +296,7 @@ INPUT = \
     $(PROJECT_PATH)/components/lwip/include/apps/esp_sntp.h \
     $(PROJECT_PATH)/components/lwip/include/apps/ping/ping_sock.h \
     $(PROJECT_PATH)/components/mbedtls/esp_crt_bundle/include/esp_crt_bundle.h \
-    $(PROJECT_PATH)/components/mbedtls/port/include/ecdsa/ecdsa_alt.h \
+    $(PROJECT_PATH)/components/mbedtls/port/psa_driver/include/psa_crypto_driver_esp_ecdsa_contexts.h \
     $(PROJECT_PATH)/components/nvs_flash/include/nvs_flash.h \
     $(PROJECT_PATH)/components/nvs_flash/include/nvs.h \
     $(PROJECT_PATH)/components/nvs_flash/include/nvs_bootloader.h \

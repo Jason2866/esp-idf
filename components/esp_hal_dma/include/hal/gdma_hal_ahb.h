@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2020-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2020-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -22,9 +22,11 @@ void gdma_ahb_hal_reset(gdma_hal_context_t *hal, int chan_id, gdma_channel_direc
 
 void gdma_ahb_hal_set_priority(gdma_hal_context_t *hal, int chan_id, gdma_channel_direction_t dir, uint32_t priority);
 
-void gdma_ahb_hal_connect_peri(gdma_hal_context_t *hal, int chan_id, gdma_channel_direction_t dir, gdma_trigger_peripheral_t periph, int periph_sub_id);
+void gdma_ahb_hal_connect_peri(gdma_hal_context_t *hal, int chan_id, gdma_channel_direction_t dir, int periph_id);
 
-void gdma_ahb_hal_disconnect_peri(gdma_hal_context_t *hal, int chan_id, gdma_channel_direction_t dir);
+void gdma_ahb_hal_connect_mem(gdma_hal_context_t *hal, int chan_id, gdma_channel_direction_t dir, int dummy_id);
+
+void gdma_ahb_hal_disconnect_all(gdma_hal_context_t *hal, int chan_id, gdma_channel_direction_t dir);
 
 void gdma_ahb_hal_enable_burst(gdma_hal_context_t *hal, int chan_id, gdma_channel_direction_t dir, bool en_data_burst, bool en_desc_burst);
 
@@ -43,6 +45,8 @@ uint32_t gdma_ahb_hal_get_intr_status_reg(gdma_hal_context_t *hal, int chan_id, 
 uint32_t gdma_ahb_hal_get_eof_desc_addr(gdma_hal_context_t *hal, int chan_id, gdma_channel_direction_t dir, bool is_success);
 
 void gdma_ahb_hal_init(gdma_hal_context_t *hal, const gdma_hal_config_t *config);
+
+void gdma_lp_ahb_hal_init(gdma_hal_context_t *hal, const gdma_hal_config_t *config);
 
 #ifdef __cplusplus
 }

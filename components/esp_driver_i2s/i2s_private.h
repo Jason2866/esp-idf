@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -49,18 +49,6 @@ extern "C" {
 #define I2S_MEM_ALLOC_CAPS      MALLOC_CAP_DEFAULT
 #endif //CONFIG_I2S_ISR_IRAM_SAFE
 #define I2S_DMA_ALLOC_CAPS      (MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA | MALLOC_CAP_8BIT)
-
-#if SOC_PERIPH_CLK_CTRL_SHARED
-#define I2S_CLOCK_SRC_ATOMIC() PERIPH_RCC_ATOMIC()
-#else
-#define I2S_CLOCK_SRC_ATOMIC()
-#endif
-
-#if !SOC_RCC_IS_INDEPENDENT
-#define I2S_RCC_ATOMIC() PERIPH_RCC_ATOMIC()
-#else
-#define I2S_RCC_ATOMIC()
-#endif
 
 #define I2S_USE_RETENTION_LINK  (SOC_HAS(PAU) && CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP)
 
@@ -177,6 +165,7 @@ struct i2s_channel_obj_t {
     uint32_t                sclk_hz;        /*!< Source clock frequency */
     uint32_t                origin_mclk_hz; /*!< Original mclk frequency */
     uint32_t                curr_mclk_hz;   /*!< Current mclk frequency */
+    uint32_t                bclk_hz;        /*!< BCLK frequency */
     /* Locks and queues */
     SemaphoreHandle_t       mutex;          /*!< Mutex semaphore for the channel operations */
     SemaphoreHandle_t       binary;         /*!< Binary semaphore for writing / reading / enabling / disabling */

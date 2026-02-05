@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2021-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2021-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -21,10 +21,10 @@
 #error "Unsupported GDMA bus type for LCD i80"
 #endif
 
-#if SOC_NON_CACHEABLE_OFFSET
-#define LCD_CACHE_ADDR_TO_NON_CACHE_ADDR(addr) ((addr) + SOC_NON_CACHEABLE_OFFSET)
+#if SOC_NON_CACHEABLE_OFFSET_SRAM
+#define LCD_SRAM_CACHE_ADDR_TO_NON_CACHE_ADDR(addr) ((addr) + SOC_NON_CACHEABLE_OFFSET_SRAM)
 #else
-#define LCD_CACHE_ADDR_TO_NON_CACHE_ADDR(addr) (addr)
+#define LCD_SRAM_CACHE_ADDR_TO_NON_CACHE_ADDR(addr) (addr)
 #endif
 
 typedef struct esp_lcd_i80_bus_t esp_lcd_i80_bus_t;
@@ -131,7 +131,7 @@ esp_err_t esp_lcd_new_i80_bus(const esp_lcd_i80_bus_config_t *bus_config, esp_lc
         esp_cache_msync(bus->format_buffer, LCD_I80_IO_FORMAT_BUF_SIZE,
                         ESP_CACHE_MSYNC_FLAG_DIR_C2M | ESP_CACHE_MSYNC_FLAG_UNALIGNED);
     }
-    bus->format_buffer_nc = LCD_CACHE_ADDR_TO_NON_CACHE_ADDR(bus->format_buffer);
+    bus->format_buffer_nc = LCD_SRAM_CACHE_ADDR_TO_NON_CACHE_ADDR(bus->format_buffer);
     // register to platform
     int bus_id = lcd_com_register_device(LCD_COM_DEVICE_TYPE_I80, bus);
     ESP_GOTO_ON_FALSE(bus_id >= 0, ESP_ERR_NOT_FOUND, err, TAG, "no free i80 bus slot");
@@ -145,7 +145,7 @@ esp_err_t esp_lcd_new_i80_bus(const esp_lcd_i80_bus_config_t *bus_config, esp_lc
     }
     // initialize HAL layer, so we can call LL APIs later
     lcd_hal_init(&bus->hal, bus_id);
-    LCD_CLOCK_SRC_ATOMIC() {
+    PERIPH_RCC_ATOMIC() {
         lcd_ll_enable_clock(bus->hal.dev, true);
     }
     // set peripheral clock resolution
@@ -554,7 +554,7 @@ static esp_err_t lcd_i80_select_periph_clock(esp_lcd_i80_bus_handle_t bus, lcd_c
                         TAG, "get clock source frequency failed");
 
     ESP_RETURN_ON_ERROR(esp_clk_tree_enable_src((soc_module_clk_t)clk_src, true), TAG, "clock source enable failed");
-    LCD_CLOCK_SRC_ATOMIC() {
+    PERIPH_RCC_ATOMIC() {
         lcd_ll_select_clk_src(bus->hal.dev, clk_src);
         // force to use integer division, as fractional division might lead to clock jitter
         lcd_ll_set_group_clock_coeff(bus->hal.dev, LCD_PERIPH_CLOCK_PRE_SCALE, 0, 0);
@@ -579,10 +579,8 @@ static esp_err_t lcd_i80_init_dma_link(esp_lcd_i80_bus_handle_t bus, const esp_l
 {
     esp_err_t ret = ESP_OK;
     // alloc DMA channel and connect to LCD peripheral
-    gdma_channel_alloc_config_t dma_chan_config = {
-        .direction = GDMA_CHANNEL_DIRECTION_TX,
-    };
-    ret = LCD_GDMA_NEW_CHANNEL(&dma_chan_config, &bus->dma_chan);
+    gdma_channel_alloc_config_t dma_chan_config = {0};
+    ret = LCD_GDMA_NEW_CHANNEL(&dma_chan_config, &bus->dma_chan, NULL);
     ESP_RETURN_ON_ERROR(ret, TAG, "alloc DMA channel failed");
     gdma_connect(bus->dma_chan, GDMA_MAKE_TRIGGER(GDMA_TRIG_PERIPH_LCD, 0));
     gdma_strategy_config_t strategy_config = {

@@ -195,6 +195,10 @@ config SOC_PMU_SUPPORTED
     bool
     default y
 
+config SOC_PMU_PVT_SUPPORTED
+    bool
+    default y
+
 config SOC_PAU_SUPPORTED
     bool
     default y
@@ -655,21 +659,9 @@ config SOC_HP_I2C_NUM
     int
     default 1
 
-config SOC_I2C_FIFO_LEN
+config SOC_LP_I2C_NUM
     int
-    default 32
-
-config SOC_I2C_CMD_REG_NUM
-    int
-    default 8
-
-config SOC_I2C_SUPPORT_SLAVE
-    bool
-    default y
-
-config SOC_I2C_SUPPORT_HW_FSM_RST
-    bool
-    default y
+    default 1
 
 config SOC_I2C_SUPPORT_XTAL
     bool
@@ -683,6 +675,10 @@ config SOC_I2C_SUPPORT_10BIT_ADDR
     bool
     default y
 
+config SOC_I2C_SUPPORT_SLAVE
+    bool
+    default y
+
 config SOC_I2C_SLAVE_SUPPORT_BROADCAST
     bool
     default y
@@ -691,25 +687,9 @@ config SOC_I2C_SLAVE_CAN_GET_STRETCH_CAUSE
     bool
     default y
 
-config SOC_I2C_SLAVE_SUPPORT_I2CRAM_ACCESS
-    bool
-    default y
-
-config SOC_I2C_SLAVE_SUPPORT_SLAVE_UNMATCH
-    bool
-    default y
-
 config SOC_I2C_SUPPORT_SLEEP_RETENTION
     bool
     default y
-
-config SOC_LP_I2C_NUM
-    int
-    default 1
-
-config SOC_LP_I2C_FIFO_LEN
-    int
-    default 16
 
 config SOC_I2S_HW_VERSION_2
     bool
@@ -1047,10 +1027,6 @@ config SOC_SPI_MEM_SUPPORT_TSUS_TRES_SEPERATE_CTR
     bool
     default y
 
-config SOC_SPI_MEM_PSRAM_FREQ_AXI_CONSTRAINED
-    bool
-    default y
-
 config SOC_MEMSPI_TIMING_TUNING_BY_MSPI_DELAY
     bool
     default y
@@ -1059,19 +1035,7 @@ config SOC_MEMSPI_IS_INDEPENDENT
     bool
     default y
 
-config SOC_MEMSPI_SRC_FREQ_120M_SUPPORTED
-    bool
-    default y
-
-config SOC_MEMSPI_SRC_FREQ_80M_SUPPORTED
-    bool
-    default y
-
-config SOC_MEMSPI_SRC_FREQ_40M_SUPPORTED
-    bool
-    default y
-
-config SOC_MEMSPI_SRC_FREQ_20M_SUPPORTED
+config SOC_SPI_MEM_FLASH_SUPPORT_HPM
     bool
     default y
 
@@ -1475,10 +1439,6 @@ config SOC_EXT_MEM_CACHE_TAG_IN_CPU_DOMAIN
     bool
     default y
 
-config SOC_PM_TOP_PD_NOT_ALLOWED
-    bool
-    default y
-
 config SOC_PM_PAU_LINK_NUM
     int
     default 5
@@ -1632,6 +1592,10 @@ config SOC_BLE_PERIODIC_ADV_ENH_SUPPORTED
     default y
 
 config SOC_BLE_CTE_SUPPORTED
+    bool
+    default y
+
+config SOC_BLE_SUBRATE_SUPPORTED
     bool
     default y
 

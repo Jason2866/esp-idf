@@ -251,6 +251,14 @@ config SOC_PMU_PVT_SUPPORTED
     bool
     default y
 
+config SOC_PVT_EN_WITH_SLEEP
+    bool
+    default y
+
+config SOC_PVT_RETENTION_BY_REGDMA
+    bool
+    default y
+
 config SOC_DCDC_SUPPORTED
     bool
     default y
@@ -783,25 +791,9 @@ config SOC_HP_I2C_NUM
     int
     default 2
 
-config SOC_I2C_FIFO_LEN
+config SOC_LP_I2C_NUM
     int
-    default 32
-
-config SOC_I2C_CMD_REG_NUM
-    int
-    default 8
-
-config SOC_I2C_SUPPORT_SLAVE
-    bool
-    default y
-
-config SOC_I2C_SUPPORT_HW_FSM_RST
-    bool
-    default y
-
-config SOC_I2C_SUPPORT_HW_CLR_BUS
-    bool
-    default y
+    default 1
 
 config SOC_I2C_SUPPORT_XTAL
     bool
@@ -815,6 +807,10 @@ config SOC_I2C_SUPPORT_10BIT_ADDR
     bool
     default y
 
+config SOC_I2C_SUPPORT_SLAVE
+    bool
+    default y
+
 config SOC_I2C_SLAVE_SUPPORT_BROADCAST
     bool
     default y
@@ -823,25 +819,9 @@ config SOC_I2C_SLAVE_CAN_GET_STRETCH_CAUSE
     bool
     default y
 
-config SOC_I2C_SLAVE_SUPPORT_I2CRAM_ACCESS
-    bool
-    default y
-
-config SOC_I2C_SLAVE_SUPPORT_SLAVE_UNMATCH
-    bool
-    default y
-
 config SOC_I2C_SUPPORT_SLEEP_RETENTION
     bool
     default y
-
-config SOC_LP_I2C_NUM
-    int
-    default 1
-
-config SOC_LP_I2C_FIFO_LEN
-    int
-    default 16
 
 config SOC_I2S_HW_VERSION_2
     bool
@@ -1415,10 +1395,6 @@ config SOC_SPI_MEM_SUPPORT_CACHE_32BIT_ADDR_MAP
     bool
     default y
 
-config SOC_SPI_MEM_PSRAM_FREQ_AXI_CONSTRAINED
-    bool
-    default y
-
 config SOC_SPI_MEM_SUPPORT_TSUS_TRES_SEPERATE_CTR
     bool
     default y
@@ -1435,19 +1411,7 @@ config SOC_MEMSPI_SUPPORT_CONTROL_DUMMY_OUT
     bool
     default y
 
-config SOC_MEMSPI_SRC_FREQ_80M_SUPPORTED
-    bool
-    default y
-
-config SOC_MEMSPI_SRC_FREQ_40M_SUPPORTED
-    bool
-    default y
-
-config SOC_MEMSPI_SRC_FREQ_20M_SUPPORTED
-    bool
-    default y
-
-config SOC_MEMSPI_SRC_FREQ_120M_SUPPORTED
+config SOC_SPI_MEM_FLASH_SUPPORT_HPM
     bool
     default y
 
@@ -1667,6 +1631,10 @@ config SOC_FLASH_ENCRYPTION_XTS_AES_256
     bool
     default y
 
+config SOC_FLASH_ENCRYPTION_XTS_AES_SUPPORT_PSEUDO_ROUND
+    bool
+    default y
+
 config SOC_UART_NUM
     int
     default 6
@@ -1859,10 +1827,6 @@ config SOC_CLK_MPLL_SUPPORTED
     bool
     default y
 
-config SOC_CLK_SDIO_PLL_SUPPORTED
-    bool
-    default y
-
 config SOC_CLK_XTAL32K_SUPPORTED
     bool
     default y
@@ -1938,18 +1902,6 @@ config SOC_JPEG_ENCODE_SUPPORTED
 config SOC_LCDCAM_CAM_SUPPORT_RGB_YUV_CONV
     bool
     default y
-
-config SOC_I3C_MASTER_PERIPH_NUM
-    bool
-    default y
-
-config SOC_I3C_MASTER_ADDRESS_TABLE_NUM
-    int
-    default 12
-
-config SOC_I3C_MASTER_COMMAND_TABLE_NUM
-    int
-    default 12
 
 config SOC_LP_CORE_SUPPORT_ETM
     bool

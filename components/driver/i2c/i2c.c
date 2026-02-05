@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2015-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2015-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -115,18 +115,6 @@ static const char *I2C_TAG = "i2c";
 #endif
 #define I2C_MEM_ALLOC_CAPS_DEFAULT      MALLOC_CAP_DEFAULT
 
-#if SOC_PERIPH_CLK_CTRL_SHARED
-#define I2C_CLOCK_SRC_ATOMIC() PERIPH_RCC_ATOMIC()
-#else
-#define I2C_CLOCK_SRC_ATOMIC()
-#endif
-
-#if !SOC_RCC_IS_INDEPENDENT
-#define I2C_RCC_ATOMIC() PERIPH_RCC_ATOMIC()
-#else
-#define I2C_RCC_ATOMIC()
-#endif
-
 #define I2C_CLR_BUS_TIMEOUT_MS        (50)  // 50ms is sufficient for clearing the bus
 
 /**
@@ -189,7 +177,7 @@ typedef struct {
     int cmd_idx;                     /*!< record current command index, for master mode */
     int status;                      /*!< record current command status, for master mode */
     int rx_cnt;                      /*!< record current read index, for master mode */
-    uint8_t data_buf[SOC_I2C_FIFO_LEN ];  /*!< a buffer to store i2c fifo data */
+    uint8_t data_buf[I2C_LL_GET(FIFO_LEN)];  /*!< a buffer to store i2c fifo data */
 
     i2c_cmd_desc_t cmd_link;         /*!< I2C command link */
     QueueHandle_t cmd_evt_queue;     /*!< I2C command event queue */
@@ -214,7 +202,7 @@ typedef struct {
     i2c_hal_context_t hal;      /*!< I2C hal context */
     portMUX_TYPE spinlock;
     bool hw_enabled;
-#if !SOC_I2C_SUPPORT_HW_CLR_BUS
+#if !I2C_LL_SUPPORT_HW_CLR_BUS
     int scl_io_num;
     int sda_io_num;
 #endif
@@ -269,7 +257,7 @@ static void i2c_hw_disable(i2c_port_t i2c_num)
 {
     I2C_ENTER_CRITICAL(&(i2c_context[i2c_num].spinlock));
     if (i2c_context[i2c_num].hw_enabled != false) {
-        I2C_RCC_ATOMIC() {
+        PERIPH_RCC_ATOMIC() {
             i2c_ll_enable_bus_clock(i2c_num, false);
         }
         i2c_context[i2c_num].hw_enabled = false;
@@ -281,7 +269,7 @@ static void i2c_hw_enable(i2c_port_t i2c_num)
 {
     I2C_ENTER_CRITICAL(&(i2c_context[i2c_num].spinlock));
     if (i2c_context[i2c_num].hw_enabled != true) {
-        I2C_RCC_ATOMIC() {
+        PERIPH_RCC_ATOMIC() {
             i2c_ll_enable_bus_clock(i2c_num, true);
             i2c_ll_reset_register(i2c_num);
         }
@@ -420,7 +408,7 @@ esp_err_t i2c_driver_install(i2c_port_t i2c_num, i2c_mode_t mode, size_t slv_rx_
         return ESP_FAIL;
     }
     i2c_hw_enable(i2c_num);
-    I2C_CLOCK_SRC_ATOMIC() {
+    PERIPH_RCC_ATOMIC() {
         i2c_hal_init(&i2c_context[i2c_num].hal, i2c_num);
     }
     //Disable I2C interrupt.
@@ -542,7 +530,7 @@ esp_err_t i2c_driver_delete(i2c_port_t i2c_num)
     }
 #endif
 
-    I2C_CLOCK_SRC_ATOMIC() {
+    PERIPH_RCC_ATOMIC() {
         i2c_hal_deinit(&i2c_context[i2c_num].hal);
     }
     free(p_i2c_obj[i2c_num]);
@@ -672,7 +660,7 @@ esp_err_t i2c_get_data_mode(i2c_port_t i2c_num, i2c_trans_mode_t *tx_trans_mode,
 static esp_err_t i2c_master_clear_bus(i2c_port_t i2c_num)
 {
     esp_err_t ret = ESP_OK;
-#if !SOC_I2C_SUPPORT_HW_CLR_BUS
+#if !I2C_LL_SUPPORT_HW_CLR_BUS
     const int scl_half_period = I2C_CLR_BUS_HALF_PERIOD_US; // use standard 100kHz data rate
     int i = 0;
     int scl_io = i2c_context[i2c_num].scl_io_num;
@@ -726,7 +714,7 @@ static esp_err_t i2c_hw_fsm_reset(i2c_port_t i2c_num)
 {
 // A workaround for avoiding cause timeout issue when using
 // hardware reset.
-#if !SOC_I2C_SUPPORT_HW_FSM_RST
+#if !I2C_LL_SUPPORT_HW_FSM_RST
     i2c_hal_timing_config_t timing_config;
     uint8_t filter_cfg;
 
@@ -827,7 +815,7 @@ esp_err_t i2c_param_config(i2c_port_t i2c_num, const i2c_config_t *i2c_conf)
         return ret;
     }
     i2c_hw_enable(i2c_num);
-    I2C_CLOCK_SRC_ATOMIC() {
+    PERIPH_RCC_ATOMIC() {
         i2c_hal_init(&i2c_context[i2c_num].hal, i2c_num);
     }
     I2C_ENTER_CRITICAL(&(i2c_context[i2c_num].spinlock));
@@ -837,7 +825,7 @@ esp_err_t i2c_param_config(i2c_port_t i2c_num, const i2c_config_t *i2c_conf)
     if (i2c_conf->mode == I2C_MODE_SLAVE) {  //slave mode
         i2c_hal_slave_init(&(i2c_context[i2c_num].hal));
         i2c_ll_slave_enable_auto_start(i2c_context[i2c_num].hal.dev, true);
-        I2C_CLOCK_SRC_ATOMIC() {
+        PERIPH_RCC_ATOMIC() {
             i2c_ll_set_source_clk(i2c_context[i2c_num].hal.dev, src_clk);
         }
         i2c_ll_set_slave_addr(i2c_context[i2c_num].hal.dev, i2c_conf->slave.slave_addr, i2c_conf->slave.addr_10bit_en);
@@ -851,12 +839,12 @@ esp_err_t i2c_param_config(i2c_port_t i2c_num, const i2c_config_t *i2c_conf)
 #endif // SOC_I2C_SUPPORT_SLAVE
     {
         i2c_hal_master_init(&(i2c_context[i2c_num].hal));
-        I2C_CLOCK_SRC_ATOMIC() {
+        PERIPH_RCC_ATOMIC() {
             i2c_ll_set_source_clk(i2c_context[i2c_num].hal.dev, src_clk);
         }
         //Default, we enable hardware filter
         i2c_ll_master_set_filter(i2c_context[i2c_num].hal.dev, I2C_FILTER_CYC_NUM_DEF);
-        I2C_CLOCK_SRC_ATOMIC() {
+        PERIPH_RCC_ATOMIC() {
             i2c_hal_set_bus_timing(&(i2c_context[i2c_num].hal), i2c_conf->master.clk_speed, src_clk, s_get_src_clk_freq(src_clk));
         }
     }
@@ -1046,7 +1034,7 @@ esp_err_t i2c_set_pin(i2c_port_t i2c_num, gpio_num_t sda_io_num, gpio_num_t scl_
             gpio_set_pull_mode(scl_io_num, GPIO_FLOATING);
         }
     }
-#if !SOC_I2C_SUPPORT_HW_CLR_BUS
+#if !I2C_LL_SUPPORT_HW_CLR_BUS
     i2c_context[i2c_num].scl_io_num = scl_io_num;
     i2c_context[i2c_num].sda_io_num = sda_io_num;
 #endif
@@ -1484,7 +1472,7 @@ static void IRAM_ATTR i2c_master_cmd_begin_static(i2c_port_t i2c_num, BaseType_t
 
             //TODO: to reduce interrupt number
             if (!i2c_cmd_is_single_byte(cmd)) {
-                fifo_fill = MIN(remaining_bytes, SOC_I2C_FIFO_LEN);
+                fifo_fill = MIN(remaining_bytes, I2C_LL_FIFO_LEN);
                 /* cmd->data shall not be altered!
                  * Else it would not be possible to reuse the commands list. */
                 write_pr = cmd->data + cmd->bytes_used;
@@ -1514,7 +1502,7 @@ static void IRAM_ATTR i2c_master_cmd_begin_static(i2c_port_t i2c_num, BaseType_t
             break;
         } else if (cmd->hw_cmd.op_code == I2C_LL_CMD_READ) {
             //TODO: to reduce interrupt number
-            fifo_fill = MIN(remaining_bytes, SOC_I2C_FIFO_LEN);
+            fifo_fill = MIN(remaining_bytes, I2C_LL_FIFO_LEN);
             p_i2c->rx_cnt = fifo_fill;
             hw_cmd.byte_num = fifo_fill;
             i2c_ll_master_write_cmd_reg(i2c_context[i2c_num].hal.dev, hw_cmd, p_i2c->cmd_idx);
@@ -1527,7 +1515,7 @@ static void IRAM_ATTR i2c_master_cmd_begin_static(i2c_port_t i2c_num, BaseType_t
         }
         p_i2c->cmd_idx++;
         p_i2c->cmd_link.head = p_i2c->cmd_link.head->next;
-        if (p_i2c->cmd_link.head == NULL || p_i2c->cmd_idx >= (SOC_I2C_CMD_REG_NUM - 1)) {
+        if (p_i2c->cmd_link.head == NULL || p_i2c->cmd_idx >= (I2C_LL_GET(CMD_REG_NUM) - 1)) {
             p_i2c->cmd_idx = 0;
             break;
         }

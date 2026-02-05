@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -83,7 +83,7 @@ void pvt_auto_dbias_init(void)
         SET_PERI_REG_MASK(PCR_PVT_MONITOR_FUNC_CLK_CONF_REG, PCR_PVT_MONITOR_FUNC_CLK_EN);
         /*config for dbias func*/
         CLEAR_PERI_REG_MASK(PVT_DBIAS_TIMER_REG, PVT_TIMER_EN);
-        esp_rom_delay_us(100);
+        esp_rom_delay_us(1);
         SET_PERI_REG_BITS(PVT_DBIAS_CHANNEL_SEL0_REG, PVT_DBIAS_CHANNEL0_SEL, PVT_CHANNEL0_SEL, PVT_DBIAS_CHANNEL0_SEL_S);
         SET_PERI_REG_BITS(PVT_DBIAS_CHANNEL_SEL0_REG, PVT_DBIAS_CHANNEL1_SEL, PVT_CHANNEL1_SEL, PVT_DBIAS_CHANNEL1_SEL_S);  // Select monitor cell ,which  used to monitor PVT situation
         SET_PERI_REG_BITS(PVT_DBIAS_CHANNEL0_SEL_REG, PVT_DBIAS_CHANNEL0_CFG, PVT_CHANNEL0_CFG, PVT_DBIAS_CHANNEL0_CFG_S);
@@ -101,12 +101,11 @@ void pvt_auto_dbias_init(void)
         SET_PERI_REG_BITS(PVT_COMB_PD_SITE2_UNIT0_VT2_CONF2_REG, PVT_MONITOR_EDG_MOD_VT2_PD_SITE2_UNIT0, PVT_EDG_MODE, PVT_MONITOR_EDG_MOD_VT2_PD_SITE2_UNIT0_S);  // Select edge_mode
         SET_PERI_REG_BITS(PVT_COMB_PD_SITE2_UNIT0_VT2_CONF1_REG, PVT_DELAY_LIMIT_VT2_PD_SITE2_UNIT0, PVT_DELAY_NUM_HIGH, PVT_DELAY_LIMIT_VT2_PD_SITE2_UNIT0_S); // The threshold for determining whether the voltage is too high
         SET_PERI_REG_BITS(PVT_COMB_PD_SITE2_UNIT1_VT2_CONF1_REG, PVT_DELAY_LIMIT_VT2_PD_SITE2_UNIT1, PVT_DELAY_NUM_LOW, PVT_DELAY_LIMIT_VT2_PD_SITE2_UNIT1_S); // The threshold for determining whether the voltage is too low
+        SET_PERI_REG_BITS(PVT_COMB_PD_SITE2_UNIT2_VT1_CONF1_REG, PVT_DELAY_LIMIT_VT1_PD_SITE2_UNIT2, PVT_DELAY_NUM_PUMP, PVT_DELAY_LIMIT_VT1_PD_SITE2_UNIT2_S); // The threshold for chargepump
 
         /*config lp offset for pvt func*/
         uint8_t lp_hp_gap = get_lp_hp_gap();
         set_pvt_hp_lp_gap(lp_hp_gap);
-    } else {
-        ESP_HW_LOGW(TAG, "blk_version is less than 3, pvt auto dbias init not supported in efuse.");
     }
 }
 
@@ -130,13 +129,10 @@ void IRAM_ATTR pvt_func_enable(bool enable)
             SET_PERI_REG_BITS(PMU_HP_ACTIVE_HP_REGULATOR0_REG, PMU_HP_ACTIVE_HP_REGULATOR_DBIAS, pvt_hp_dbias, PMU_HP_ACTIVE_HP_REGULATOR_DBIAS_S);
             SET_PERI_REG_BITS(PMU_HP_SLEEP_LP_REGULATOR0_REG, PMU_HP_SLEEP_LP_REGULATOR_DBIAS, pvt_lp_dbias, PMU_HP_SLEEP_LP_REGULATOR_DBIAS_S);
             CLEAR_PERI_REG_MASK(PVT_DBIAS_TIMER_REG, PVT_TIMER_EN); //disable auto dbias
-            CLEAR_PERI_REG_MASK(PVT_CLK_CFG_REG, PVT_MONITOR_CLK_PVT_EN);
             SET_PERI_REG_MASK(PMU_HP_ACTIVE_HP_REGULATOR0_REG, PMU_DIG_REGULATOR0_DBIAS_SEL);   // hand over control of dbias to pmu
             CLEAR_PERI_REG_MASK(PCR_PVT_MONITOR_CONF_REG, PCR_PVT_MONITOR_CLK_EN);
             CLEAR_PERI_REG_MASK(PCR_PVT_MONITOR_FUNC_CLK_CONF_REG, PCR_PVT_MONITOR_FUNC_CLK_EN);
         }
-    } else {
-        ESP_HW_LOGD(TAG, "blk_version is less than 3, pvt enable not supported in efuse.");
     }
 }
 
@@ -148,8 +144,6 @@ void charge_pump_init(void)
         SET_PERI_REG_BITS(PVT_PMUP_CHANNEL_CFG_REG, PVT_PUMP_CHANNEL_CODE0, PVT_PUMP_CHANNEL_CODE, PVT_PUMP_CHANNEL_CODE0_S);   //Set channel code
         WRITE_PERI_REG(PVT_PMUP_BITMAP_LOW0_REG, (1 << PVT_PUMP_BITMAP));  // Select monitor cell for charge pump
         SET_PERI_REG_BITS(PVT_PMUP_DRV_CFG_REG, PVT_PUMP_DRV0, PVT_PUMP_DRV, PVT_PUMP_DRV0_S); //Configure the charging intensity
-    } else {
-        ESP_HW_LOGW(TAG, "blk_version is less than 3, pvt charge_pump init not supported in efuse.");
     }
 }
 
@@ -162,8 +156,6 @@ void IRAM_ATTR charge_pump_enable(bool enable)
         } else {
             CLEAR_PERI_REG_MASK(PVT_PMUP_DRV_CFG_REG, PVT_PUMP_EN); //disable charge pump
         }
-    } else {
-        ESP_HW_LOGD(TAG, "blk_version is less than 3, pvt charge_pump enable not supported in efuse.");
     }
 }
 

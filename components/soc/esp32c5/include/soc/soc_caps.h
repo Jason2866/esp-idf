@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0 OR MIT
  */
@@ -71,6 +71,7 @@
 #define SOC_BOD_SUPPORTED               1
 #define SOC_APM_SUPPORTED               1 /*!< Support for APM peripheral */
 #define SOC_PMU_SUPPORTED               1
+#define SOC_PMU_PVT_SUPPORTED           1
 #define SOC_PAU_SUPPORTED               1
 #define SOC_RTC_TIMER_V2_SUPPORTED      1
 #define SOC_LP_AON_SUPPORTED            1
@@ -269,29 +270,19 @@
 #define SOC_ANA_CMPR_SUPPORT_ETM               (1)
 
 /*-------------------------- I2C CAPS ----------------------------------------*/
-#define SOC_I2C_NUM                 (2U)
-#define SOC_HP_I2C_NUM              (1U)
+#define SOC_I2C_NUM                             (2U)
+#define SOC_HP_I2C_NUM                          (1U)
+#define SOC_LP_I2C_NUM                          (1U)
 
-#define SOC_I2C_FIFO_LEN            (32) /*!< I2C hardware FIFO depth */
-#define SOC_I2C_CMD_REG_NUM         (8)  /*!< Number of I2C command registers */
-#define SOC_I2C_SUPPORT_SLAVE       (1)
+#define SOC_I2C_SUPPORT_XTAL                    (1)
+#define SOC_I2C_SUPPORT_RTC                     (1)
+#define SOC_I2C_SUPPORT_10BIT_ADDR              (1)
 
-#define SOC_I2C_SUPPORT_HW_FSM_RST  (1)
-#define SOC_I2C_SUPPORT_XTAL        (1)
-#define SOC_I2C_SUPPORT_RTC         (1)
-#define SOC_I2C_SUPPORT_10BIT_ADDR   (1)
-#define SOC_I2C_SLAVE_SUPPORT_BROADCAST    (1)
-#define SOC_I2C_SLAVE_CAN_GET_STRETCH_CAUSE    (1)
-#define SOC_I2C_SLAVE_SUPPORT_I2CRAM_ACCESS   (1)
-#define SOC_I2C_SLAVE_SUPPORT_SLAVE_UNMATCH    (1)
+#define SOC_I2C_SUPPORT_SLAVE                   (1)
+#define SOC_I2C_SLAVE_SUPPORT_BROADCAST         (1)
+#define SOC_I2C_SLAVE_CAN_GET_STRETCH_CAUSE     (1)
 
-#define SOC_I2C_SUPPORT_SLEEP_RETENTION (1)
-
-/*-------------------------- LP_I2C CAPS -------------------------------------*/
-// ESP32-C5 has 1 LP_I2C
-#define SOC_LP_I2C_NUM              (1U)
-
-#define SOC_LP_I2C_FIFO_LEN         (16) /*!< LP_I2C hardware FIFO depth */
+#define SOC_I2C_SUPPORT_SLEEP_RETENTION         (1)
 
 /*-------------------------- I2S CAPS ----------------------------------------*/
 #define SOC_I2S_HW_VERSION_2        (1)
@@ -429,14 +420,11 @@
 #define SOC_SPI_MEM_SUPPORT_CACHE_32BIT_ADDR_MAP          (1)
 #define SOC_SPI_MEM_SUPPORT_TIMING_TUNING                 (1)
 #define SOC_SPI_MEM_SUPPORT_TSUS_TRES_SEPERATE_CTR        (1)
-#define SOC_SPI_MEM_PSRAM_FREQ_AXI_CONSTRAINED            (1)
 #define SOC_MEMSPI_TIMING_TUNING_BY_MSPI_DELAY            (1)
 
 #define SOC_MEMSPI_IS_INDEPENDENT                 1
-#define SOC_MEMSPI_SRC_FREQ_120M_SUPPORTED        1
-#define SOC_MEMSPI_SRC_FREQ_80M_SUPPORTED         1
-#define SOC_MEMSPI_SRC_FREQ_40M_SUPPORTED         1
-#define SOC_MEMSPI_SRC_FREQ_20M_SUPPORTED         1
+
+#define SOC_SPI_MEM_FLASH_SUPPORT_HPM                         (1) /*!< Support High Performance Mode */
 
 /*-------------------------- SYSTIMER CAPS ----------------------------------*/
 #define SOC_SYSTIMER_COUNTER_NUM            2  // Number of counter units
@@ -597,7 +585,6 @@
 #define SOC_PM_CPU_RETENTION_BY_SW                 (1)
 #define SOC_PM_MODEM_RETENTION_BY_REGDMA           (1)
 #define SOC_EXT_MEM_CACHE_TAG_IN_CPU_DOMAIN        (1)
-#define SOC_PM_TOP_PD_NOT_ALLOWED                  (1)
 
 #define SOC_PM_PAU_LINK_NUM                 (5)
 #define SOC_PM_PAU_REGDMA_LINK_CONFIGURABLE (1)
@@ -652,6 +639,7 @@
 #define SOC_BLE_MULTI_CONN_OPTIMIZATION     (1)    /*!< Support multiple connections optimization */
 #define SOC_BLE_PERIODIC_ADV_ENH_SUPPORTED  (1)    /*!< Support For BLE Periodic Adv Enhancements */
 #define SOC_BLE_CTE_SUPPORTED               (1)    /*!< Support Bluetooth LE Constant Tone Extension (CTE) */
+#define SOC_BLE_SUBRATE_SUPPORTED           (1)    /*!< Support Bluetooth LE Connection Subrating */
 #define SOC_BLE_PERIODIC_ADV_WITH_RESPONSE  (1)    /*!< Support Bluetooth LE Periodic Advertising with Response (PAwR) */
 
 /*------------------------------------- PHY CAPS -------------------------------------*/

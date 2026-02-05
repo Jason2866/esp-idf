@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2010-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2010-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -9,16 +9,14 @@
 #pragma once
 
 #include <esp_intr_alloc.h>
+#include "esp_pm.h"
+#include "soc/soc.h"   //for SOC_NON_CACHEABLE_OFFSET_SRAM
 #include "driver/spi_common.h"
 #include "hal/spi_types.h"
 #include "hal/dma_types.h"
-#include "soc/ext_mem_defs.h"   //for SOC_NON_CACHEABLE_OFFSET
 #include "esp_private/spi_dma.h"
-#include "esp_pm.h"
-#include "esp_private/spi_share_hw_ctrl.h"
-#if SOC_GDMA_SUPPORTED
 #include "esp_private/gdma.h"
-#endif
+#include "esp_private/spi_share_hw_ctrl.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -34,7 +32,7 @@ typedef dma_descriptor_align8_t spi_dma_desc_t;
 typedef dma_descriptor_align4_t spi_dma_desc_t;
 #endif
 
-#if SOC_NON_CACHEABLE_OFFSET
+#if SOC_NON_CACHEABLE_OFFSET_SRAM
 #include "hal/cache_ll.h"
 #define ADDR_DMA_2_CPU(addr)   ((typeof(addr))CACHE_LL_L2MEM_NON_CACHE_ADDR(addr))
 #define ADDR_CPU_2_DMA(addr)   ((typeof(addr))CACHE_LL_L2MEM_CACHE_ADDR(addr))
@@ -52,7 +50,7 @@ typedef enum {
 /// Attributes of an SPI bus
 typedef struct {
     spi_bus_config_t bus_cfg;           ///< Config used to initialize the bus
-    uint64_t gpio_reserve;              ///< reserved output gpio bit mask
+    uint64_t gpio_reserve;              ///< reserved gpio matrix output pins and all iomux pins bit mask
     uint32_t flags;                     ///< Flags (SPICOMMON_BUSFLAG_* flag combination of bus abilities) of the bus
     int max_transfer_sz;                ///< Maximum length of bytes available to send
     bool dma_enabled;                   ///< To enable DMA or not
@@ -187,14 +185,13 @@ esp_err_t spicommon_bus_initialize_io(spi_host_device_t host, const spi_bus_conf
 /**
  * @brief Free the IO used by a SPI peripheral
  *
- * @param bus_cfg Bus config struct which defines which pins to be used.
- * @param io_reserved Bitmap indicate which pin is reserved
+ * @param host SPI peripheral
  *
  * @return
  *         - ESP_ERR_INVALID_ARG   if parameter is invalid
  *         - ESP_OK                on success
  */
-esp_err_t spicommon_bus_free_io_cfg(const spi_bus_config_t *bus_cfg, uint64_t *io_reserved);
+esp_err_t spicommon_bus_free_io_cfg(spi_host_device_t host);
 
 /**
  * @brief Initialize a Chip Select pin for a specific SPI peripheral

@@ -3,7 +3,35 @@
 # using gen_soc_caps_kconfig.py, do not edit manually
 #####################################################
 
+config SOC_DEDICATED_GPIO_SUPPORTED
+    bool
+    default y
+
 config SOC_UART_SUPPORTED
+    bool
+    default y
+
+config SOC_GDMA_SUPPORTED
+    bool
+    default y
+
+config SOC_AHB_GDMA_SUPPORTED
+    bool
+    default y
+
+config SOC_AXI_GDMA_SUPPORTED
+    bool
+    default y
+
+config SOC_LP_AHB_GDMA_SUPPORTED
+    bool
+    default y
+
+config SOC_GPTIMER_SUPPORTED
+    bool
+    default y
+
+config SOC_ASYNC_MEMCPY_SUPPORTED
     bool
     default y
 
@@ -15,11 +43,15 @@ config SOC_EFUSE_SUPPORTED
     bool
     default y
 
+config SOC_SDM_SUPPORTED
+    bool
+    default y
+
 config SOC_SYSTIMER_SUPPORTED
     bool
     default y
 
-config SOC_FLASH_ENC_SUPPORTED
+config SOC_PSRAM_DMA_CAPABLE
     bool
     default y
 
@@ -105,11 +137,11 @@ config SOC_HP_CPU_HAS_MULTIPLE_CORES
 
 config SOC_CPU_BREAKPOINTS_NUM
     int
-    default 3
+    default 4
 
 config SOC_CPU_WATCHPOINTS_NUM
     int
-    default 3
+    default 4
 
 config SOC_CPU_WATCHPOINT_MAX_REGION_SIZE
     hex
@@ -134,6 +166,30 @@ config SOC_CPU_HAS_LOCKUP_RESET
 config SOC_SIMD_PREFERRED_DATA_ALIGNMENT
     int
     default 16
+
+config SOC_DMA_CAN_ACCESS_FLASH
+    bool
+    default y
+
+config SOC_AHB_GDMA_VERSION
+    int
+    default 2
+
+config SOC_GDMA_SUPPORT_ETM
+    bool
+    default y
+
+config SOC_GDMA_SUPPORT_SLEEP_RETENTION
+    bool
+    default y
+
+config SOC_GDMA_EXT_MEM_ENC_ALIGNMENT
+    int
+    default 16
+
+config SOC_APM_CTRL_FILTER_SUPPORTED
+    bool
+    default y
 
 config SOC_GPIO_PORT
     int
@@ -187,6 +243,14 @@ config SOC_RTCIO_PIN_COUNT
     int
     default 8
 
+config SOC_SDM_SUPPORT_SLEEP_RETENTION
+    bool
+    default y
+
+config SOC_LEDC_CHANNEL_NUM
+    int
+    default 6
+
 config SOC_MMU_PERIPH_NUM
     int
     default 2
@@ -223,18 +287,6 @@ config SOC_MEMSPI_SUPPORT_CONTROL_DUMMY_OUT
     bool
     default y
 
-config SOC_MEMSPI_SRC_FREQ_80M_SUPPORTED
-    bool
-    default y
-
-config SOC_MEMSPI_SRC_FREQ_40M_SUPPORTED
-    bool
-    default y
-
-config SOC_SPI_MEM_PSRAM_FREQ_AXI_CONSTRAINED
-    bool
-    default y
-
 config SOC_MEMSPI_FLASH_PSRAM_INDEPENDENT
     bool
     default y
@@ -268,6 +320,14 @@ config SOC_SYSTIMER_INT_LEVEL
     default y
 
 config SOC_SYSTIMER_ALARM_MISS_COMPENSATE
+    bool
+    default y
+
+config SOC_TIMER_SUPPORT_ETM
+    bool
+    default y
+
+config SOC_TIMER_SUPPORT_SLEEP_RETENTION
     bool
     default y
 
@@ -310,6 +370,10 @@ config SOC_KEY_MANAGER_ECDSA_KEY_DEPLOY
 config SOC_EFUSE_SECURE_BOOT_KEY_DIGESTS
     int
     default 3
+
+config SOC_FLASH_ENCRYPTION_XTS_AES
+    bool
+    default y
 
 config SOC_FLASH_ENCRYPTED_XTS_AES_BLOCK_MAX
     int
@@ -363,10 +427,6 @@ config SOC_CLK_APLL_SUPPORTED
     bool
     default y
 
-config SOC_CLK_SDIO_PLL_SUPPORTED
-    bool
-    default y
-
 config SOC_CLK_RC32K_SUPPORTED
     bool
     default y
@@ -380,5 +440,9 @@ config SOC_CLK_LP_FAST_SUPPORT_XTAL
     default y
 
 config SOC_CLK_ANA_I2C_MST_HAS_ROOT_GATE
+    bool
+    default y
+
+config SOC_RCC_IS_INDEPENDENT
     bool
     default y

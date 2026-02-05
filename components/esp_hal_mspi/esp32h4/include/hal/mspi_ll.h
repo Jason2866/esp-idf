@@ -33,6 +33,10 @@
 #define MSPI_LL_PERIPH_NUM                            2
 #define MSPI_TIMING_LL_MSPI_ID_0                      0
 #define MSPI_TIMING_LL_MSPI_ID_1                      1
+
+// PSRAM frequency should be constrained by AXI frequency to avoid FIFO underflow.
+#define MSPI_TIMING_LL_PSRAM_FREQ_AXI_CONSTRAINED     1
+
 #define MSPI_LL_EVENT_SLV_ST_END                      (1<<3)
 #define MSPI_LL_EVENT_MST_ST_END                      (1<<4)
 #define MSPI_LL_EVENT_ECC_ERR                         (1<<5)
@@ -68,10 +72,9 @@ static inline void _mspi_timing_ll_set_flash_clk_src(uint32_t mspi_id, soc_perip
     case FLASH_CLK_SRC_RC_FAST:
         PCR.mspi_clk_conf.mspi_func_clk_sel = 1;
         break;
-    // case FLASH_CLK_SRC_PLL_F64M:
-    //     PCR.mspi_clk_conf.mspi_func_clk_sel = 2;
-    //     break;
-    // TODO: [ESP32H4] IDF-13632, support 64M
+    case FLASH_CLK_SRC_REF_F64M:
+        PCR.mspi_clk_conf.mspi_func_clk_sel = 2;
+        break;
     case FLASH_CLK_SRC_PLL_F48M:
         PCR.mspi_clk_conf.mspi_func_clk_sel = 3;
         break;

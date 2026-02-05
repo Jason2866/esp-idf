@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0 OR MIT
  */
@@ -72,6 +72,7 @@ PROVIDE ( TIMERG1             = 0x20581000 );
 PROVIDE ( IO_MUX              = 0x20582000 );
 PROVIDE ( GPIO                = 0x20583000 );
 PROVIDE ( GPIO_EXT            = 0x20583E00 );
+PROVIDE ( SDM                 = 0x20583E04 );
 PROVIDE ( MSPI_IOMUX          = 0x20584000 );
 PROVIDE ( HP_SYSTEM           = 0x20586000 );
 PROVIDE ( HP_SYS_CLKRST       = 0x20587000 );
@@ -84,14 +85,14 @@ PROVIDE ( LP_ANA_PERI         = 0x20702000 );
 PROVIDE ( HUK                 = 0x20703000 );
 PROVIDE ( PMU                 = 0x20704000 );
 PROVIDE ( TOUCH_AON           = 0x20705000 );
-PROVIDE ( LP_PERICLKRST       = 0x20710000 );
+PROVIDE ( LP_PERI_PMS         = 0x20706000 );
+PROVIDE ( LP_TEE              = 0x20706800 );
+PROVIDE ( LP_APM              = 0x20706C00 );
+PROVIDE ( LP_PERI_CLKRST      = 0x20710000 );
 PROVIDE ( LP_IO_MUX           = 0x20712000 );
 PROVIDE ( LP_GPIO             = 0x20713000 );
 PROVIDE ( LP_INTR             = 0x20714000 );
 PROVIDE ( EFUSE               = 0x20715000 );
-PROVIDE ( LP_PERI_PMS         = 0x20716000 );
-PROVIDE ( LP_TEE              = 0x20716800 );
-PROVIDE ( LP_APM              = 0x20716C00 );
 PROVIDE ( LP_TIMER            = 0x20800000 );
 PROVIDE ( LP_WDT              = 0x20801000 );
 PROVIDE ( LP_CLOCK_CALI0      = 0x20802000 );
@@ -107,7 +108,7 @@ PROVIDE ( ADC                 = 0x20815000 );
 PROVIDE ( TOUCH_SENS          = 0x20816000 );
 PROVIDE ( LP_MAILBOX          = 0x20817000 );
 PROVIDE ( TSENS               = 0x20818000 );
-PROVIDE ( LP_AHB_PDMA         = 0x20819000 );
+PROVIDE ( LP_AHB_DMA          = 0x20819000 );
 PROVIDE ( LP_DAC              = 0x2081A000 );
 PROVIDE ( CACHE               = 0x2C000000 );
 PROVIDE ( TRACE0              = 0x2D000000 );

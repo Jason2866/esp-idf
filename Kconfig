@@ -148,8 +148,6 @@ mainmenu "Espressif IoT Development Framework Configuration"
         bool
         default "y" if IDF_TARGET="esp32h4"
         select IDF_TARGET_ARCH_RISCV
-        select IDF_ENV_BRINGUP
-        select IDF_ENV_FPGA if ESP32H4_SELECTS_REV_MP
 
     config IDF_TARGET_ESP32S31
         bool
@@ -161,6 +159,7 @@ mainmenu "Espressif IoT Development Framework Configuration"
     config IDF_TARGET_LINUX
         bool
         default "y" if IDF_TARGET="linux"
+        select FREERTOS_UNICORE
 
     config IDF_FIRMWARE_CHIP_ID
         hex
@@ -793,5 +792,4 @@ mainmenu "Espressif IoT Development Framework Configuration"
             - CONFIG_ESP_WIFI_ENABLE_ROAMING_APP
             - CONFIG_USB_HOST_EXT_PORT_RESET_ATTEMPTS
             - CONFIG_GDMA_ENABLE_WEIGHTED_ARBITRATION
-            - CONFIG_I3C_MASTER_ENABLED
             - CONFIG_ESPTOOLPY_FAST_REFLASHING
