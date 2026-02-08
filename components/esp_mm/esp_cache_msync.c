@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -32,6 +32,16 @@ DEFINE_CRIT_SECTION_LOCK_STATIC(s_spinlock);
 #if CONFIG_ESP_MM_CACHE_MSYNC_C2M_CHUNKED_OPS
 static _lock_t s_mutex;
 #endif
+
+void esp_cache_sync_ops_enter_critical_section(void)
+{
+    esp_os_enter_critical_safe(&s_spinlock);
+}
+
+void esp_cache_sync_ops_exit_critical_section(void)
+{
+    esp_os_exit_critical_safe(&s_spinlock);
+}
 
 #if SOC_CACHE_WRITEBACK_SUPPORTED
 static void s_c2m_ops(uint32_t vaddr, size_t size)
