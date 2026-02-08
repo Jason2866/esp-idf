@@ -116,6 +116,8 @@
 #define SOC_AES_SUPPORT_AES_128 (1)
 #define SOC_AES_SUPPORT_AES_256 (1)
 
+#define SOC_AES_SUPPORT_PSEUDO_ROUND_FUNCTION (1)
+
 /*-------------------------- ADC CAPS -------------------------------*/
 /*!< SAR ADC Module*/
 #define SOC_ADC_RTC_CTRL_SUPPORTED              1
@@ -352,6 +354,7 @@
 #define SOC_ISP_BLC_SUPPORTED                    1
 #define SOC_ISP_CCM_SUPPORTED                    1
 #define SOC_ISP_COLOR_SUPPORTED                  1
+#define SOC_ISP_CROP_SUPPORTED                   1
 #define SOC_ISP_DEMOSAIC_SUPPORTED               1
 #define SOC_ISP_DVP_SUPPORTED                    1
 #define SOC_ISP_LSC_SUPPORTED                    1
