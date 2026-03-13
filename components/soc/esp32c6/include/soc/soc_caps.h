@@ -581,6 +581,8 @@
 #define SOC_PM_RETENTION_HAS_CLOCK_BUG      (1)
 #define SOC_EXT_MEM_CACHE_TAG_IN_CPU_DOMAIN (1)
 
+#define SOC_PM_MODEM_RF_FLAG_UPDATE_WORKAROUND  (1)
+
 #define SOC_PM_PAU_LINK_NUM                 (4)
 #define SOC_PM_PAU_REGDMA_LINK_MULTI_ADDR   (1)
 #define SOC_PM_PAU_REGDMA_LINK_WIFIMAC      (1)
@@ -636,6 +638,7 @@
 #define SOC_BLE_PERIODIC_ADV_ENH_SUPPORTED  (1)    /*!< Support For BLE Periodic Adv Enhancements */
 #define SOC_BLUFI_SUPPORTED             (1)    /*!< Support BLUFI */
 #define SOC_BLE_MULTI_CONN_OPTIMIZATION (1)    /*!< Support multiple connections optimization */
+#define SOC_BLE_SUBRATE_SUPPORTED       (1)    /*!< Support Bluetooth LE Connection Subrating */
 #define SOC_BLE_PERIODIC_ADV_WITH_RESPONSE  (1)    /*!< Support Bluetooth LE Periodic Advertising with Response (PAwR) */
 
 #define SOC_BLE_USE_WIFI_PWR_CLK_WORKAROUND (1)

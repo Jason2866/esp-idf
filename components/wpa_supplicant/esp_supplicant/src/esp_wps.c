@@ -681,6 +681,10 @@ static int wps_finish(void)
     }
 
     if (sm->wps->state == WPS_FINISHED) {
+        if (sm->state == WPA_FINISH_PROCESS) {
+            return ESP_OK;
+        }
+        sm->state = WPA_FINISH_PROCESS;
         bool connect = (sm->ap_cred_cnt == 1);
 
 #ifdef CONFIG_WPS_RECONNECT_ON_FAIL
@@ -1631,6 +1635,7 @@ static int wifi_wps_disable_internal(void *ctx, void *data)
     if (wps_get_status() == WPS_STATUS_PENDING) {
         esp_wifi_disconnect();
     }
+    esp_wifi_scan_stop();
     wps_set_status(WPS_STATUS_DISABLE);
 
     /* Call wps_delete_timer to delete all WPS timer, no timer will call wps_post()
