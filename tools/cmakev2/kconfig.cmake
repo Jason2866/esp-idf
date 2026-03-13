@@ -69,6 +69,32 @@ function(__init_kconfig)
 endfunction()
 
 #[[
+    __create_sdkconfig_orig_copy()
+
+    Create a copy of the sdkconfig file in the build directory to preserve
+    all original options, including those from managed components that are
+    not yet known to kconfgen. The copy is referenced via __SDKCONFIG_ORIG
+    and used as the --config input for kconfgen, so that unknown options
+    are not dropped during intermediate sdkconfig regeneration rounds.
+
+    After the component manager has fetched all components (and their Kconfig
+    definitions are available), __SDKCONFIG_ORIG is reset to point to the
+    real sdkconfig so that subsequent operations (menuconfig, etc.) read
+    and write the actual file.
+#]]
+function(__create_sdkconfig_orig_copy)
+    idf_build_get_property(sdkconfig SDKCONFIG)
+    idf_build_get_property(build_dir BUILD_DIR)
+    set(sdkconfig_orig "${build_dir}/sdkconfig.orig")
+    if(EXISTS "${sdkconfig}")
+        file(COPY_FILE "${sdkconfig}" "${sdkconfig_orig}" ONLY_IF_DIFFERENT)
+    else()
+        set(sdkconfig_orig "${sdkconfig}")
+    endif()
+    idf_build_set_property(__SDKCONFIG_ORIG "${sdkconfig_orig}")
+endfunction()
+
+#[[
 .. cmakev2:function:: __should_generate_sdkconfig
 
     .. code-block:: cmake
@@ -671,12 +697,20 @@ function(__create_base_kconfgen_command sdkconfig sdkconfig_defaults)
         endforeach()
     endif()
 
+    # Use __SDKCONFIG_ORIG for --config so that unknown options from managed
+    # components are preserved during intermediate kconfgen runs. Falls back
+    # to the real sdkconfig when __SDKCONFIG_ORIG is not yet set.
+    idf_build_get_property(sdkconfig_orig __SDKCONFIG_ORIG)
+    if(NOT sdkconfig_orig)
+        set(sdkconfig_orig "${sdkconfig}")
+    endif()
+
     # Create base kconfgen command
     set(base_kconfgen_cmd ${python} -m kconfgen
         --list-separator=semicolon
         --kconfig "${root_kconfig}"
         --sdkconfig-rename "${root_sdkconfig_rename}"
-        --config "${sdkconfig}"
+        --config "${sdkconfig_orig}"
         ${defaults_args}
         --env "IDF_BUILD_V2=y")
 
@@ -903,5 +937,80 @@ function(idf_create_save_defconfig)
         USES_TERMINAL
         COMMENT "Saving defconfig..."
         VERBATIM
+    )
+endfunction()
+
+#[[
+.. cmakev2:function:: idf_create_config_report
+
+    .. code-block:: cmake
+
+        idf_create_config_report(<executable>
+                                 TARGET <target>)
+
+    *executable[in]*
+
+    Executable target for which to create the config-report target.
+
+    *TARGET[in]*
+
+        Name of the config-report target to be created.
+
+    Create a config-report target with the name specified by the ``TARGET``
+    option for an ``executable``. This target generates a JSON file with the
+    project configuration report in the build/config directory. The report
+    contains information about the Kconfig parsing, including errors, warnings,
+    and other diagnostic information.
+#]]
+function(idf_create_config_report executable)
+    set(options)
+    set(one_value TARGET)
+    set(multi_value)
+    cmake_parse_arguments(ARG "${options}" "${one_value}" "${multi_value}" ${ARGN})
+
+    if(NOT DEFINED ARG_TARGET)
+        idf_die("TARGET option is required")
+    endif()
+
+    if(TARGET "${ARG_TARGET}")
+        idf_die("TARGET '${ARG_TARGET}' for config-report already exists")
+    endif()
+
+    idf_build_get_property(python PYTHON)
+    idf_build_get_property(idf_path IDF_PATH)
+    idf_build_get_property(kconfgen_cmd __BASE_KCONFGEN_CMD)
+    idf_build_get_property(config_dir CONFIG_DIR)
+    idf_build_get_property(target IDF_TARGET)
+    idf_build_get_property(toolchain IDF_TOOLCHAIN)
+    idf_build_get_property(idf_init_version __IDF_INIT_VERSION)
+    idf_build_get_property(idf_env_fpga __IDF_ENV_FPGA)
+
+    # Get KCONFIG_REPORT_VERBOSITY from environment or use default
+    set(kconfig_report_verbosity "$ENV{KCONFIG_REPORT_VERBOSITY}")
+    if(NOT kconfig_report_verbosity)
+        set(kconfig_report_verbosity "default")
+        idf_msg("KCONFIG_REPORT_VERBOSITY not set, using default")
+    endif()
+
+    __create_executable_config_env_file("${executable}")
+    get_target_property(config_env_dir "${executable}" CONFIG_ENV_DIR)
+
+    add_custom_target("${ARG_TARGET}"
+        # Prepare Kconfig source files
+        COMMAND ${python} "${idf_path}/tools/kconfig_new/prepare_kconfig_files.py"
+        --list-separator=semicolon
+        --env-file "${config_env_dir}/config.env"
+        # Generate config report
+        COMMAND ${kconfgen_cmd}
+        --env "IDF_TARGET=${target}"
+        --env "IDF_TOOLCHAIN=${toolchain}"
+        --env "IDF_ENV_FPGA=${idf_env_fpga}"
+        --env "IDF_INIT_VERSION=${idf_init_version}"
+        --output report "${config_dir}/kconfig_parse_report.json"
+        --env "KCONFIG_REPORT_VERBOSITY=${kconfig_report_verbosity}"
+        --env-file "${config_env_dir}/config.env"
+        USES_TERMINAL
+        VERBATIM
+        COMMENT "Generating configuration report..."
     )
 endfunction()
