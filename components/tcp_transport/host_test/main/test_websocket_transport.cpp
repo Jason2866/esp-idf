@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -208,6 +208,65 @@ TEST_CASE("WebSocket Transport Connection", "[success]")
         std::string response(buffer, read_len);
         REQUIRE(response == "Test");
     }
+
+    SECTION("Happy flow with smaller response header") {
+        // Set the response header length to a size that's smaller than the full response
+        // but still large enough to find the header delimiter
+        ws_config.response_headers_len = 130;  // Large enough for the header but smaller than full response
+        REQUIRE(esp_transport_ws_set_config(websocket_transport.get(), &ws_config) == ESP_OK);
+
+        // Set the callback function for mock_read
+        mock_read_Stub(mock_valid_read_callback);
+        mock_poll_read_Stub(mock_poll_read_callback);
+
+        // Create a marker to check that the value after the end of the response header buffer is not overwritten
+        std::string expected_full_response = make_response();
+        char marker = 0x42;  // Use a distinctive marker value
+        response_header_buffer[ws_config.response_headers_len] = marker;
+
+        REQUIRE(esp_transport_connect(websocket_transport.get(), host, port, timeout) == 0);
+
+        // Verify the response header was stored correctly and truncated at the header boundary
+        std::string expected_header = "HTTP/1.1 101 Switching Protocols\r\n"
+                                      "Upgrade: websocket\r\n"
+                                      "Connection: Upgrade\r\n"
+                                      "Sec-WebSocket-Accept: HSmrc0sMlYUkAGmm5OPpG2HaGWk=\r\n"
+                                      "\r\n";
+
+        REQUIRE(std::string(response_header_buffer.data()) == expected_header);
+        // Verify the marker after the buffer wasn't overwritten
+        REQUIRE(response_header_buffer[ws_config.response_headers_len] == marker);
+    }
+
+    SECTION("Poll read with buffered data") {
+        // Set the callback function for mock_read
+        mock_read_Stub(mock_valid_read_callback);
+
+        static int parent_poll_calls = 0;
+        parent_poll_calls = 0;
+
+        // Verify poll_read is not called when buffer has data
+        mock_poll_read_Stub([](esp_transport_handle_t t, int timeout_ms, int num_call){
+            parent_poll_calls++;
+            return 0;
+        });
+
+        REQUIRE(esp_transport_connect(websocket_transport.get(), host, port, timeout) == 0);
+
+        // buffer should contain "Test" (4 bytes)
+        // ws_poll_read should return 1 because buffer is not empty
+        REQUIRE(esp_transport_poll_read(websocket_transport.get(), timeout) == 1);
+        REQUIRE(parent_poll_calls == 0);
+
+        // Read the data to empty the buffer
+        char buffer[10];
+        int read_len = esp_transport_read(websocket_transport.get(), buffer, sizeof(buffer), timeout);
+        REQUIRE(read_len == 4);
+
+        // Now buffer is empty, ws_poll_read should call parent poll
+        esp_transport_poll_read(websocket_transport.get(), timeout);
+        REQUIRE(parent_poll_calls == 1);
+    }
 }
 
 TEST_CASE("WebSocket Transport Connection", "[failure]")
@@ -313,5 +372,31 @@ TEST_CASE("WebSocket Transport Connection", "[failure]")
         REQUIRE(esp_transport_connect(websocket_transport.get(), host, port, timeout) == -1);
         // Assert the expected HTTP status code
         REQUIRE((esp_transport_ws_get_upgrade_request_status(websocket_transport.get())) == 301);
+    }
+
+    SECTION("ws connect fails (buffer full, no delimiter)") {
+        // Mock read to fill buffer with non-delimiter data
+        mock_read_Stub([](esp_transport_handle_t h, char *buf, int len, int tout, int n) {
+             if (len > 0) {
+                 memset(buf, 'A', len);
+             }
+             return len;
+        });
+        mock_poll_read_Stub(mock_poll_read_callback);
+
+        REQUIRE(esp_transport_connect(websocket_transport.get(), host, port, timeout) == -1);
+    }
+
+    SECTION("ws connect succeeds (response header buffer too small for handshake verification)") {
+        // Set a very small response header buffer
+        ws_config.response_headers_len = 50;
+        REQUIRE(esp_transport_ws_set_config(websocket_transport.get(), &ws_config) == ESP_OK);
+
+        // Set the callback function for mock_read
+        mock_read_Stub(mock_valid_read_callback);
+        mock_poll_read_Stub(mock_poll_read_callback);
+
+        // Connect should now succeed even with small user buffer
+        REQUIRE(esp_transport_connect(websocket_transport.get(), host, port, timeout) == 0);
     }
 }

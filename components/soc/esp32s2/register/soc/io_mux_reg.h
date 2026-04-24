@@ -156,7 +156,6 @@
 #define SPI_D7_GPIO_NUM  36
 #define SPI_DQS_GPIO_NUM 37
 
-#define MAX_RTC_GPIO_NUM 21
 #define MAX_PAD_GPIO_NUM 46
 #define MAX_GPIO_NUM    53
 

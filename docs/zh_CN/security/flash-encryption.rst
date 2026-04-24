@@ -1039,7 +1039,17 @@ JTAG 调试
     片外 RAM
     ------------
 
-    启用 flash 加密后，任何通过缓存从片外 SPI RAM 读取和写入的数据也将被加密/解密。这个实现的方式以及使用的密钥与 flash 加密相同。如果启用 flash 加密，则片外 SPI RAM 的加密也会被启用，无法单独控制此功能。
+    .. only:: SOC_PSRAM_ENCRYPTION_PAGE_CONFIGURABLE
+
+      启用 flash 加密后，任何通过缓存从片外 SPI RAM 读取和写入的数据也可以被加密/解密。在 {IDF_TARGET_NAME} 上，PSRAM 加密可以按 MMU 页面粒度进行控制，允许对单个 PSRAM 页面选择性地加密或不加密。但在默认配置下，启用 flash 加密时所有 PSRAM 页面都会被加密。
+
+    .. only:: not SOC_PSRAM_ENCRYPTION_PAGE_CONFIGURABLE
+
+      启用 flash 加密后，任何通过缓存从片外 SPI RAM 读取和写入的数据也将被加密/解密。如果启用 flash 加密，则片外 SPI RAM 的加密也会自动启用。
+
+    .. only:: SOC_PSRAM_ENCRYPTION_SEPARATE_KEY
+
+      在 {IDF_TARGET_NAME} 上，PSRAM 加密可以使用独立的加密密钥。如果未烧录 PSRAM 加密密钥，则会使用 flash 加密密钥作为 PSRAM 加密密钥。
 
 
 技术细节

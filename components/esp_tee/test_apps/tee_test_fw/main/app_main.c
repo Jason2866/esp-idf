@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -10,9 +10,20 @@
 #include "unity.h"
 #include "memory_checks.h"
 
+#if CONFIG_HEAP_TRACING
+#include "esp_heap_trace.h"
+#define NUM_RECORDS 100
+static heap_trace_record_t trace_record[NUM_RECORDS];
+#endif
+
 /* setUp runs before every test */
 void setUp(void)
 {
+#if CONFIG_HEAP_TRACING
+    heap_trace_init_standalone(trace_record, NUM_RECORDS);
+    heap_trace_start(HEAP_TRACE_LEAKS);
+#endif
+
     test_utils_record_free_mem();
     test_utils_set_leak_level(CONFIG_UNITY_CRITICAL_LEAK_LEVEL_GENERAL, ESP_LEAK_TYPE_CRITICAL, ESP_COMP_LEAK_GENERAL);
     test_utils_set_leak_level(CONFIG_UNITY_WARN_LEAK_LEVEL_GENERAL, ESP_LEAK_TYPE_WARNING, ESP_COMP_LEAK_GENERAL);
@@ -28,8 +39,17 @@ void tearDown(void)
     /* clean up some of the newlib's lazy allocations */
     esp_reent_cleanup();
 
+#if CONFIG_HEAP_TRACING
+    heap_trace_stop();
+#endif
+
     /* check if unit test has caused heap corruption in any heap */
-    TEST_ASSERT_MESSAGE(heap_caps_check_integrity(MALLOC_CAP_INVALID, true), "The test has corrupted the heap");
+    if (!heap_caps_check_integrity_all(true)) {
+#if CONFIG_HEAP_TRACING
+        heap_trace_dump();
+#endif
+        TEST_FAIL_MESSAGE("The test has corrupted the heap");
+    }
 
     test_utils_finish_and_evaluate_leaks(test_utils_get_leak_level(ESP_LEAK_TYPE_WARNING, ESP_COMP_LEAK_ALL),
                                          test_utils_get_leak_level(ESP_LEAK_TYPE_CRITICAL, ESP_COMP_LEAK_ALL));

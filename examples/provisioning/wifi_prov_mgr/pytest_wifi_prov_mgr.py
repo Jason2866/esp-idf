@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# SPDX-FileCopyrightText: 2018-2025 Espressif Systems (Shanghai) CO LTD
+# SPDX-FileCopyrightText: 2018-2026 Espressif Systems (Shanghai) CO LTD
 # SPDX-License-Identifier: Apache-2.0
 import logging
 import os
@@ -102,10 +102,3 @@ def test_wifi_prov_mgr(dut: Dut, sec_ver: int) -> None:
 @idf_parametrize('target', ['esp32'], indirect=['target'])
 def test_examples_wifi_prov_mgr_sec1(dut: Dut) -> None:
     test_wifi_prov_mgr(dut, 1)
-
-
-@pytest.mark.generic
-@pytest.mark.xfail(reason='Runner unable to connect to target over Bluetooth', run=False)
-@idf_parametrize('target', ['esp32'], indirect=['target'])
-def test_examples_wifi_prov_mgr_sec2(dut: Dut) -> None:
-    test_wifi_prov_mgr(dut, 2)

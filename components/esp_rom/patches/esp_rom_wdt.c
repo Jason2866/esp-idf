@@ -6,9 +6,11 @@
 
 #include "sdkconfig.h"
 #include <stddef.h>
-
+#include "soc/soc_caps.h"
+#include "soc/chip_revision.h"
 #include "esp_rom_caps.h"
-
+#include "hal/config.h"
+#include "hal/efuse_hal.h"
 #include "hal/wdt_types.h"
 #include "hal/wdt_hal.h"
 #include "hal/mwdt_ll.h"
@@ -119,13 +121,13 @@ void wdt_hal_deinit(wdt_hal_context_t *hal)
     hal->mwdt_dev = NULL;
 }
 
-#if CONFIG_IDF_TARGET_ESP32P4
+#if CONFIG_IDF_TARGET_ESP32P4 && (HAL_CONFIG(CHIP_SUPPORT_MIN_REV) <= 301)
 extern void rom_wdt_hal_config_stage(wdt_hal_context_t *hal, wdt_stage_t stage, uint32_t timeout, wdt_stage_action_t behavior);
 
 /* rwdt_ll_config_stage is implemented erroneously in ESP32P4 rom code, TODO: PM-654*/
 void wdt_hal_config_stage(wdt_hal_context_t *hal, wdt_stage_t stage, uint32_t timeout_ticks, wdt_stage_action_t behavior)
 {
-    if (hal->inst == WDT_RWDT && stage == WDT_STAGE0) {
+    if ((hal->inst == WDT_RWDT && stage == WDT_STAGE0) && !ESP_CHIP_REV_ABOVE(efuse_hal_chip_revision(), 302)) {
         timeout_ticks = timeout_ticks >> (1 + REG_GET_FIELD(EFUSE_RD_REPEAT_DATA1_REG, EFUSE_WDT_DELAY_SEL));
     }
     rom_wdt_hal_config_stage(hal, stage, timeout_ticks, behavior);

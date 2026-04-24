@@ -83,11 +83,13 @@ ESP-IDF 启动过程中，片外 RAM 被映射到数据虚拟地址空间，该�
 添加片外 RAM 到堆内存分配器
 ----------------------------
 
-在 :ref:`CONFIG_SPIRAM_USE` 中选择 ``Make RAM allocatable using heap_caps_malloc(..., MALLOC_CAP_SPIRAM)`` 选项。
+在 :ref:`CONFIG_SPIRAM_USE` 中选择 ``Add RAM to heap_caps allocator (malloc() stays internal by default)`` 选项。
 
-启用上述选项后，片外 RAM 被映射到数据虚拟地址空间，并将这个区域添加到携带 ``MALLOC_CAP_SPIRAM`` 标志的 :doc:`堆内存分配器 </api-reference/system/mem_alloc>`。
+启用上述选项后，片外 RAM 被映射到数据虚拟地址空间，并将这个区域添加到携带 ``MALLOC_CAP_SPIRAM`` 标志的 :doc:`堆内存分配器 </api-reference/system/mem_alloc>`。由于该内存区域同时带有 ``MALLOC_CAP_DEFAULT`` 标志，因此 ``heap_caps_malloc(size, MALLOC_CAP_DEFAULT)`` 这类调用仍然可能返回 PSRAM 指针。
 
-程序如果想从片外存储器分配存储空间，则需要调用 ``heap_caps_malloc(size, MALLOC_CAP_SPIRAM)``，之后可以调用 ``free()`` 函数释放这部分存储空间。
+如果程序想显式地从片外存储器分配存储空间，则需要调用 ``heap_caps_malloc(size, MALLOC_CAP_SPIRAM)``，之后可以调用 ``free()`` 函数释放这部分存储空间。
+
+在该模式下，标准 ``malloc()`` 默认不会从外部 RAM 分配内存，因为它使用的是单独的默认分配策略。
 
 .. _external_ram_config_malloc:
 
@@ -238,6 +240,14 @@ ESP-IDF 启动过程中，片外 RAM 被映射到数据虚拟地址空间，该�
     可以为存储在外部 RAM 中的数据启用自动加密功能。启用该功能后，通过缓存读写的任何数据将被外部存储器加密硬件自动加密、解密。
 
     只要启用了 flash 加密功能，就会启用这个功能。关于如何启用 flash 加密以及其工作原理，请参考 :doc:`/security/flash-encryption`。
+
+    .. only:: SOC_PSRAM_ENCRYPTION_PAGE_CONFIGURABLE
+
+        在 {IDF_TARGET_NAME} 上，PSRAM 加密可以按 MMU 页面粒度进行控制，允许对单个 PSRAM 页面选择性地加密或不加密。但在默认配置下，启用 flash 加密时所有 PSRAM 页面都会被加密。
+
+    .. only:: SOC_PSRAM_ENCRYPTION_SEPARATE_KEY
+
+        在 {IDF_TARGET_NAME} 上，PSRAM 加密可以使用独立的加密密钥。如果未烧录 PSRAM 加密密钥，则会使用 flash 加密密钥作为 PSRAM 加密密钥。
 
 
 .. only:: esp32

@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
+# SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
 # SPDX-License-Identifier: Unlicense OR CC0-1.0
 import http.server
+import itertools
 import multiprocessing
 import os
 import ssl
@@ -77,16 +78,19 @@ server_key = (
     '-----END PRIVATE KEY-----\n'
 )
 
+CONFIG_PARTITIONS_OTA = [
+    ('on_update_no_sb_ecdsa', 'esp32'),
+    *itertools.product(
+        ['on_update_no_sb_rsa', 'virt_sb_v2_and_fe', 'virt_sb_v2_and_fe_2'],
+        ['esp32', 'esp32c3', 'esp32s3'],
+    ),
+]
+
 
 @pytest.mark.wifi_high_traffic
-@pytest.mark.parametrize(
-    'config',
-    ['on_update_no_sb_ecdsa', 'on_update_no_sb_rsa', 'virt_sb_v2_and_fe', 'virt_sb_v2_and_fe_2'],
-    indirect=True,
-)
 @pytest.mark.parametrize('skip_autoflash', ['y'], indirect=True)
 @pytest.mark.timeout(2400)
-@idf_parametrize('target', ['esp32', 'esp32c3', 'esp32s3'], indirect=['target'])
+@idf_parametrize('config, target', CONFIG_PARTITIONS_OTA, indirect=['config', 'target'])
 def test_examples_partitions_ota(dut: Dut) -> None:
     print(' - Erase flash')
     dut.serial.erase_flash()

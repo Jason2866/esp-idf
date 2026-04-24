@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
+# SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
 # SPDX-License-Identifier: Unlicense OR CC0-1.0
 import logging
 import os
@@ -6,7 +6,6 @@ import os
 import pytest
 from pytest_embedded import Dut
 from pytest_embedded_idf.utils import idf_parametrize
-from pytest_embedded_idf.utils import soc_filtered_targets
 from pytest_embedded_qemu.dut import QemuDut
 
 
@@ -665,14 +664,6 @@ def test_examples_efuse_with_virt_secure_boot_v2_esp32xx(dut: Dut) -> None:
 
 
 @pytest.mark.generic
-@pytest.mark.parametrize('config', ['virt_secure_boot_v2_ecdsa_p384'], indirect=True)
-@pytest.mark.parametrize('skip_autoflash', ['y'], indirect=True)
-@idf_parametrize('target', soc_filtered_targets('SOC_ECDSA_SUPPORT_CURVE_P384 == 1'), indirect=['target'])
-def test_examples_efuse_with_virt_secure_boot_v2_ecdsa_p384_esp32xx(dut: Dut) -> None:
-    example_efuse_with_virt_secure_boot_v2_esp32xx(dut)
-
-
-@pytest.mark.generic
 @pytest.mark.parametrize('config', ['virt_secure_boot_v2'], indirect=True)
 @pytest.mark.parametrize('skip_autoflash', ['y'], indirect=True)
 @idf_parametrize(
@@ -1101,12 +1092,4 @@ def example_efuse_with_virt_sb_v2_and_fe(dut: Dut) -> None:
     indirect=['target'],
 )
 def test_examples_efuse_with_virt_sb_v2_and_fe_esp32xx(dut: Dut) -> None:
-    example_efuse_with_virt_sb_v2_and_fe(dut)
-
-
-@pytest.mark.generic
-@pytest.mark.parametrize('skip_autoflash', ['y'], indirect=True)
-@pytest.mark.parametrize('config', ['virt_sb_v2_ecdsa_p384_and_fe'], indirect=True)
-@idf_parametrize('target', soc_filtered_targets('SOC_ECDSA_SUPPORT_CURVE_P384 == 1'), indirect=['target'])
-def test_examples_efuse_with_virt_sb_v2_ecdsa_p384_and_fe_esp32xx(dut: Dut) -> None:
     example_efuse_with_virt_sb_v2_and_fe(dut)

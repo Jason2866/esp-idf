@@ -30,6 +30,8 @@ extern "C" {
 
 #define RTCIO_LL_PIN_FUNC       0
 
+#define RTCIO_LL_GPIO_NUM_OFFSET    0 // rtcio 0-7 correspond to gpio 0-7
+
 typedef enum {
     RTCIO_LL_FUNC_RTC = 0x0,         /*!< The pin controlled by RTC module. */
     RTCIO_LL_FUNC_DIGITAL = 0x1,     /*!< The pin controlled by DIGITAL module. */

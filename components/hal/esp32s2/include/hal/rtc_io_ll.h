@@ -21,7 +21,9 @@
 #include "soc/rtc_periph.h"
 #include "soc/sens_struct.h"
 
-#define RTCIO_LL_PIN_FUNC     0
+#define RTCIO_LL_PIN_FUNC           0
+
+#define RTCIO_LL_GPIO_NUM_OFFSET    0 // rtcio 0-21 correspond to gpio 0-21
 
 #ifdef __cplusplus
 extern "C" {

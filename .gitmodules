@@ -40,11 +40,11 @@
 [submodule "components/spiffs/spiffs"]
 	path = components/spiffs/spiffs
 	url = ../../pellepl/spiffs.git
-	sbom-version = 0.2-255-g0dbb3f71c5f6
+	sbom-version = 0.2-265-gad902ca
 	sbom-supplier = Person: Peter Andersson
 	sbom-url = https://github.com/pellepl/spiffs
 	sbom-description = Wear-leveled SPI flash file system for embedded devices
-	sbom-hash = 0dbb3f71c5f6fae3747a9d935372773762baf852
+	sbom-hash = ad902cadceb39d0825a97e25ecb5867641f606ba
 
 [submodule "components/json/cJSON"]
 	path = components/json/cJSON
@@ -55,7 +55,7 @@
 	sbom-supplier = Person: Dave Gamble
 	sbom-url = https://github.com/DaveGamble/cJSON
 	sbom-description = Ultralightweight JSON parser in ANSI C
-	sbom-hash = c859b25da02955fef659d658b8f324b5cde87be3
+	sbom-hash = b2890c8d76bbb64e710585ebc0a917196b9c67e7
 
 [submodule "components/mbedtls/mbedtls"]
 	path = components/mbedtls/mbedtls

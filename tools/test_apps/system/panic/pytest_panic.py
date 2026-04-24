@@ -64,12 +64,6 @@ CONFIG_PANIC = list(itertools.chain(itertools.product(['panic'], ['supported_tar
 CONFIG_PANIC_DUAL_CORE = list(itertools.chain(itertools.product(['panic'], TARGETS_DUAL_CORE)))
 CONFIG_PANIC_HALT = list(itertools.chain(itertools.product(['panic_halt'], TARGETS_ALL)))
 
-CONFIGS_BACKTRACE = list(
-    itertools.chain(
-        # One single-core target and one dual-core target is enough
-        itertools.product(['framepointer'], ['esp32c3', 'esp32p4'])
-    )
-)
 
 CONFIGS_DUAL_CORE = list(
     itertools.chain(
@@ -708,7 +702,7 @@ def test_panic_handler_crash1(dut: PanicTestDut, config: str, test_func_name: st
 # currently ESP32-S2, ESP32-C3, ESP32-C2, ESP32-H2, ESP32-C6, ESP32-P4, ESP32-C5 and ESP32-C61 are supported
 CONFIGS_MEMPROT_IDRAM = list(
     itertools.chain(
-        itertools.product(
+        zip(
             [
                 'memprot_esp32s2',
                 'memprot_esp32c3',
@@ -727,7 +721,7 @@ CONFIGS_MEMPROT_DCACHE = list(itertools.chain(itertools.product(['memprot_esp32s
 
 CONFIGS_MEMPROT_RTC_FAST_MEM = list(
     itertools.chain(
-        itertools.product(
+        zip(
             [
                 'memprot_esp32s2',
                 'memprot_esp32c3',
@@ -746,7 +740,7 @@ CONFIGS_MEMPROT_RTC_SLOW_MEM = list(itertools.chain(itertools.product(['memprot_
 
 CONFIGS_MEMPROT_FLASH_IDROM = list(
     itertools.chain(
-        itertools.product(
+        zip(
             ['memprot_esp32c5', 'memprot_esp32c6', 'memprot_esp32c61', 'memprot_esp32h2', 'memprot_esp32p4'],
             ['esp32c5', 'esp32c6', 'esp32c61', 'esp32h2', 'esp32p4'],
         )
@@ -755,7 +749,7 @@ CONFIGS_MEMPROT_FLASH_IDROM = list(
 
 CONFIGS_MEMPROT_SPIRAM_XIP_IROM_ALIGNMENT_HEAP = list(
     itertools.chain(
-        itertools.product(
+        zip(
             ['memprot_spiram_xip_esp32c5', 'memprot_spiram_xip_esp32c61', 'memprot_spiram_xip_esp32p4'],
             ['esp32c5', 'esp32c61', 'esp32p4'],
         )
@@ -764,7 +758,7 @@ CONFIGS_MEMPROT_SPIRAM_XIP_IROM_ALIGNMENT_HEAP = list(
 
 CONFIGS_MEMPROT_SPIRAM_XIP_DROM_ALIGNMENT_HEAP = list(
     itertools.chain(
-        itertools.product(
+        zip(
             [
                 'memprot_spiram_xip_esp32s3',
                 'memprot_spiram_xip_esp32c5',
@@ -778,7 +772,7 @@ CONFIGS_MEMPROT_SPIRAM_XIP_DROM_ALIGNMENT_HEAP = list(
 
 CONFIGS_MEMPROT_INVALID_REGION_PROTECTION_USING_PMA = list(
     itertools.chain(
-        itertools.product(
+        zip(
             ['memprot_esp32c5', 'memprot_esp32c6', 'memprot_esp32c61', 'memprot_esp32h2', 'memprot_esp32p4'],
             ['esp32c5', 'esp32c6', 'esp32c61', 'esp32h2', 'esp32p4'],
         )
@@ -991,9 +985,7 @@ def test_rtc_fast_reg2_execute_violation(dut: PanicTestDut, test_func_name: str)
 
 # TODO: IDF-6820: ESP32-S2 -> Fix multiple panic reasons in different runs
 @pytest.mark.generic
-@pytest.mark.xfail(
-    'config.getvalue("target") == "esp32s2"', reason='Multiple panic reasons for the same test may surface', run=False
-)
+@pytest.mark.xfail(targets=['esp32s2'], reason='Multiple panic reasons for the same test may surface', run=False)
 @idf_parametrize('config, target', CONFIGS_MEMPROT_RTC_FAST_MEM, indirect=['config', 'target'])
 @pytest.mark.temp_skip_ci(targets=['esp32p4'], reason='p4 rev3 migration, IDF-14348')
 def test_rtc_fast_reg3_execute_violation(dut: PanicTestDut, test_func_name: str) -> None:
@@ -1282,21 +1274,6 @@ def test_tcb_corrupted(dut: PanicTestDut, target: str, config: str, test_func_na
     coredump_pattern = [re.compile(pattern.decode('utf-8')) for pattern in regex_patterns]
 
     common_test(dut, config, expected_backtrace=None, expected_coredump=coredump_pattern)
-
-
-@pytest.mark.generic
-@idf_parametrize('config, target', CONFIGS_BACKTRACE, indirect=['config', 'target'])
-@pytest.mark.temp_skip_ci(targets=['esp32p4'], reason='p4 rev3 migration, IDF-14348')
-def test_panic_print_backtrace(dut: PanicTestDut, config: str, test_func_name: str) -> None:
-    dut.run_test_func(test_func_name)
-    regex_pattern = rb'abort\(\) was called at PC [0-9xa-f]+ on core 0'
-    dut.expect(regex_pattern)
-    dut.expect_backtrace()
-    dut.expect_elf_sha256()
-    dut.expect_none(['Guru Meditation', 'Re-entered core dump'])
-
-    coredump_pattern = re.compile(PANIC_ABORT_PREFIX + regex_pattern.decode('utf-8'))
-    common_test(dut, config, expected_backtrace=None, expected_coredump=[coredump_pattern])
 
 
 @pytest.mark.generic

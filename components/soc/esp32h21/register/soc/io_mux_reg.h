@@ -147,7 +147,6 @@ extern "C" {
 #define EXT_OSC_SLOW_GPIO_NUM        6
 
 
-#define MAX_RTC_GPIO_NUM             11             // GPIO5~11 are the pads with LP function
 #define MAX_PAD_GPIO_NUM             25
 #define MAX_GPIO_NUM                 29
 

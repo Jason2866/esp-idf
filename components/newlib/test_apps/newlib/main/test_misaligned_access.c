@@ -130,7 +130,7 @@ TEST_CASE("mem functions in IRAM", "[misaligned_mem]")
     TEST_ASSERT_TRUE(fn_in_ram(strncmp));
 }
 
-#if CONFIG_ESP_SYSTEM_MEMPROT_PMP
+#if CONFIG_IDF_TARGET_ARCH_RISCV
 TEST_CASE("access across different PMP regions", "[misaligned_mem]")
 {
     /*

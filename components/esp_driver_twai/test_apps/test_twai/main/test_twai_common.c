@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -12,13 +12,15 @@
 #include "test_utils.h"
 #include "esp_attr.h"
 #include "esp_log.h"
+#include "esp_timer.h"
 #include "esp_heap_caps.h"
 #include "esp_clk_tree.h"
 #include "freertos/FreeRTOS.h"
 #include "esp_twai.h"
 #include "esp_twai_onchip.h"
 #include "soc/twai_periph.h"
-#include "esp_rom_gpio.h"
+#include "soc/gpio_sig_map.h"
+#include "esp_private/gpio.h"
 #include "driver/uart.h" // for baudrate detection
 
 #define TEST_TX_GPIO                4
@@ -583,6 +585,55 @@ TEST_CASE("twai bus off recovery (loopback)", "[twai]")
     TEST_ESP_OK(twai_node_delete(node_hdl));
 }
 
+static IRAM_ATTR bool test_arb_error_cb(twai_node_handle_t handle, const twai_error_event_data_t *edata, void *user_ctx)
+{
+    esp_rom_printf("bus error: 0x%lx\n", edata->err_flags.val);
+    // only arb lost or stuff err is expected, stuff_err comes from RX section after arb lost
+    // test using loopback mode, arb_lost -> switch to RX -> no one is sending -> can't receive new waves -> stuff err
+    TEST_ASSERT(edata->err_flags.arb_lost || edata->err_flags.stuff_err);
+    return true;
+}
+
+TEST_CASE("test arb lost and stuff err", "[twai]")
+{
+    twai_node_handle_t node_hdl;
+    twai_onchip_node_config_t node_config = {};
+    node_config.io_cfg.tx = TEST_TX_GPIO;
+    node_config.io_cfg.rx = TEST_TX_GPIO;   // Using same pin for test without transceiver
+    node_config.io_cfg.quanta_clk_out = GPIO_NUM_NC;
+    node_config.io_cfg.bus_off_indicator = GPIO_NUM_NC;
+    node_config.bit_timing.bitrate = 50000;  //slow bitrate to ensure soft error trigger
+    node_config.tx_queue_depth = 1;
+    node_config.flags.enable_self_test = true;
+    TEST_ESP_OK(twai_new_node_onchip(&node_config, &node_hdl));
+
+    twai_event_callbacks_t user_cbs = {};
+    user_cbs.on_error = test_arb_error_cb;
+    TEST_ESP_OK(twai_node_register_event_callbacks(node_hdl, &user_cbs, NULL));
+    TEST_ESP_OK(twai_node_enable(node_hdl));
+
+    twai_node_status_t node_status = {};
+    twai_frame_t tx_frame = {};
+    tx_frame.header.id = 0x7F0; // send high id range to easier trigger arb lost
+    gpio_set_level(TEST_TX_GPIO, 0);
+    while (node_status.state != TWAI_ERROR_BUS_OFF && (tx_frame.header.id > 0x7F0 - 10)) {
+        printf("sending frame %lx last tec %d rec %d\n", tx_frame.header.id --, node_status.tx_error_count, node_status.rx_error_count);
+        TEST_ESP_OK(twai_node_transmit(node_hdl, &tx_frame, 500));
+        if (tx_frame.header.id < 0x7F0 - 2) {    // trigger error after 2 frames
+            printf("trigger arb lost now!\n");
+            esp_rom_delay_us(5 * (1000000 / node_config.bit_timing.bitrate)); // trigger error at 30 bits after frame start
+            esp_rom_gpio_connect_out_signal(TEST_TX_GPIO, twai_controller_periph_signals.controllers[0].tx_sig, false, false);
+            esp_rom_delay_us(2 * (1000000 / node_config.bit_timing.bitrate)); // trigger error for 2 bits
+            esp_rom_gpio_connect_out_signal(TEST_TX_GPIO, twai_controller_periph_signals.controllers[0].tx_sig, false, false);
+        }
+        vTaskDelay(pdMS_TO_TICKS(1000)); // some time for hardware report errors
+        twai_node_get_info(node_hdl, &node_status, NULL);
+    }
+
+    TEST_ESP_OK(twai_node_disable(node_hdl));
+    TEST_ESP_OK(twai_node_delete(node_hdl));
+}
+
 static void test_send_wait_task(void *args)
 {
     const char *task_name = pcTaskGetName(NULL);
@@ -754,7 +805,7 @@ static IRAM_ATTR bool test_dlc_range_cb(twai_node_handle_t handle, const twai_rx
 {
     twai_frame_t *rx_frame = (twai_frame_t *)user_ctx;
     if (ESP_OK == twai_node_receive_from_isr(handle, rx_frame)) {
-        esp_rom_printf(DRAM_STR("RX len %d %s\n"), rx_frame->header.dlc, rx_frame->buffer);
+        ESP_EARLY_LOGI("RX", "timestamp %llu frame %x [%d] %s", rx_frame->header.timestamp, rx_frame->header.id, rx_frame->header.dlc, rx_frame->buffer);
     }
     return false;
 }
@@ -800,6 +851,7 @@ TEST_CASE("twai dlc range test", "[twai]")
         TEST_ASSERT_EQUAL(len % 9, rx_frame.header.dlc);
         memset(rx_buffer, 0, sizeof(rx_buffer));
     }
+    TEST_ASSERT_EQUAL(0, rx_frame.header.timestamp); // timestamp should be 0 if not enabled
 
     tx_frame.buffer_len = 9;
     tx_frame.header.dlc = 0;
@@ -811,4 +863,73 @@ TEST_CASE("twai dlc range test", "[twai]")
 
     TEST_ESP_OK(twai_node_disable(node_hdl));
     TEST_ESP_OK(twai_node_delete(node_hdl));
+}
+
+#define MS_TO_TWAI_TICK(time_ms, resolution) ((time_ms) * (resolution / 1000))
+TEST_CASE("twai rx timestamp", "[twai]")
+{
+    twai_node_handle_t node_hdl;
+    twai_onchip_node_config_t node_config = {};
+    node_config.io_cfg.tx = TEST_TX_GPIO;
+    node_config.io_cfg.rx = TEST_TX_GPIO; // Using same pin for test without transceiver
+    node_config.io_cfg.quanta_clk_out = GPIO_NUM_NC;
+    node_config.io_cfg.bus_off_indicator = GPIO_NUM_NC;
+    node_config.bit_timing.bitrate = 800000;
+    node_config.tx_queue_depth = TEST_FRAME_NUM;
+    node_config.flags.enable_loopback = true;
+    node_config.flags.enable_self_test = true;
+
+    bool hw_timer = false;
+#if SOC_TWAI_SUPPORT_TIMESTAMP
+    hw_timer = true;
+#endif
+    for (uint32_t resolution = 1000; resolution <= 10000000; resolution *= 100) {
+        node_config.timestamp_resolution_hz = resolution;
+        printf("\nTesting resolution %ld\n", resolution);
+        if (((resolution < 2000) && hw_timer) || ((resolution > 1000000) && !hw_timer)) {
+            TEST_ESP_ERR(twai_new_node_onchip(&node_config, &node_hdl), ESP_ERR_INVALID_ARG);
+            continue;
+        }
+        TEST_ESP_OK(twai_new_node_onchip(&node_config, &node_hdl));
+
+        uint8_t rx_buffer[TWAI_FRAME_MAX_LEN] = {0};
+        twai_frame_t rx_frame = {};
+        rx_frame.buffer = rx_buffer;
+        rx_frame.buffer_len = sizeof(rx_buffer);
+
+        twai_event_callbacks_t user_cbs = {};
+        user_cbs.on_rx_done = test_dlc_range_cb;
+        TEST_ESP_OK(twai_node_register_event_callbacks(node_hdl, &user_cbs, &rx_frame));
+        TEST_ESP_OK(twai_node_enable(node_hdl));
+
+        twai_frame_t tx_frame = {};
+        tx_frame.buffer = (uint8_t *)"hi time";
+        tx_frame.buffer_len = strlen((const char *)tx_frame.buffer);
+        uint64_t time_now, time_last = MS_TO_TWAI_TICK(esp_timer_get_time() / 1000, resolution);
+        for (int i = 1; i < 10; i++) {
+            tx_frame.header.id = i;
+            printf("\nwaiting %dms (%ld ticks) ...\n", i * 100, MS_TO_TWAI_TICK(i * 100, resolution));
+            esp_rom_delay_us(i * 100 * 1000);
+            TEST_ESP_OK(twai_node_transmit(node_hdl, &tx_frame, 100));
+            TEST_ESP_OK(twai_node_transmit_wait_all_done(node_hdl, 100));
+
+            time_now = MS_TO_TWAI_TICK(esp_timer_get_time() / 1000, resolution);
+            printf("esp tick now %llu, diff %llu\n", time_now, time_now - rx_frame.header.timestamp);
+            TEST_ASSERT_INT32_WITHIN(MAX(resolution / 100, 5), time_now, rx_frame.header.timestamp);
+            TEST_ASSERT_INT32_WITHIN(MAX(resolution / 100, 5), rx_frame.header.timestamp - time_last, MS_TO_TWAI_TICK(i * 100, resolution));
+            time_last = rx_frame.header.timestamp;
+        }
+
+        printf("\n==============================================\n");
+        printf("Test timestamp still alive during node disable/enable (%ld ticks)\n", MS_TO_TWAI_TICK(1000, resolution));
+        TEST_ESP_OK(twai_node_disable(node_hdl));
+        esp_rom_delay_us(1000 * 1000);
+        TEST_ESP_OK(twai_node_enable(node_hdl));
+        TEST_ESP_OK(twai_node_transmit(node_hdl, &tx_frame, 100));
+        TEST_ESP_OK(twai_node_transmit_wait_all_done(node_hdl, 100));
+        TEST_ASSERT_INT32_WITHIN(MAX(resolution / 100, 5), rx_frame.header.timestamp - time_last, MS_TO_TWAI_TICK(1000, resolution));
+
+        TEST_ESP_OK(twai_node_disable(node_hdl));
+        TEST_ESP_OK(twai_node_delete(node_hdl));
+    }
 }

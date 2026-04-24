@@ -1039,8 +1039,17 @@ The command ``idf.py decrypt-flash-data`` can be used with the same options (and
   External RAM
   ------------
 
-  When Flash Encryption is enabled any data read from and written to external SPI RAM through the cache will also be encrypted/decrypted. This happens the same way and with the same key as for Flash Encryption. If Flash Encryption is enabled then encryption for external SPI RAM is also always enabled, it is not possible to separately control this functionality.
+  .. only:: SOC_PSRAM_ENCRYPTION_PAGE_CONFIGURABLE
 
+    When Flash Encryption is enabled any data read from and written to external SPI RAM through the cache can also be encrypted/decrypted. On {IDF_TARGET_NAME}, PSRAM encryption can be controlled on a per-MMU-page basis, allowing individual PSRAM pages to be selectively encrypted or left unencrypted. However, in the default configuration, all PSRAM pages are encrypted when flash encryption is enabled.
+
+  .. only:: not SOC_PSRAM_ENCRYPTION_PAGE_CONFIGURABLE
+
+    When Flash Encryption is enabled any data read from and written to external SPI RAM through the cache will also be encrypted/decrypted. If Flash Encryption is enabled then encryption for external SPI RAM is also automatically enabled.
+
+  .. only:: SOC_PSRAM_ENCRYPTION_SEPARATE_KEY
+
+    On {IDF_TARGET_NAME}, PSRAM encryption can use an independent encryption key. If the PSRAM encryption key is not programmed, the flash encryption key will be used as the PSRAM encryption key.
 
 Technical Details
 -----------------

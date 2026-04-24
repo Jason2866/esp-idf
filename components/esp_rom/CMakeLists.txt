@@ -148,7 +148,7 @@ if(ESP_TEE_BUILD)
         rom_linker_script("newlib-nano")
     endif()
     rom_linker_script("libc")
-    if(CONFIG_ESP_ROM_HAS_SUBOPTIMAL_NEWLIB_ON_MISALIGNED_MEMORY)
+    if(CONFIG_ESP_ROM_HAS_SUBOPTIMAL_NEWLIB_ON_MISALIGNED_MEMORY) # TODO IDF-13852: use optimized memcpy for TEE ?
         rom_linker_script("libc-suboptimal_for_misaligned_mem")
     endif()
 endif()

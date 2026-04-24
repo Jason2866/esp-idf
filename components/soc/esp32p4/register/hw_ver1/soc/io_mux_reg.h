@@ -194,7 +194,6 @@
 
 #define EXT_OSC_SLOW_GPIO_NUM        0 // XTAL_32K_N
 
-#define MAX_RTC_GPIO_NUM             15
 #define MAX_PAD_GPIO_NUM             54
 #define MAX_GPIO_NUM                 56
 

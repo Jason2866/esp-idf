@@ -374,3 +374,5 @@ entries:
                 port:xPortInterruptedFromISRContext (default)
                 port:vPortYieldFromISR (default)
                 port:vPortYieldOtherCore (default)
+            if (SOC_CPU_COPROC_NUM > 0) && SOC_CPU_HAS_FPU && SOC_PM_FPU_RETENTION_BY_SW:
+                port:xPortFPUContextIsDirty (noflash_text)

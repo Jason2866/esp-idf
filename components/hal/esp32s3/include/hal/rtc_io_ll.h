@@ -23,12 +23,15 @@
 #include "soc/usb_serial_jtag_reg.h"
 #include "soc/usb_serial_jtag_struct.h"
 #include "soc/sens_struct.h"
+#include "soc/rtc_cntl_reg.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #define RTCIO_LL_PIN_FUNC     0
+
+#define RTCIO_LL_GPIO_NUM_OFFSET    0 // rtcio 0-21 correspond to gpio 0-21
 
 typedef enum {
     RTCIO_LL_FUNC_RTC = 0x0,         /*!< The pin controlled by RTC module. */

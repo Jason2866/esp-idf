@@ -140,7 +140,6 @@
 #define USB_INT_PHY0_DM_GPIO_NUM   18
 #define USB_INT_PHY0_DP_GPIO_NUM   19
 
-#define MAX_RTC_GPIO_NUM 5
 #define MAX_PAD_GPIO_NUM 21
 #define MAX_GPIO_NUM    25
 

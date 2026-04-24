@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
+# SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
 # SPDX-License-Identifier: Unlicense OR CC0-1.0
 import os.path
 import time
@@ -79,7 +79,8 @@ def test_gcov(openocd_dut: 'OpenOCD', dut: IdfDut) -> None:
 
 
 @pytest.mark.usb_serial_jtag
-@idf_parametrize('target', ['esp32s3', 'esp32c3', 'esp32c5', 'esp32c6', 'esp32h2', 'esp32p4'], indirect=['target'])
-@pytest.mark.temp_skip_ci(targets=['esp32p4'], reason='p4 rev3 migration # TODO: IDF-14440')
+@idf_parametrize(
+    'target', ['esp32s3', 'esp32c3', 'esp32c5', 'esp32c6', 'esp32c61', 'esp32h2', 'esp32p4'], indirect=['target']
+)
 def test_gcov_usj(openocd_dut: 'OpenOCD', dut: IdfDut) -> None:
     _test_gcov(openocd_dut, dut)

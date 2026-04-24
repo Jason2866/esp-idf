@@ -1,5 +1,7 @@
 # SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
 # SPDX-License-Identifier: Apache-2.0
+import typing as t
+
 """
 Pytest Related Constants. Don't import third-party packages here.
 """
@@ -16,7 +18,7 @@ SUPPORTED_TARGETS = [
     'esp32c5',
     'esp32c61',
 ]
-PREVIEW_TARGETS: list[str] = []  # this PREVIEW_TARGETS excludes 'linux' target
+PREVIEW_TARGETS: t.List[str] = []  # this PREVIEW_TARGETS excludes 'linux' target
 
 DEFAULT_LOGDIR = 'pytest-embedded'
 

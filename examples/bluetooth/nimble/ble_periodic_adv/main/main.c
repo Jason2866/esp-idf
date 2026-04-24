@@ -177,12 +177,12 @@ app_main(void)
     ble_hs_cfg.reset_cb = periodic_adv_on_reset;
     ble_hs_cfg.sync_cb = periodic_adv_on_sync;
     ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
+
 #if CONFIG_BT_NIMBLE_GAP_SERVICE
     /* Set the default device name. */
     int rc = ble_svc_gap_device_name_set("nimble_periodic_adv");
     assert(rc == 0);
 #endif
-
     /* XXX Need to have template for store */
     ble_store_config_init();
 

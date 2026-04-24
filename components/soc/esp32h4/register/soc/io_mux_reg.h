@@ -154,7 +154,7 @@ extern "C" {
 #define GPIO_PAD_SET_DRV(num, drv) PIN_SET_DRV(IOMUX_REG_GPIO##num, drv)
 
 #define EXT_OSC_SLOW_GPIO_NUM         0
-#define MAX_RTC_GPIO_NUM              5
+
 #define MAX_PAD_GPIO_NUM             39
 #define MAX_GPIO_NUM                 43
 

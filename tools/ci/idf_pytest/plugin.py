@@ -49,8 +49,8 @@ def requires_elf_or_map(case: PytestCase) -> bool:
     return False
 
 
-def skipped_targets(item: Function) -> set[str]:
-    def _get_temp_markers_disabled_targets(marker_name: str) -> set[str]:
+def skipped_targets(item: Function) -> t.Set[str]:
+    def _get_temp_markers_disabled_targets(marker_name: str) -> t.Set[str]:
         targets = []
         for _m in item.own_markers:
             if _m.name == marker_name:
@@ -115,7 +115,7 @@ class IdfLocalPlugin:
         return item.callspec.params.get(key, default) or default
 
     @pytest.hookimpl(wrapper=True)
-    def pytest_collection_modifyitems(self, config: Config, items: list[Function]) -> t.Generator[None, None, None]:
+    def pytest_collection_modifyitems(self, config: Config, items: t.List[Function]) -> t.Generator[None, None, None]:
         yield  # throw it back to idf-ci
 
         deselected_items = []
