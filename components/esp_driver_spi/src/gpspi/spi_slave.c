@@ -414,7 +414,7 @@ static void SPI_SLAVE_ISR_ATTR spi_slave_uninstall_priv_trans(spi_host_device_t 
         if (trans->tx_buffer && (trans->tx_buffer != priv_trans->tx_buffer)) {
             free(priv_trans->tx_buffer);
         }
-        if (trans->rx_buffer && (trans->rx_buffer != priv_trans->rx_buffer)) {
+        if (priv_trans->rx_buffer && (trans->rx_buffer != priv_trans->rx_buffer)) {
             memcpy(trans->rx_buffer, priv_trans->rx_buffer, (trans->length + 7) / 8);
             free(priv_trans->rx_buffer);
         }
@@ -494,6 +494,7 @@ esp_err_t SPI_SLAVE_ATTR spi_slave_queue_trans(spi_host_device_t host, const spi
 
     r = xQueueSend(spihost[host]->trans_queue, (void *)&priv_trans, ticks_to_wait);
     if (!r) {
+        spi_slave_uninstall_priv_trans(host, &priv_trans);
         return ESP_ERR_TIMEOUT;
     }
     esp_intr_enable(spihost[host]->intr);

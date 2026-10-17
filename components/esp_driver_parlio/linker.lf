@@ -7,13 +7,15 @@ entries:
         parlio_tx: parlio_mount_buffer (noflash)
 
         if SOC_PARLIO_TX_SUPPORT_LOOP_TRANSMISSION = y:
-            parlio_tx: parlio_tx_gdma_eof_callback (noflash)
+            parlio_tx: parlio_tx_gdma_buffer_switched_callback (noflash)
 
     if PARLIO_RX_ISR_HANDLER_IN_IRAM = y:
         parlio_rx: parlio_rx_default_eof_callback (noflash)
         parlio_rx: parlio_rx_default_desc_done_callback (noflash)
         parlio_rx: parlio_rx_mount_transaction_buffer (noflash)
         parlio_rx: parlio_rx_set_delimiter_config (noflash)
+        parlio_rx: parlio_rx_unit_trigger_fake_eof (noflash)
+        parlio_common: parlio_sw_retention (noflash)
 
 [mapping:parlio_driver_gdma_link]
 archive: libesp_hw_support.a

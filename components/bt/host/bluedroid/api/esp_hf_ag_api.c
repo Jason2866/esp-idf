@@ -215,7 +215,7 @@ esp_err_t esp_hf_ag_unknown_at_send(esp_bd_addr_t remote_addr, char *unat)
     if (esp_bluedroid_get_status() != ESP_BLUEDROID_STATUS_ENABLED) {
         return ESP_ERR_INVALID_STATE;
     }
-    if (remote_addr == NULL || unat == NULL) {
+    if (remote_addr == NULL) {
         return ESP_ERR_INVALID_ARG;
     }
     btc_msg_t msg;
@@ -680,7 +680,7 @@ esp_err_t esp_hf_ag_audio_data_send(esp_hf_sync_conn_hdl_t sync_conn_hdl, esp_hf
         return ESP_ERR_INVALID_ARG;
     }
 
-    if (btc_hf_ag_audio_data_send(sync_conn_hdl, (uint8_t *)audio_buf, audio_buf->data, audio_buf->data_len)) {
+    if (btc_hf_ag_audio_data_send(sync_conn_hdl, (uint8_t *)audio_buf, audio_buf->data, audio_buf->data_len) == BT_STATUS_SUCCESS) {
         return ESP_OK;
     }
     return ESP_FAIL;

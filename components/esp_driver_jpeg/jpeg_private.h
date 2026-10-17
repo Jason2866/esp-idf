@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -7,6 +7,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdatomic.h>
 #include "sys/queue.h"
 #include "esp_private/dma2d.h"
@@ -31,6 +32,17 @@ extern "C" {
 #define JPEG_INTR_ALLOC_FLAG              (ESP_INTR_FLAG_SHARED)
 
 #define JPEG_ALIGN_UP(num, align)         (((num) + ((align) - 1)) & ~((align) - 1))
+// Buffers fed to the 2D-DMA must be at least 16-byte aligned.
+#define JPEG_DMA2D_BUFFER_ALIGN           16
+
+// The JPEG codec cannot work with encrypted buffer, because it deals with macro block. When an
+// unencrypted PSRAM region is reserved (CONFIG_SPIRAM_ENC_EXEMPT), codec buffers
+// must come from it; otherwise use normal PSRAM.
+#if CONFIG_SPIRAM_ENC_EXEMPT
+#define JPEG_SPIRAM_ALLOC_CAPS            (MALLOC_CAP_SPIRAM_NO_ENC)
+#else
+#define JPEG_SPIRAM_ALLOC_CAPS            (MALLOC_CAP_SPIRAM)
+#endif
 
 typedef struct jpeg_decoder_t jpeg_decoder_t;
 typedef struct jpeg_encoder_t jpeg_encoder_t;
@@ -145,7 +157,9 @@ typedef struct {
 
 typedef struct {
     uint8_t *header_buf;                           // Pointer to the header of jpeg header buffer
+    uint32_t header_buf_size;                      // Capacity of header_buf in bytes
     uint32_t header_len;                           // Record for header length
+    bool header_buf_overflow;                      // Set when emit exceeds header_buf_size
     uint32_t m_quantization_tables[2][JPEG_QUANTIZATION_TABLE_LEN];         // quantization tables
     uint8_t num_components;                        // number of components
     uint32_t origin_h;                             // horizontal of original picture
@@ -244,6 +258,18 @@ esp_err_t jpeg_isr_deregister(jpeg_codec_handle_t jpeg_codec, jpeg_isr_handler_t
  * @return esp_err_t Returns ESP_OK if the interrupt priority meets the requirements, or an error code on failure
  */
 esp_err_t jpeg_check_intr_priority(jpeg_codec_handle_t jpeg_codec, int intr_priority);
+
+/**
+ * @brief Validate a user buffer that will be accessed by the 2D-DMA
+ *
+ * The buffer must be 16-byte aligned. When CONFIG_SPIRAM_ENC_EXEMPT is enabled,
+ * a PSRAM buffer must reside in the unencrypted carve-out, since the 2D-DMA
+ * cannot access encrypted PSRAM. Internal RAM buffers are always accepted.
+ *
+ * @param buffer Buffer pointer provided by the user
+ * @return true if the buffer can be used by the 2D-DMA, false otherwise
+ */
+bool jpeg_check_dma2d_buffer(const void *buffer);
 
 #ifdef __cplusplus
 }

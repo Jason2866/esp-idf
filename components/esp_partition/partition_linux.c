@@ -444,7 +444,7 @@ esp_err_t esp_partition_write(const esp_partition_t *partition, size_t dst_offse
     if (dst_offset > partition->size) {
         return ESP_ERR_INVALID_ARG;
     }
-    if (dst_offset + size > partition->size) {
+    if (size > partition->size - dst_offset) {
         return ESP_ERR_INVALID_SIZE;
     }
 
@@ -500,7 +500,7 @@ esp_err_t esp_partition_read(const esp_partition_t *partition, size_t src_offset
     if (src_offset > partition->size) {
         return ESP_ERR_INVALID_ARG;
     }
-    if (src_offset + size > partition->size) {
+    if (size > partition->size - src_offset) {
         return ESP_ERR_INVALID_SIZE;
     }
 
@@ -545,7 +545,7 @@ esp_err_t esp_partition_erase_range(const esp_partition_t *partition, size_t off
     if (offset > partition->size || offset % partition->erase_size != 0) {
         return ESP_ERR_INVALID_ARG;
     }
-    if (offset + size > partition->size || size % partition->erase_size != 0) {
+    if (size > partition->size - offset || size % partition->erase_size != 0) {
         return ESP_ERR_INVALID_SIZE;
     }
 
@@ -588,7 +588,7 @@ esp_err_t esp_partition_erase_range(const esp_partition_t *partition, size_t off
  * ESP_OK - calculated out parameters hold pointer to the requested memory area and default handle respectively
  */
 esp_err_t esp_partition_mmap(const esp_partition_t *partition, size_t offset, size_t size,
-                             esp_partition_mmap_memory_t memory,
+                             esp_partition_mmap_flag_t flags,
                              const void **out_ptr, esp_partition_mmap_handle_t *out_handle)
 {
     ESP_LOGV(TAG, "esp_partition_mmap(): partition=%s offset=%" PRIu32 " size=%" PRIu32 "", partition->label, (uint32_t) offset, (uint32_t) size);
@@ -597,7 +597,7 @@ esp_err_t esp_partition_mmap(const esp_partition_t *partition, size_t offset, si
     if (offset > partition->size) {
         return ESP_ERR_INVALID_ARG;
     }
-    if (offset + size > partition->size) {
+    if (size > partition->size - offset) {
         return ESP_ERR_INVALID_SIZE;
     }
     if (partition->flash_chip != NULL) {

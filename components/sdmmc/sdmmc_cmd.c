@@ -394,7 +394,7 @@ esp_err_t sdmmc_send_cmd_send_scr(sdmmc_card_t* card, sdmmc_scr_t *out_scr)
     if (err == ESP_OK) {
         err = sdmmc_decode_scr(buf, out_scr);
     }
-    free(buf);
+    heap_caps_free(buf);
     return err;
 }
 
@@ -464,16 +464,15 @@ esp_err_t sdmmc_send_cmd_num_of_written_blocks(sdmmc_card_t* card, size_t* out_n
 
     err = sdmmc_send_app_cmd(card, &cmd);
     if (err != ESP_OK) {
-        free(buf);
+        heap_caps_free(buf);
         ESP_LOGE(TAG, "%s: sdmmc_send_app_cmd returned 0x%x, failed to get number of written write blocks", __func__, err);
         return err;
     }
 
-    size_t result = __builtin_bswap32(*(uint32_t*)buf);
     if (out_num_blocks) {
-        *out_num_blocks = result;
+        *out_num_blocks = __builtin_bswap32(*(uint32_t*)buf);
     }
-    free(buf);
+    heap_caps_free(buf);
     return err;
 }
 
@@ -542,7 +541,7 @@ esp_err_t sdmmc_write_sectors(sdmmc_card_t* card, const void* src,
             }
         }
         if (!use_dma_aligned_buffer) {
-            free(buf);
+            heap_caps_free(buf);
         }
     }
     return err;
@@ -586,7 +585,8 @@ esp_err_t sdmmc_write_sectors_dma(sdmmc_card_t* card, const void* src,
                 vTaskDelay(1); // when the host is in spi mode
             }
             size_t successfully_written_blocks = 0;
-            if (sdmmc_send_cmd_num_of_written_blocks(card, &successfully_written_blocks) == ESP_OK) {
+            err = sdmmc_send_cmd_num_of_written_blocks(card, &successfully_written_blocks);
+            if (err == ESP_OK) {
                 ESP_LOGD(TAG, "%s: successfully wrote %zu blocks out of %zu", __func__, successfully_written_blocks, block_count);
             } else {
                 ESP_LOGE(TAG, "%s: sdmmc_send_cmd_num_of_written_blocks returned 0x%x", __func__, err);
@@ -602,7 +602,8 @@ esp_err_t sdmmc_write_sectors_dma(sdmmc_card_t* card, const void* src,
 
     /* SD mode: wait for the card to become idle based on R1 status */
     if (!host_is_spi(card)) {
-        switch (sdmmc_wait_for_idle(card, status)) {
+        err = sdmmc_wait_for_idle(card, status);
+        switch (err) {
             case ESP_OK:
                 break;
             case ESP_ERR_TIMEOUT:
@@ -703,7 +704,7 @@ esp_err_t sdmmc_read_sectors(sdmmc_card_t* card, void* dst,
             cur_dst += block_size * blocks_per_read;
         }
         if (!use_dma_aligned_buffer) {
-            free(buf);
+            heap_caps_free(buf);
         }
     }
     return err;
@@ -748,7 +749,8 @@ esp_err_t sdmmc_read_sectors_dma(sdmmc_card_t* card, void* dst,
 
     /* SD mode: wait for the card to become idle based on R1 status */
     if (!host_is_spi(card)) {
-        switch (sdmmc_wait_for_idle(card, status)) {
+        err = sdmmc_wait_for_idle(card, status);
+        switch (err) {
             case ESP_OK:
                 break;
             case ESP_ERR_TIMEOUT:

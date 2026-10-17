@@ -11,6 +11,7 @@
 #include <inttypes.h>
 
 #include "esp_attr.h"
+#include "esp_cpu.h"
 #include "esp_rom_caps.h"
 #include "esp_macros.h"
 #include "esp_memory_utils.h"
@@ -567,6 +568,9 @@ static void FORCE_IRAM_ATTR suspend_cache(void) {
         // fully check the access to external memory, writeback & invalidate is needed here.
         Cache_WriteBack_Invalidate_All(CACHE_MAP_MASK);
 #endif
+#if SOC_BRANCH_PREDICTOR_SUPPORTED
+        esp_cpu_branch_prediction_disable();
+#endif
         spi_flash_disable_cache(esp_cpu_get_core_id(), &s_cache_state);
     }
 }
@@ -577,6 +581,9 @@ static void FORCE_IRAM_ATTR resume_cache(void) {
     assert(s_cache_suspend_cnt >= 0 && DRAM_STR("cache resume doesn't match suspend ops"));
     if (s_cache_suspend_cnt == 0) {
         spi_flash_restore_cache(esp_cpu_get_core_id(), s_cache_state);
+#if SOC_BRANCH_PREDICTOR_SUPPORTED
+        esp_cpu_branch_prediction_enable();
+#endif
     }
 }
 
@@ -779,6 +786,10 @@ static SLEEP_FN_ATTR void misc_modules_sleep_prepare(uint32_t sleep_flags, bool 
 static SLEEP_FN_ATTR void misc_modules_wake_prepare(uint32_t sleep_flags)
 {
 #if CONFIG_ESP_ENABLE_PVT && SOC_PVT_EN_WITH_SLEEP
+    if ((sleep_flags & PMU_SLEEP_PD_CPU) && !(sleep_flags & PMU_SLEEP_PD_TOP)) {
+        /* If TOP is powered down, configuration in pvt_auto_dbias_init was already restored in wakeup retention*/
+        pvt_auto_dbias_init();
+    }
     pvt_func_enable(true);
 #endif
 
@@ -1017,14 +1028,6 @@ static esp_err_t SLEEP_FN_ATTR esp_sleep_start(uint32_t sleep_flags, uint32_t cl
         should_skip_sleep = light_sleep_uart_prepare(sleep_flags, sleep_duration);
     }
 
-#if CONFIG_ESP_PHY_ENABLED && SOC_DEEP_SLEEP_SUPPORTED
-    // Do deep-sleep PHY related callback, which need to be executed when the PLL clock is exists.
-    // For light-sleep, PHY state is managed by the upper layer of the wifi/bt protocol stack.
-    if (deep_sleep) {
-        s_do_deep_sleep_phy_callback();
-    }
-#endif
-
 #if !CONFIG_APP_BUILD_TYPE_PURE_RAM_APP
     uint32_t xtal_freq = rtc_clk_xtal_freq_get();
     esp_clk_utils_mspi_speed_mode_sync_before_cpu_freq_switching(xtal_freq, xtal_freq);
@@ -1226,21 +1229,26 @@ static esp_err_t FORCE_IRAM_ATTR deep_sleep_start(bool allow_sleep_rejection)
         }
     }
 #endif
-
-#if CONFIG_IDF_TARGET_ESP32S2
+#if CONFIG_IDF_TARGET_ESP32S2 && CONFIG_ESP_BROWNOUT_DET
     /* Due to hardware limitations, on S2 the brownout detector sometimes trigger during deep sleep
        to circumvent this we disable the brownout detector before sleeping  */
     esp_brownout_disable();
-#endif //CONFIG_IDF_TARGET_ESP32S2
+#endif //CONFIG_IDF_TARGET_ESP32S2 && CONFIG_ESP_BROWNOUT_DET && CONFIG_ESP_BROWNOUT_DET
 
     esp_sync_timekeeping_timers();
+
+#if CONFIG_ESP_PHY_ENABLED && SOC_DEEP_SLEEP_SUPPORTED
+    /* Close PHY/RF before stalling the other CPU. phy_close_rf() (registered via
+     * esp_deep_sleep_register_phy_hook) takes s_phy_int_mux and may take rtc_spinlock;
+     * those can be held by the other core.
+     */
+    s_do_deep_sleep_phy_callback();
+#endif
 
     // Must acquire all spinlocks which may be acquired during sleep process before stalling other core,
     // otherwise deadlock may occur.
     portENTER_CRITICAL(&s_config.lock);
 #if !CONFIG_FREERTOS_UNICORE
-    extern portMUX_TYPE rtc_spinlock;
-    portENTER_CRITICAL_SAFE(&rtc_spinlock); // Maybe acquired from temp_sensor_get_raw_value by phy_close_rf callback
     esp_clk_private_lock(); // Maybe acquired from esp_clk_slowclk_cal_set
 #endif
 
@@ -1319,9 +1327,14 @@ static esp_err_t FORCE_IRAM_ATTR deep_sleep_start(bool allow_sleep_rejection)
     esp_ipc_isr_release_other_cpu();
 #if !CONFIG_FREERTOS_UNICORE
     esp_clk_private_unlock();
-    portEXIT_CRITICAL_SAFE(&rtc_spinlock);
 #endif
     portEXIT_CRITICAL(&s_config.lock);
+
+#if CONFIG_IDF_TARGET_ESP32S2 && CONFIG_ESP_BROWNOUT_DET
+    /* Brownout was disabled before attempting deep sleep; restore it after rejection. */
+    esp_brownout_init();
+#endif //CONFIG_IDF_TARGET_ESP32S2 && CONFIG_ESP_BROWNOUT_DET
+
     return err;
 }
 

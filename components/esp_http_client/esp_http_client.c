@@ -410,10 +410,17 @@ esp_err_t esp_http_client_set_username(esp_http_client_handle_t client, const ch
         ESP_LOGE(TAG, "client must not be NULL");
         return ESP_ERR_INVALID_ARG;
     }
+    /* Duplicate first so that passing the current username back in (e.g. the pointer
+     * returned by esp_http_client_get_username()) is safe: the old buffer is freed only
+     * after the copy succeeds, avoiding a use-after-free on self-aliasing (CWE-416). */
+    char *new_username = username ? strdup(username) : NULL;
+    if (username != NULL && new_username == NULL) {
+        return ESP_ERR_NO_MEM;
+    }
     if (client->connection_info.username != NULL) {
         free(client->connection_info.username);
     }
-    client->connection_info.username = username ? strdup(username) : NULL;
+    client->connection_info.username = new_username;
     return ESP_OK;
 }
 
@@ -456,11 +463,19 @@ esp_err_t esp_http_client_set_password(esp_http_client_handle_t client, const ch
         ESP_LOGE(TAG, "client must not be NULL");
         return ESP_ERR_INVALID_ARG;
     }
+    /* Duplicate first so that passing the current password back in (e.g. the pointer
+     * returned by esp_http_client_get_password()) is safe: zeroize and free the old buffer
+     * only after the copy succeeds, avoiding a use-after-free / credential corruption
+     * (CWE-416) caused by memset zeroing the source before strdup reads it. */
+    char *new_password = password ? strdup(password) : NULL;
+    if (password != NULL && new_password == NULL) {
+        return ESP_ERR_NO_MEM;
+    }
     if (client->connection_info.password != NULL) {
         memset(client->connection_info.password, 0, strlen(client->connection_info.password));
         free(client->connection_info.password);
     }
-    client->connection_info.password = password ? strdup(password) : NULL;
+    client->connection_info.password = new_password;
     return ESP_OK;
 }
 
@@ -1298,10 +1313,14 @@ static int esp_http_client_get_data(esp_http_client_handle_t client)
     errno = 0;
     int rlen = esp_transport_read(client->transport, res_buffer->data, client->buffer_size_rx, client->timeout_ms);
     if (rlen >= 0) {
-        // When tls error is ESP_TLS_ERR_SSL_WANT_READ (-0x6900), esp_trasnport_read returns ERR_TCP_TRANSPORT_CONNECTION_TIMEOUT (0x0).
-        // We should not execute http_parser_execute() on this condition as it sets the internal state machine in an
-        // invalid state.
-        if (!(client->is_async && rlen == 0)) {
+        // esp_transport_read() returns 0 (ERR_TCP_TRANSPORT_CONNECTION_TIMEOUT) whenever the
+        // underlying poll times out with no data ready -- e.g. when tls error is
+        // ESP_TLS_ERR_SSL_WANT_READ (-0x6900) -- and this can happen in blocking mode too, not
+        // just when client->is_async. We must not execute http_parser_execute() with len==0 in
+        // this case: a len==0 call is only valid to signal genuine end-of-stream, and calling it
+        // while the parser is mid-header/mid-body (as it will be on a mid-response stall) sets
+        // HPE_INVALID_EOF_STATE and permanently wedges the parser for the rest of the connection.
+        if (rlen != 0) {
             http_parser_execute(client->parser, client->parser_settings, res_buffer->data, rlen);
         }
     }
@@ -1493,9 +1512,16 @@ esp_err_t esp_http_client_perform(esp_http_client_handle_t client)
                         if (client->connection_info.method != HTTP_METHOD_HEAD && !client->is_chunk_complete) {
                             ESP_LOGE(TAG, "Incomplete chunked data received %d", ret);
 
-                            if (ret == ESP_ERR_TCP_TRANSPORT_CONNECTION_TIMEOUT) {
+                            // `ret` is the raw, untranslated value from esp_http_client_get_data()
+                            // (i.e. esp_transport_read()'s own ERR_TCP_TRANSPORT_* enum, e.g. 0/-1),
+                            // not the translated ESP_ERR_TCP_TRANSPORT_* esp_err_t codes (0xe001/0xe002)
+                            // produced by esp_transport_translate_error(). Comparing against the
+                            // translated codes here made both branches below unreachable, so every
+                            // timeout/clean-close during body reading was misreported as the generic
+                            // ESP_ERR_HTTP_INCOMPLETE_DATA.
+                            if (ret == ERR_TCP_TRANSPORT_CONNECTION_TIMEOUT) {
                                 err = ESP_ERR_HTTP_READ_TIMEOUT;
-                            } else if (ret == ESP_ERR_TCP_TRANSPORT_CONNECTION_CLOSED_BY_FIN) {
+                            } else if (ret == ERR_TCP_TRANSPORT_CONNECTION_CLOSED_BY_FIN) {
                                 err = ESP_ERR_HTTP_CONNECTION_CLOSED;
                             } else {
                                 err = ESP_ERR_HTTP_INCOMPLETE_DATA;
@@ -1514,9 +1540,9 @@ esp_err_t esp_http_client_perform(esp_http_client_handle_t client)
                         if (client->connection_info.method != HTTP_METHOD_HEAD && client->response->data_process < client->response->content_length) {
                             ESP_LOGE(TAG, "Incomlete data received, ret=%d, %"PRId64"/%"PRId64" bytes", ret, client->response->data_process, client->response->content_length);
 
-                            if (ret == ESP_ERR_TCP_TRANSPORT_CONNECTION_TIMEOUT) {
+                            if (ret == ERR_TCP_TRANSPORT_CONNECTION_TIMEOUT) {
                                 err = ESP_ERR_HTTP_READ_TIMEOUT;
-                            } else if (ret == ESP_ERR_TCP_TRANSPORT_CONNECTION_CLOSED_BY_FIN) {
+                            } else if (ret == ERR_TCP_TRANSPORT_CONNECTION_CLOSED_BY_FIN) {
                                 err = ESP_ERR_HTTP_CONNECTION_CLOSED;
                             } else {
                                 err = ESP_ERR_HTTP_INCOMPLETE_DATA;
@@ -1645,14 +1671,17 @@ static esp_err_t esp_http_client_connect(esp_http_client_handle_t client)
             }
         }
         client->state = HTTP_STATE_CONNECTED;
-        http_dispatch_event(client, HTTP_EVENT_ON_CONNECTED, NULL, 0);
-        http_dispatch_event_to_event_loop(HTTP_EVENT_ON_CONNECTED, &client, sizeof(esp_http_client_handle_t));
 #ifdef CONFIG_ESP_TLS_CLIENT_SESSION_TICKETS
+        /* Perform handle-dependent session-ticket bookkeeping before dispatching the user
+         * callback: a synchronous HTTP_EVENT_ON_CONNECTED handler is permitted to destroy
+         * the client, so dereferencing the handle afterwards would be a UAF (CWE-416). */
         if (client->session_ticket_state != SESSION_TICKET_UNUSED) {
             esp_transport_ssl_session_ticket_operation(client->transport, ESP_TRANSPORT_SESSION_TICKET_SAVE);
             client->session_ticket_state = SESSION_TICKET_SAVED;
         }
 #endif
+        http_dispatch_event(client, HTTP_EVENT_ON_CONNECTED, NULL, 0);
+        http_dispatch_event_to_event_loop(HTTP_EVENT_ON_CONNECTED, &client, sizeof(esp_http_client_handle_t));
 
     }
     return ESP_OK;

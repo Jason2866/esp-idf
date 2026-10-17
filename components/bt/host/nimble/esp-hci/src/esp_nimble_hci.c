@@ -182,7 +182,6 @@ static void ble_hci_rx_acl(uint8_t *data, uint16_t len)
 {
     struct os_mbuf *m = NULL;
     int rc;
-    int sr;
 
     int retry_count = 1;
 
@@ -216,9 +215,7 @@ static void ble_hci_rx_acl(uint8_t *data, uint16_t len)
         os_mbuf_free_chain(m);
         return;
     }
-    OS_ENTER_CRITICAL(sr);
     ble_transport_to_hs_acl(m);
-    OS_EXIT_CRITICAL(sr);
 }
 #endif
 
@@ -307,7 +304,8 @@ static int host_rcv_pkt(uint8_t *data, uint16_t len)
         }
 
         if (data[1] == BLE_HCI_EVCODE_HW_ERROR) {
-            assert(0);
+            esp_rom_printf("HCI HW error from controller, hw_code=%d\n",
+                           (totlen > BLE_HCI_EVENT_HDR_LEN) ? data[3] : 0);
         }
 
         /* Allocate LE Advertising Report Event from lo pool only */
